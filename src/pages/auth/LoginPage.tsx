@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Store, AlertTriangle } from 'lucide-react'
-import { signIn } from '@/lib/auth'
+import { Store, AlertTriangle, Zap } from 'lucide-react'
+import { signIn, enterDemoMode } from '@/lib/auth'
 import { isConfigured } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -13,7 +13,6 @@ export function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!isConfigured) return
     setError('')
     setLoading(true)
     try {
@@ -38,21 +37,31 @@ export function LoginPage() {
           <p className="text-gray-500 text-sm mt-1">نظام إدارة محلات الموبايل</p>
         </div>
 
-        {/* Supabase not configured warning */}
+        {/* Demo mode banner */}
         {!isConfigured && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex gap-3">
-            <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">التطبيق يعمل في وضع العرض</p>
-              <p className="text-xs text-amber-600 mt-0.5">لم يتم ربط قاعدة البيانات بعد</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <div className="flex gap-3 mb-3">
+              <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">وضع العرض</p>
+                <p className="text-xs text-amber-600 mt-0.5">لم يتم ربط قاعدة البيانات بعد</p>
+              </div>
             </div>
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full bg-amber-500 hover:bg-amber-600 border-transparent"
+              icon={<Zap size={15} />}
+              onClick={enterDemoMode}
+            >
+              دخول تجريبي — شوف التطبيق
+            </Button>
           </div>
         )}
 
-        {/* Form */}
+        {/* Login form */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-5">تسجيل الدخول</h2>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="البريد الإلكتروني"
@@ -61,7 +70,7 @@ export function LoginPage() {
               onChange={e => setEmail(e.target.value)}
               placeholder="name@company.com"
               required
-              autoFocus
+              autoFocus={isConfigured}
               disabled={!isConfigured}
             />
             <Input
@@ -73,13 +82,11 @@ export function LoginPage() {
               required
               disabled={!isConfigured}
             />
-
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-sm text-red-700">
                 {error}
               </div>
             )}
-
             <Button
               type="submit"
               variant="primary"
@@ -88,7 +95,7 @@ export function LoginPage() {
               disabled={!isConfigured}
               className="w-full"
             >
-              {isConfigured ? 'دخول' : 'في انتظار ربط قاعدة البيانات'}
+              دخول
             </Button>
           </form>
         </div>

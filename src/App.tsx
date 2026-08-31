@@ -17,7 +17,7 @@ const qc = new QueryClient({
 })
 
 function Guard() {
-  const { session, loading } = useAuth()
+  const { session, profile, loading } = useAuth()
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -25,7 +25,8 @@ function Guard() {
     </div>
   )
 
-  if (!session) return <LoginPage />
+  // دخول لو عنده session حقيقي أو profile تجريبي
+  if (!session && !profile) return <LoginPage />
 
   return (
     <Routes>
@@ -48,7 +49,7 @@ export default function App() {
   return (
     <QueryClientProvider client={qc}>
       <AuthProvider>
-        <BrowserRouter>
+        <BrowserRouter basename="/mobile-shop-control">
           <Guard />
         </BrowserRouter>
       </AuthProvider>
