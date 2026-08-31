@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Store } from 'lucide-react'
+import { Store, AlertTriangle } from 'lucide-react'
 import { signIn } from '@/lib/auth'
+import { isConfigured } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -12,6 +13,7 @@ export function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!isConfigured) return
     setError('')
     setLoading(true)
     try {
@@ -36,6 +38,17 @@ export function LoginPage() {
           <p className="text-gray-500 text-sm mt-1">نظام إدارة محلات الموبايل</p>
         </div>
 
+        {/* Supabase not configured warning */}
+        {!isConfigured && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex gap-3">
+            <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">التطبيق يعمل في وضع العرض</p>
+              <p className="text-xs text-amber-600 mt-0.5">لم يتم ربط قاعدة البيانات بعد</p>
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-5">تسجيل الدخول</h2>
@@ -49,6 +62,7 @@ export function LoginPage() {
               placeholder="name@company.com"
               required
               autoFocus
+              disabled={!isConfigured}
             />
             <Input
               label="كلمة المرور"
@@ -57,6 +71,7 @@ export function LoginPage() {
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              disabled={!isConfigured}
             />
 
             {error && (
@@ -70,9 +85,10 @@ export function LoginPage() {
               variant="primary"
               size="lg"
               loading={loading}
+              disabled={!isConfigured}
               className="w-full"
             >
-              دخول
+              {isConfigured ? 'دخول' : 'في انتظار ربط قاعدة البيانات'}
             </Button>
           </form>
         </div>
