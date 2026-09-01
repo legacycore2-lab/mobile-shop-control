@@ -87,7 +87,7 @@ export const devicesRepository = {
 
   lookupByImei: async (imei: string): Promise<MobileDeviceView[]> => {
     const { data, error } = await supabase
-      .rpc('lookup_device_by_imei', { p_imei: imei })
+      .rpc('lookup_device_by_imei', { p_imei: imei } as never)
     if (error) throw error
     return (data ?? []) as MobileDeviceView[]
   },
