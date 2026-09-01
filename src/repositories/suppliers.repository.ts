@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase'
 import type { Supplier } from '@/types/database'
 
+type SupplierInsert = Omit<Supplier, 'id' | 'created_at' | 'updated_at'>
+type SupplierUpdate = Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>
+
 export const suppliersRepository = {
 
   getAll: async (): Promise<Supplier[]> => {
@@ -9,7 +12,7 @@ export const suppliersRepository = {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data ?? []
+    return (data ?? []) as Supplier[]
   },
 
   getById: async (id: string): Promise<Supplier | null> => {
@@ -19,28 +22,28 @@ export const suppliersRepository = {
       .eq('id', id)
       .single()
     if (error) throw error
-    return data
+    return data as Supplier | null
   },
 
-  create: async (payload: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>): Promise<Supplier> => {
+  create: async (payload: SupplierInsert): Promise<Supplier> => {
     const { data, error } = await supabase
       .from('suppliers')
-      .insert(payload)
+      .insert(payload as never)
       .select()
       .single()
     if (error) throw error
-    return data
+    return data as Supplier
   },
 
-  update: async (id: string, payload: Partial<Supplier>): Promise<Supplier> => {
+  update: async (id: string, payload: SupplierUpdate): Promise<Supplier> => {
     const { data, error } = await supabase
       .from('suppliers')
-      .update(payload)
+      .update(payload as never)
       .eq('id', id)
       .select()
       .single()
     if (error) throw error
-    return data
+    return data as Supplier
   },
 
   remove: async (id: string): Promise<void> => {
