@@ -24,13 +24,13 @@ export function Table<T extends { id: string }>({
     <div className={cn('overflow-auto', className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
+          <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
             {columns.map((col) => (
               <th
                 key={col.key}
                 style={{ width: col.width }}
                 className={cn(
-                  'px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap',
+                  'px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap',
                   col.align === 'left'   && 'text-left',
                   col.align === 'center' && 'text-center',
                   (!col.align || col.align === 'right') && 'text-right',
@@ -44,17 +44,17 @@ export function Table<T extends { id: string }>({
         <tbody>
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i} className="border-b border-gray-100">
+              <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3">
-                    <div className="h-4 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
                   </td>
                 ))}
               </tr>
             ))
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400">
+              <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
                 {empty}
               </td>
             </tr>
@@ -64,15 +64,16 @@ export function Table<T extends { id: string }>({
                 key={row.id}
                 onClick={() => onRowClick?.(row)}
                 className={cn(
-                  'border-b border-gray-100 transition-colors',
-                  onRowClick && 'cursor-pointer hover:bg-blue-50/50',
+                  'border-b border-gray-100 dark:border-gray-800 transition-colors',
+                  'text-gray-700 dark:text-gray-300',
+                  onRowClick && 'cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10',
                 )}
               >
                 {columns.map((col) => (
                   <td
                     key={col.key}
                     className={cn(
-                      'px-4 py-3 text-gray-700',
+                      'px-4 py-3',
                       col.align === 'left'   && 'text-left',
                       col.align === 'center' && 'text-center',
                       (!col.align || col.align === 'right') && 'text-right',
