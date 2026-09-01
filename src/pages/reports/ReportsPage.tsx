@@ -39,7 +39,7 @@ const MONTH_NAMES = ['يناير','فبراير','مارس','إبريل','ماي
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, sub, icon: Icon, color }: {
-  label: string; value: string; sub?: string
+  label: string; value: string | number; sub?: string
   icon: React.ElementType
   color: 'blue' | 'green' | 'amber' | 'red' | 'purple' | 'teal'
 }) {
@@ -70,7 +70,7 @@ function KpiCard({ label, value, sub, icon: Icon, color }: {
 // ── Bar Chart (pure CSS) ──────────────────────────────────────────────────────
 
 function BarChart({ data, valueKey, labelKey, color = 'blue', height = 140 }: {
-  data: Record<string, unknown>[]
+  data: ({ [key: string]: unknown })[]
   valueKey: string; labelKey: string
   color?: string; height?: number
 }) {
@@ -378,13 +378,13 @@ export function ReportsPage() {
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
               <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">أعلى الموديلات مبيعاً</h2>
               {saleLoad ? <Skeleton /> : (
-                <BarChart data={sales} valueKey="total_units" labelKey="model_name" color="blue" height={120} />
+                <BarChart data={sales as unknown as ({ [key: string]: unknown })[]} valueKey="total_units" labelKey="model_name" color="blue" height={120} />
               )}
             </div>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
               <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">أعلى الموردين بالمشتريات</h2>
               {supLoad ? <Skeleton /> : (
-                <BarChart data={suppliers} valueKey="total_cost" labelKey="supplier_name" color="purple" height={120} />
+                <BarChart data={suppliers as unknown as ({ [key: string]: unknown })[]} valueKey="total_cost" labelKey="supplier_name" color="purple" height={120} />
               )}
             </div>
           </div>
@@ -484,7 +484,7 @@ export function ReportsPage() {
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">قيمة المخزون حسب الماركة (تكلفة)</h2>
             {stckLoad ? <Skeleton rows={3} cols={6} /> : (
-              <BarChart data={stock} valueKey="total_cost" labelKey="brand_name" color="blue" height={130} />
+              <BarChart data={stock as unknown as ({ [key: string]: unknown })[]} valueKey="total_cost" labelKey="brand_name" color="blue" height={130} />
             )}
           </div>
           {/* Table */}
@@ -559,7 +559,7 @@ export function ReportsPage() {
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">إجمالي المشتريات حسب المورد</h2>
             {supLoad ? <Skeleton rows={3} cols={6} /> : (
-              <BarChart data={suppliers} valueKey="total_cost" labelKey="supplier_name" color="purple" height={130} />
+              <BarChart data={suppliers as unknown as ({ [key: string]: unknown })[]} valueKey="total_cost" labelKey="supplier_name" color="purple" height={130} />
             )}
           </div>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
