@@ -10,6 +10,7 @@ import { PosPage } from '@/pages/pos/PosPage'
 import { PurchasesPage } from '@/pages/purchases/PurchasesPage'
 import { SuppliersPage } from '@/pages/suppliers/SuppliersPage'
 import { CustomersPage } from '@/pages/customers/CustomersPage'
+import { ProductsPage } from '@/pages/products/ProductsPage'
 import { ReportsPage } from '@/pages/reports/ReportsPage'
 import { SettingsPage } from '@/pages/settings/SettingsPage'
 
@@ -37,6 +38,7 @@ function Guard() {
         <Route path="/purchases"  element={<PurchasesPage />} />
         <Route path="/suppliers"  element={<SuppliersPage />} />
         <Route path="/customers"  element={<CustomersPage />} />
+        <Route path="/products"   element={<ProductsPage />} />
         <Route path="/reports"    element={<ReportsPage />} />
         <Route path="/settings"   element={<SettingsPage />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
