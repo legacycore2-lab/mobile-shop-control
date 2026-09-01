@@ -1,3 +1,4 @@
+// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/lib/auth'
@@ -13,6 +14,7 @@ import { CustomersPage } from '@/pages/customers/CustomersPage'
 import { ProductsPage } from '@/pages/products/ProductsPage'
 import { ReportsPage } from '@/pages/reports/ReportsPage'
 import { SettingsPage } from '@/pages/settings/SettingsPage'
+import { AuditLogsPage } from '@/pages/audit/AuditLogsPage'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -40,6 +42,7 @@ function Guard() {
         <Route path="/customers"  element={<CustomersPage />} />
         <Route path="/products"   element={<ProductsPage />} />
         <Route path="/reports"    element={<ReportsPage />} />
+        <Route path="/audit"      element={<AuditLogsPage />} />
         <Route path="/settings"   element={<SettingsPage />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Route>
