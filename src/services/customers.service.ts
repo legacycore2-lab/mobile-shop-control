@@ -36,7 +36,7 @@ export const customersService = {
 
   create: async (form: CustomerFormData): Promise<Customer> => {
     if (!form.name?.trim()) throw new Error('اسم العميل مطلوب')
-    return customersRepository.create({
+    const payload = {
       name:            form.name.trim(),
       phone:           form.phone?.trim()   || null,
       address:         form.address?.trim() || null,
@@ -44,19 +44,21 @@ export const customersService = {
       notes:           form.notes?.trim()   || null,
       is_active:       form.is_active ?? true,
       created_by:      form.created_by,
-    })
+    }
+    return customersRepository.create(payload as never)
   },
 
   update: async (id: string, form: Partial<CustomerFormData>): Promise<Customer> => {
     if (form.name !== undefined && !form.name?.trim()) throw new Error('اسم العميل مطلوب')
-    return customersRepository.update(id, {
+    const payload = {
       ...(form.name            !== undefined && { name: form.name.trim() }),
       ...(form.phone           !== undefined && { phone: form.phone?.trim() || null }),
       ...(form.address         !== undefined && { address: form.address?.trim() || null }),
       ...(form.opening_balance !== undefined && { opening_balance: Number(form.opening_balance) || 0 }),
       ...(form.notes           !== undefined && { notes: form.notes?.trim() || null }),
       ...(form.is_active       !== undefined && { is_active: form.is_active }),
-    })
+    }
+    return customersRepository.update(id, payload as never)
   },
 
   remove: (id: string) => customersRepository.remove(id),
