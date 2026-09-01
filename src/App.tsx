@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/lib/auth'
+import { ThemeProvider } from '@/lib/theme'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
@@ -20,12 +21,11 @@ function Guard() {
   const { session, profile, loading } = useAuth()
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
-  // دخول لو عنده session حقيقي أو profile تجريبي
   if (!session && !profile) return <LoginPage />
 
   return (
@@ -47,12 +47,14 @@ function Guard() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={qc}>
-      <AuthProvider>
-        <BrowserRouter basename="/mobile-shop-control">
-          <Guard />
-        </BrowserRouter>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={qc}>
+        <AuthProvider>
+          <BrowserRouter basename="/mobile-shop-control">
+            <Guard />
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   )
 }
