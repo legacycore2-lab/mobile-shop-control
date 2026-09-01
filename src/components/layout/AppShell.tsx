@@ -1,3 +1,4 @@
+// src/components/layout/AppShell.tsx
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, signOut } from '@/lib/auth'
@@ -5,20 +6,21 @@ import { useTheme } from '@/lib/theme'
 import {
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
-  Menu, X, Store, ChevronRight, Sun, Moon, Tag,
+  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 const NAV = [
-  { to: '/',          icon: LayoutDashboard, label: 'الرئيسية',   end: true },
-  { to: '/devices',   icon: Smartphone,      label: 'الأجهزة'             },
-  { to: '/pos',       icon: ShoppingCart,    label: 'نقطة البيع'          },
-  { to: '/purchases', icon: Package,         label: 'المشتريات'           },
-  { to: '/products',  icon: Tag,             label: 'المنتجات'            },
-  { to: '/suppliers', icon: Truck,           label: 'الموردين'            },
-  { to: '/customers', icon: Users,           label: 'العملاء'             },
-  { to: '/reports',   icon: BarChart3,       label: 'التقارير'            },
-  { to: '/settings',  icon: Settings,        label: 'الإعدادات'           },
+  { to: '/',          icon: LayoutDashboard, label: 'الرئيسية',    end: true   },
+  { to: '/devices',   icon: Smartphone,      label: 'الأجهزة'                 },
+  { to: '/pos',       icon: ShoppingCart,    label: 'نقطة البيع'              },
+  { to: '/purchases', icon: Package,         label: 'المشتريات'               },
+  { to: '/products',  icon: Tag,             label: 'المنتجات'                },
+  { to: '/suppliers', icon: Truck,           label: 'الموردين'                },
+  { to: '/customers', icon: Users,           label: 'العملاء'                 },
+  { to: '/reports',   icon: BarChart3,       label: 'التقارير'                },
+  { to: '/audit',     icon: Shield,          label: 'سجل العمليات'            },
+  { to: '/settings',  icon: Settings,        label: 'الإعدادات'               },
 ]
 
 export function AppShell() {
