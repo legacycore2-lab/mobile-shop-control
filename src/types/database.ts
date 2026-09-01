@@ -1,6 +1,7 @@
-export type UserRole     = 'owner' | 'manager' | 'cashier' | 'warehouse'
-export type DeviceStatus = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair'
-export type ProductType  = 'accessory' | 'spare_part'
+export type UserRole      = 'owner' | 'manager' | 'cashier' | 'warehouse'
+export type DeviceStatus  = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair'
+export type ProductType   = 'accessory' | 'spare_part'
+export type InvoiceStatus = 'draft' | 'confirmed' | 'cancelled'
 
 export interface Profile {
   id: string; full_name: string; phone: string | null
@@ -57,6 +58,49 @@ export interface MobileDeviceView extends MobileDevice {
   added_by_name: string; sold_by_name: string | null
 }
 
+// ── Purchase Invoices ─────────────────────────────────────────────────────────
+
+export interface PurchaseInvoice {
+  id:             string
+  invoice_number: string
+  supplier_id:    string
+  invoice_date:   string
+  total_amount:   number
+  paid_amount:    number
+  discount:       number
+  notes:          string | null
+  status:         InvoiceStatus
+  created_by:     string
+  created_at:     string
+  updated_at:     string
+}
+
+export interface PurchaseInvoiceDevice {
+  id:         string
+  invoice_id: string
+  device_id:  string
+  cost_price: number
+  created_at: string
+}
+
+export interface PurchaseInvoiceProduct {
+  id:         string
+  invoice_id: string
+  product_id: string
+  quantity:   number
+  unit_price: number
+  subtotal:   number
+  created_at: string
+}
+
+export interface PurchaseInvoiceView extends PurchaseInvoice {
+  supplier_name:   string
+  created_by_name: string
+  devices_count:   number
+  products_count:  number
+  remaining:       number  // total - paid - discount
+}
+
 export interface AuditLog {
   id: string; user_id: string; action: string; entity_type: string
   entity_id: string | null; description: string | null
@@ -67,19 +111,23 @@ export interface AuditLog {
 export type Database = {
   public: {
     Tables: {
-      profiles:          { Row: Profile;        Insert: Omit<Profile, 'created_at'|'updated_at'>;        Update: Partial<Profile> }
-      suppliers:         { Row: Supplier;       Insert: Omit<Supplier, 'id'|'created_at'|'updated_at'>;  Update: Partial<Supplier> }
-      customers:         { Row: Customer;       Insert: Omit<Customer, 'id'|'created_at'|'updated_at'>;  Update: Partial<Customer> }
-      product_categories:{ Row: ProductCategory;Insert: Omit<ProductCategory, 'id'|'created_at'>;        Update: Partial<ProductCategory> }
-      products:          { Row: Product;        Insert: Omit<Product, 'id'|'created_at'|'updated_at'>;   Update: Partial<Product> }
-      mobile_brands:     { Row: MobileBrand;    Insert: Omit<MobileBrand, 'id'|'created_at'>;            Update: Partial<MobileBrand> }
-      mobile_models:     { Row: MobileModel;    Insert: Omit<MobileModel, 'id'|'created_at'>;            Update: Partial<MobileModel> }
-      mobile_devices:    { Row: MobileDevice;   Insert: Omit<MobileDevice, 'id'|'created_at'|'updated_at'>; Update: Partial<MobileDevice> }
-      audit_logs:        { Row: AuditLog;       Insert: Omit<AuditLog, 'id'|'created_at'>;               Update: never }
+      profiles:                  { Row: Profile;               Insert: Omit<Profile, 'created_at'|'updated_at'>;               Update: Partial<Profile> }
+      suppliers:                 { Row: Supplier;              Insert: Omit<Supplier, 'id'|'created_at'|'updated_at'>;          Update: Partial<Supplier> }
+      customers:                 { Row: Customer;              Insert: Omit<Customer, 'id'|'created_at'|'updated_at'>;          Update: Partial<Customer> }
+      product_categories:        { Row: ProductCategory;       Insert: Omit<ProductCategory, 'id'|'created_at'>;                Update: Partial<ProductCategory> }
+      products:                  { Row: Product;               Insert: Omit<Product, 'id'|'created_at'|'updated_at'>;           Update: Partial<Product> }
+      mobile_brands:             { Row: MobileBrand;           Insert: Omit<MobileBrand, 'id'|'created_at'>;                    Update: Partial<MobileBrand> }
+      mobile_models:             { Row: MobileModel;           Insert: Omit<MobileModel, 'id'|'created_at'>;                    Update: Partial<MobileModel> }
+      mobile_devices:            { Row: MobileDevice;          Insert: Omit<MobileDevice, 'id'|'created_at'|'updated_at'>;      Update: Partial<MobileDevice> }
+      purchase_invoices:         { Row: PurchaseInvoice;       Insert: Omit<PurchaseInvoice, 'id'|'created_at'|'updated_at'>;   Update: Partial<PurchaseInvoice> }
+      purchase_invoice_devices:  { Row: PurchaseInvoiceDevice; Insert: Omit<PurchaseInvoiceDevice, 'id'|'created_at'>;          Update: never }
+      purchase_invoice_products: { Row: PurchaseInvoiceProduct;Insert: Omit<PurchaseInvoiceProduct, 'id'|'created_at'|'subtotal'>; Update: never }
+      audit_logs:                { Row: AuditLog;              Insert: Omit<AuditLog, 'id'|'created_at'>;                       Update: never }
     }
     Functions: {
-      lookup_device_by_imei: { Args: { p_imei: string }; Returns: MobileDeviceView[] }
-      get_low_stock_products: { Args: Record<never,never>; Returns: { product_id:string; product_name:string; stock_qty:number; reorder_level:number; category_name:string }[] }
+      lookup_device_by_imei:  { Args: { p_imei: string };      Returns: MobileDeviceView[] }
+      get_low_stock_products: { Args: Record<never,never>;      Returns: { product_id:string; product_name:string; stock_qty:number; reorder_level:number; category_name:string }[] }
+      next_purchase_invoice_number: { Args: Record<never,never>; Returns: string }
     }
   }
 }
