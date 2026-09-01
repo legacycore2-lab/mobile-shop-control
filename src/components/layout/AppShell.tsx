@@ -5,19 +5,20 @@ import { useTheme } from '@/lib/theme'
 import {
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
-  Menu, X, Store, ChevronRight, Sun, Moon,
+  Menu, X, Store, ChevronRight, Sun, Moon, Tag,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 const NAV = [
-  { to: '/',           icon: LayoutDashboard, label: 'الرئيسية',   end: true },
-  { to: '/devices',    icon: Smartphone,      label: 'الأجهزة'             },
-  { to: '/pos',        icon: ShoppingCart,    label: 'نقطة البيع'          },
-  { to: '/purchases',  icon: Package,         label: 'المشتريات'           },
-  { to: '/suppliers',  icon: Truck,           label: 'الموردين'            },
-  { to: '/customers',  icon: Users,           label: 'العملاء'             },
-  { to: '/reports',    icon: BarChart3,       label: 'التقارير'            },
-  { to: '/settings',   icon: Settings,        label: 'الإعدادات'           },
+  { to: '/',          icon: LayoutDashboard, label: 'الرئيسية',   end: true },
+  { to: '/devices',   icon: Smartphone,      label: 'الأجهزة'             },
+  { to: '/pos',       icon: ShoppingCart,    label: 'نقطة البيع'          },
+  { to: '/purchases', icon: Package,         label: 'المشتريات'           },
+  { to: '/products',  icon: Tag,             label: 'المنتجات'            },
+  { to: '/suppliers', icon: Truck,           label: 'الموردين'            },
+  { to: '/customers', icon: Users,           label: 'العملاء'             },
+  { to: '/reports',   icon: BarChart3,       label: 'التقارير'            },
+  { to: '/settings',  icon: Settings,        label: 'الإعدادات'           },
 ]
 
 export function AppShell() {
@@ -99,7 +100,6 @@ export function AppShell() {
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{profile?.full_name ?? '---'}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{profile?.role}</p>
             </div>
-            {/* Theme toggle */}
             <button
               onClick={toggle}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
@@ -134,7 +134,6 @@ export function AppShell() {
               {currentPage?.label ?? 'Mobile Shop'}
             </h1>
           </div>
-          {/* Theme toggle — header (mobile) */}
           <button
             onClick={toggle}
             className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
