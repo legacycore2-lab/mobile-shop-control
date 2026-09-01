@@ -1,9 +1,8 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
-  --sidebar-width: 240px;
-  --sidebar-collapsed: 64px;
-  --header-height: 56px;
   --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -12,12 +11,20 @@
 body {
   font-family: var(--font);
   direction: rtl;
+  margin: 0;
   background: #f4f5f7;
   color: #1a1a2e;
-  margin: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body, body.dark {
+  background: #0f1117;
+  color: #e2e8f0;
 }
 
 /* scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }
 ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.dark ::-webkit-scrollbar-track { background: #1e2130; }
+.dark ::-webkit-scrollbar-thumb { background: #3d4460; border-radius: 3px; }
