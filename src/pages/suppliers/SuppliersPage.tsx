@@ -1,3 +1,4 @@
+import { exportToCsv, SUPPLIER_EXPORT_HEADERS } from '@/lib/exportUtils'
 import { useState, useMemo } from 'react'
 import {
   Search, Plus, Download, Phone, MapPin,
@@ -259,8 +260,8 @@ export function SuppliersPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">إدارة بيانات وحسابات الموردين</p>
         </div>
         <div className="flex gap-2">
-          <button className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
-            <Download size={14} /> تصدير
+          <button onClick={() => exportToCsv('suppliers', SUPPLIER_EXPORT_HEADERS, filtered)} className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
+            <Download size={14} /> تصدير CSV
           </button>
           <button onClick={openAdd}
             className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
