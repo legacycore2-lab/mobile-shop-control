@@ -1,6 +1,7 @@
 // src/pages/devices/DeviceModal.tsx
 import { useState, useEffect } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, ScanLine } from 'lucide-react'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import {
   useCreateDevice, useUpdateDevice,
   useBrands, useModelsByBrand, useCreateBrand, useCreateModel,
@@ -67,7 +68,9 @@ export function DeviceModal({ device, onClose }: {
   const [newModelName, setNewModelName] = useState('')
   const [showNewBrand, setShowNewBrand] = useState(false)
   const [showNewModel, setShowNewModel] = useState(false)
-  const [error, setError]               = useState('')
+  const [error,     setError]            = useState('')
+  const [scanImei1, setScanImei1]        = useState(false)
+  const [scanImei2, setScanImei2]        = useState(false)
 
   // Auto-fill brand from model when editing
   const { data: allModels = [] } = useModelsByBrand(form.brand_id)
@@ -176,15 +179,29 @@ export function DeviceModal({ device, onClose }: {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>IMEI 1 <span className="text-red-500">*</span></label>
-                  <input value={form.imei1} onChange={e => set('imei1', e.target.value)}
-                    placeholder="355XXXXXXXXXXXX" dir="ltr" required
-                    className={cn(inputCls, 'font-mono')} />
+                  <div className="flex gap-2">
+                    <input value={form.imei1} onChange={e => set('imei1', e.target.value)}
+                      placeholder="355XXXXXXXXXXXX" dir="ltr" required
+                      className={cn(inputCls, 'font-mono')} />
+                    <button type="button" onClick={() => setScanImei1(true)}
+                      className="h-10 w-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors flex-shrink-0"
+                      title="مسح IMEI بالكاميرا">
+                      <ScanLine size={15} />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>IMEI 2</label>
-                  <input value={form.imei2} onChange={e => set('imei2', e.target.value)}
-                    placeholder="355XXXXXXXXXXXX" dir="ltr"
-                    className={cn(inputCls, 'font-mono')} />
+                  <div className="flex gap-2">
+                    <input value={form.imei2} onChange={e => set('imei2', e.target.value)}
+                      placeholder="355XXXXXXXXXXXX" dir="ltr"
+                      className={cn(inputCls, 'font-mono')} />
+                    <button type="button" onClick={() => setScanImei2(true)}
+                      className="h-10 w-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors flex-shrink-0"
+                      title="مسح IMEI 2 بالكاميرا">
+                      <ScanLine size={15} />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <label className={labelCls}>الرقم التسلسلي</label>
@@ -359,6 +376,24 @@ export function DeviceModal({ device, onClose }: {
             )}
           </div>
 
+          {scanImei1 && (
+            <BarcodeScanner
+              title="مسح IMEI 1"
+              placeholder="355XXXXXXXXXXXX"
+              validate={/^\d{14,16}$/}
+              onScan={code => { set('imei1', code); setScanImei1(false) }}
+              onClose={() => setScanImei1(false)}
+            />
+          )}
+          {scanImei2 && (
+            <BarcodeScanner
+              title="مسح IMEI 2"
+              placeholder="355XXXXXXXXXXXX"
+              validate={/^\d{14,16}$/}
+              onScan={code => { set('imei2', code); setScanImei2(false) }}
+              onClose={() => setScanImei2(false)}
+            />
+          )}
           {/* Footer */}
           <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-800">
             <button type="button" onClick={onClose}
