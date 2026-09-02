@@ -30,6 +30,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const [tab,           setTab]           = useState<'devices' | 'products'>('devices')
   const [deviceSearch,  setDeviceSearch]  = useState('')
   const [scanDevice,    setScanDevice]    = useState(false)
+  const [productSearch, setProductSearch] = useState('')
 
   const filteredDevices = useMemo(() => {
     const q = deviceSearch.toLowerCase()
@@ -237,13 +238,38 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
 
               {tab === 'products' && (
                 <div className="space-y-3">
-                  <select onChange={e => { addProduct(e.target.value); e.target.value = '' }}
-                    className={inputCls + ' cursor-pointer'} defaultValue="">
-                    <option value="">+ إضافة منتج</option>
-                    {products.filter(p => p.is_active && p.stock_qty > 0 && !productLines.find(l => l.product_id === p.id)).map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.stock_qty} {p.unit})</option>
-                    ))}
-                  </select>
+                  {/* Product search + list */}
+                  <div className="relative">
+                    <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={productSearch}
+                      onChange={e => setProductSearch(e.target.value)}
+                      placeholder="بحث بالاسم أو الكود..."
+                      className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                    />
+                  </div>
+                  <div className="max-h-44 overflow-y-auto space-y-1.5 border border-gray-100 dark:border-gray-800 rounded-xl p-2">
+                    {products
+                      .filter(p => p.is_active && p.stock_qty > 0 && !productLines.find(l => l.product_id === p.id))
+                      .filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()) || (p.sku ?? '').toLowerCase().includes(productSearch.toLowerCase()))
+                      .map(p => (
+                        <button key={p.id} type="button" onClick={() => { addProduct(p.id); setProductSearch('') }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 transition-colors text-right group">
+                          <div className="text-right min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{p.name}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-600">{p.category_name} · {p.stock_qty} {p.unit} متاح</p>
+                          </div>
+                          <div className="text-left flex-shrink-0 mr-2">
+                            <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{fmt(p.selling_price)} ج</p>
+                            <Plus size={14} className="mx-auto text-gray-300 group-hover:text-blue-500 mt-0.5" />
+                          </div>
+                        </button>
+                      ))
+                    }
+                    {products.filter(p => p.is_active && p.stock_qty > 0 && !productLines.find(l => l.product_id === p.id)).length === 0 && (
+                      <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-3">لا توجد منتجات متاحة</p>
+                    )}
+                  </div>
                   {productLines.length === 0 ? (
                     <div className="py-4 text-center text-gray-400 dark:text-gray-600 text-sm">لم تتم إضافة منتجات بعد</div>
                   ) : (
