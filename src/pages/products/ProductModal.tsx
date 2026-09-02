@@ -1,17 +1,17 @@
 // src/pages/products/ProductModal.tsx
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import {
   useCreateProduct, useUpdateProduct,
-  useProductCategories, useCreateCategory, useDeleteCategory,
+  useProductCategories, useCreateCategory,
 } from '@/hooks/useProducts'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
-import { Plus } from 'lucide-react'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 import { TYPE_MAP } from './constants'
 import type { ProductType } from '@/types/database'
+import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
 
 interface FormState {
   category_id: string; name: string; sku: string; barcode: string
@@ -31,37 +31,41 @@ export function ProductModal({ product, onClose }: {
   product: ProductWithCategory | null
   onClose: () => void
 }) {
-  const { profile }              = useAuth()
+  const { profile }               = useAuth()
   const { data: categories = [] } = useProductCategories()
   const { data: suppliers   = [] } = useSuppliers()
-  const createMutation            = useCreateProduct()
-  const updateMutation            = useUpdateProduct()
-  const createCatMutation         = useCreateCategory()
+  const createMutation             = useCreateProduct()
+  const updateMutation             = useUpdateProduct()
+  const createCatMutation          = useCreateCategory()
 
   const [form, setForm] = useState<FormState>(
     product
       ? {
-          category_id:        product.category_id,
-          name:               product.name,
-          sku:                product.sku        ?? '',
-          barcode:            product.barcode    ?? '',
-          product_type:       product.product_type,
-          cost_price:         String(product.cost_price),
-          selling_price:      String(product.selling_price),
-          stock_qty:          String(product.stock_qty),
-          reorder_level:      String(product.reorder_level),
-          unit:               product.unit,
+          category_id:         product.category_id,
+          name:                product.name,
+          sku:                 product.sku        ?? '',
+          barcode:             product.barcode    ?? '',
+          product_type:        product.product_type,
+          cost_price:          String(product.cost_price),
+          selling_price:       String(product.selling_price),
+          stock_qty:           String(product.stock_qty),
+          reorder_level:       String(product.reorder_level),
+          unit:                product.unit,
           default_supplier_id: product.default_supplier_id ?? '',
-          is_active:          product.is_active,
-          notes:              product.notes ?? '',
+          is_active:           product.is_active,
+          notes:               product.notes ?? '',
         }
       : EMPTY_FORM
   )
 
-  const [newCatName, setNewCatName] = useState('')
-  const [newCatType, setNewCatType] = useState<ProductType>('accessory')
-  const [showNewCat, setShowNewCat] = useState(false)
-  const [error, setError]           = useState('')
+  const [newCatName,    setNewCatName]    = useState('')
+  const [newCatType,    setNewCatType]    = useState<ProductType>('accessory')
+  const [showNewCat,    setShowNewCat]    = useState(false)
+  const [error,         setError]         = useState('')
+  // After save — show barcode label
+  const [printLabel,    setPrintLabel]    = useState<{
+    code: string; name: string; subName: string; price: number
+  } | null>(null)
 
   const set = (k: keyof FormState, v: string | boolean) =>
     setForm(f => ({ ...f, [k]: v }))
@@ -84,18 +88,27 @@ export function ProductModal({ product, onClose }: {
     try {
       const payload = {
         ...form,
-        cost_price:     Number(form.cost_price)     || 0,
-        selling_price:  Number(form.selling_price)  || 0,
-        stock_qty:      Number(form.stock_qty)       || 0,
-        reorder_level:  Number(form.reorder_level)   || 5,
-        created_by:     profile?.id ?? '',
+        cost_price:    Number(form.cost_price)    || 0,
+        selling_price: Number(form.selling_price) || 0,
+        stock_qty:     Number(form.stock_qty)     || 0,
+        reorder_level: Number(form.reorder_level) || 5,
+        created_by:    profile?.id ?? '',
       }
       if (product) {
         await updateMutation.mutateAsync({ id: product.id, form: payload })
+        onClose()
       } else {
-        await createMutation.mutateAsync(payload)
+        const created = await createMutation.mutateAsync(payload)
+        // Generate barcode label automatically
+        const code = created.barcode || created.sku || created.id.substring(0, 12)
+        const cat  = categories.find(c => c.id === created.category_id)
+        setPrintLabel({
+          code,
+          name:    created.name,
+          subName: cat?.name ?? TYPE_MAP[created.product_type].label,
+          price:   created.selling_price,
+        })
       }
-      onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'حدث خطأ')
     }
@@ -104,6 +117,22 @@ export function ProductModal({ product, onClose }: {
   const loading  = createMutation.isPending || updateMutation.isPending
   const labelCls = 'text-sm font-semibold text-gray-700 dark:text-gray-300'
   const inputCls = 'h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
+
+  // Show print modal after save (new product only)
+  if (printLabel) {
+    return (
+      <BarcodeLabelModal
+        label={{
+          type:    'product',
+          code:    printLabel.code,
+          name:    printLabel.name,
+          subName: printLabel.subName,
+          price:   printLabel.price,
+        }}
+        onClose={onClose}
+      />
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
@@ -282,6 +311,15 @@ export function ProductModal({ product, onClose }: {
               </div>
             )}
 
+            {!product && (
+              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-3 flex items-center gap-2">
+                <span className="text-lg">🏷️</span>
+                <span className="text-xs text-green-700 dark:text-green-400">
+                  بعد الحفظ سيظهر الباركود جاهزاً للطباعة تلقائياً
+                </span>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
                 {error}
@@ -298,7 +336,7 @@ export function ProductModal({ product, onClose }: {
             <button type="submit" disabled={loading}
               className="h-9 px-5 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-2">
               {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {product ? 'حفظ التعديلات' : 'إضافة المنتج'}
+              {product ? 'حفظ التعديلات' : 'إضافة المنتج 🏷️'}
             </button>
           </div>
         </form>
@@ -306,6 +344,3 @@ export function ProductModal({ product, onClose }: {
     </div>
   )
 }
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
