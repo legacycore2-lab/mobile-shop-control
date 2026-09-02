@@ -15,9 +15,9 @@ interface BarcodeScannerProps {
   validate?:    RegExp
 }
 
-// ── USB hook ──────────────────────────────────────────────────────────────────
+// ── USB hook (used both inside modal and externally) ──────────────────────────
 
-function useUsbScanner(onScan: (code: string) => void, active: boolean) {
+export function useUsbScanner(onScan: (code: string) => void, active: boolean) {
   const buf   = useRef('')
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -90,7 +90,6 @@ function CameraScanner({ divId, onScan, onError }: {
         )
 
         if (!mountedRef.current) {
-          // Component unmounted before start finished
           stateRef.current = 'stopping'
           await scanner.stop().catch(() => {})
           scanner.clear()
@@ -118,7 +117,6 @@ function CameraScanner({ divId, onScan, onError }: {
 
     return () => {
       mountedRef.current = false
-      // Only stop if actually running
       if (stateRef.current === 'running' && scannerRef.current) {
         stateRef.current = 'stopping'
         scannerRef.current.stop()
