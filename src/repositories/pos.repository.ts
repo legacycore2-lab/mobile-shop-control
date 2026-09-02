@@ -1,3 +1,4 @@
+// src/repositories/pos.repository.ts
 import { supabase } from '@/lib/supabase'
 import type { MobileDeviceView } from '@/types/database'
 
@@ -65,7 +66,6 @@ export const posRepository = {
   nextInvoiceNumber: async (): Promise<string> => {
     const { data, error } = await supabase.rpc('next_sale_invoice_number')
     if (error) {
-      // fallback if function not created yet
       const ts = Date.now().toString().slice(-6)
       return `SAL-${ts}`
     }
@@ -253,7 +253,6 @@ export const posRepository = {
       if (updateErr) throw updateErr
     }
 
-    // Adjust product stock
     const { data: prdLines, error: prdErr } = await supabase
       .from('sale_invoice_products')
       .select('product_id, quantity')
@@ -275,12 +274,58 @@ export const posRepository = {
     }
   },
 
-  cancel: async (id: string): Promise<void> => {
-    const { error } = await supabase
+  // ── إلغاء فاتورة (مسودة أو مؤكدة) مع استرجاع الأجهزة والمنتجات ─────────
+  cancel: async (id: string, isConfirmed: boolean): Promise<void> => {
+    // 1. غيّر حالة الفاتورة
+    const { error: invErr } = await supabase
       .from('sale_invoices')
       .update({ status: 'cancelled' } as never)
       .eq('id', id)
-    if (error) throw error
+    if (invErr) throw invErr
+
+    if (isConfirmed) {
+      // 2. أرجع الأجهزة لـ in_stock
+      const { data: devLines, error: devErr } = await supabase
+        .from('sale_invoice_devices')
+        .select('device_id')
+        .eq('invoice_id', id)
+      if (devErr) throw devErr
+
+      for (const line of (devLines ?? []) as { device_id: string }[]) {
+        await supabase
+          .from('mobile_devices')
+          .update({
+            status:               'in_stock',
+            sale_invoice_id:      null,
+            sold_to_customer_id:  null,
+            actual_selling_price: null,
+            sold_at:              null,
+            sold_by:              null,
+          } as never)
+          .eq('id', line.device_id)
+      }
+
+      // 3. أرجع stock المنتجات
+      const { data: prdLines, error: prdErr } = await supabase
+        .from('sale_invoice_products')
+        .select('product_id, quantity')
+        .eq('invoice_id', id)
+      if (prdErr) throw prdErr
+
+      for (const line of (prdLines ?? []) as { product_id: string; quantity: number }[]) {
+        const { data: prod } = await supabase
+          .from('products')
+          .select('stock_qty')
+          .eq('id', line.product_id)
+          .single()
+        if (prod) {
+          await supabase
+            .from('products')
+            .update({ stock_qty: (prod as { stock_qty: number }).stock_qty + line.quantity } as never)
+            .eq('id', line.product_id)
+        }
+      }
+    }
   },
 
   remove: async (id: string): Promise<void> => {
