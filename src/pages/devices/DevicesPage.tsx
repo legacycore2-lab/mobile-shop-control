@@ -26,6 +26,7 @@ export function DevicesPage() {
   const [filter,   setFilter]   = useState<FilterStatus>('all')
   const [page,     setPage]     = useState(1)
   const [modal,    setModal]    = useState<'add' | 'edit' | null>(null)
+  const [initImei, setInitImei] = useState('')
   const [selected, setSelected] = useState<MobileDeviceView | null>(null)
   const [drawer,   setDrawer]   = useState<MobileDeviceView | null>(null)
   const [scanner,  setScanner]  = useState(false)
@@ -266,7 +267,8 @@ export function DevicesPage() {
       {modal && (
         <DeviceModal
           device={modal === 'edit' ? selected : null}
-          onClose={closeModal}
+          initImei={modal === 'add' ? initImei : ''}
+          onClose={() => { closeModal(); setInitImei('') }}
         />
       )}
       {drawer && (
@@ -277,7 +279,18 @@ export function DevicesPage() {
           title="مسح IMEI الجهاز"
           placeholder="IMEI (15 رقم)..."
           validate={/^\d{14,16}$/}
-          onScan={code => { setSearch(code); setScanner(false) }}
+          onScan={code => {
+            setScanner(false)
+            const found = devices.find(d => d.imei1 === code || d.imei2 === code)
+            if (found) {
+              // Device exists — show in table
+              setSearch(code)
+            } else {
+              // New IMEI — open add modal with IMEI pre-filled
+              setInitImei(code)
+              setModal('add')
+            }
+          }}
           onClose={() => setScanner(false)}
         />
       )}
