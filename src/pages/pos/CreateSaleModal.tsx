@@ -1,24 +1,159 @@
 // src/pages/pos/CreateSaleModal.tsx
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { Plus, X, Smartphone, Tag, AlertCircle, FileText, Users, Search, ScanLine, Zap } from 'lucide-react'
-import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import {
-  useCreateSale, useConfirmSale, useInStockDevices,
-} from '@/hooks/usePos'
+  Plus, X, Smartphone, Tag, AlertCircle, FileText,
+  Search, ScanLine, Zap, CheckCircle, Package,
+} from 'lucide-react'
+import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
+import { useCreateSale, useInStockDevices } from '@/hooks/usePos'
 import { useCustomers } from '@/hooks/useCustomers'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { fmt } from './constants'
 import type { SaleDeviceLine, SaleProductLine } from '@/services/pos.service'
+import type { MobileDeviceView } from '@/types/database'
+import type { ProductWithCategory } from '@/repositories/products.repository'
+
+// ── Scan Preview Card ─────────────────────────────────────────────────────────
+// يظهر بعد كل مسح — بيعرض بيانات المنتج/الجهاز ويسأل "تضيفه؟"
+
+interface ScanPreview {
+  type:    'device' | 'product'
+  device?: MobileDeviceView
+  product?: ProductWithCategory
+}
+
+function ScanPreviewCard({
+  preview, onAdd, onDismiss,
+}: {
+  preview:   ScanPreview
+  onAdd:     () => void
+  onDismiss: () => void
+}) {
+  if (preview.type === 'device' && preview.device) {
+    const d = preview.device
+    return (
+      <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400 dark:border-blue-600 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+              <Smartphone size={18} className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{d.brand_name} {d.model_name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{d.imei1}</p>
+            </div>
+          </div>
+          <button onClick={onDismiss}
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ['الحالة',    d.storage ?? '—'],
+            ['اللون',     d.color   ?? '—'],
+            ['السعر',     `${fmt(d.selling_price ?? d.cost_price)} ج`],
+          ].map(([l, v]) => (
+            <div key={l} className="bg-white dark:bg-gray-900 rounded-lg p-2">
+              <p className="text-xs text-gray-400 dark:text-gray-500">{l}</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">{v}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onDismiss}
+            className="flex-1 h-9 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 transition-colors">
+            تجاهل
+          </button>
+          <button onClick={onAdd}
+            className="flex-1 h-9 text-sm font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center gap-1.5">
+            <CheckCircle size={14} /> أضف للفاتورة
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (preview.type === 'product' && preview.product) {
+    const p = preview.product
+    return (
+      <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-400 dark:border-green-600 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
+              <Package size={18} className="text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{p.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{p.category_name}</p>
+            </div>
+          </div>
+          <button onClick={onDismiss}
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ['المخزون',      `${p.stock_qty} ${p.unit}`],
+            ['سعر الشراء',  `${fmt(p.cost_price)} ج`],
+            ['سعر البيع',   `${fmt(p.selling_price)} ج`],
+          ].map(([l, v]) => (
+            <div key={l} className="bg-white dark:bg-gray-900 rounded-lg p-2">
+              <p className="text-xs text-gray-400 dark:text-gray-500">{l}</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">{v}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onDismiss}
+            className="flex-1 h-9 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 transition-colors">
+            تجاهل
+          </button>
+          <button onClick={onAdd}
+            className="flex-1 h-9 text-sm font-bold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-1.5">
+            <CheckCircle size={14} /> أضف للفاتورة
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+// ── Not Found Card ────────────────────────────────────────────────────────────
+
+function NotFoundCard({ code, onDismiss }: { code: string; onDismiss: () => void }) {
+  return (
+    <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-4 flex items-center gap-3">
+      <AlertCircle size={18} className="text-red-500 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-red-700 dark:text-red-400">لم يُعثر على هذا الباركود</p>
+        <p className="text-xs text-red-500 font-mono truncate mt-0.5">{code}</p>
+      </div>
+      <button onClick={onDismiss}
+        className="w-6 h-6 rounded-lg flex items-center justify-center text-red-400 hover:text-red-600 flex-shrink-0">
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
+// ── Main Modal ────────────────────────────────────────────────────────────────
 
 export function CreateSaleModal({ onClose }: { onClose: () => void }) {
-  const { profile }                = useAuth()
-  const { data: customers  = [] }  = useCustomers()
-  const { data: products   = [] }  = useProducts()
-  const { data: inStock    = [] }  = useInStockDevices()
-  const createMutation             = useCreateSale()
-  const confirmMutation            = useConfirmSale()
+  const { profile }               = useAuth()
+  const { data: customers  = [] } = useCustomers()
+  const { data: products   = [] } = useProducts()
+  const { data: inStock    = [] } = useInStockDevices()
+  const createMutation            = useCreateSale()
 
   const [customerId,    setCustomerId]    = useState('')
   const [invoiceDate,   setInvoiceDate]   = useState(new Date().toISOString().split('T')[0])
@@ -30,18 +165,36 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const [error,         setError]         = useState('')
   const [tab,           setTab]           = useState<'devices' | 'products'>('devices')
   const [deviceSearch,  setDeviceSearch]  = useState('')
-  const [scanDevice,    setScanDevice]    = useState(false)
   const [productSearch, setProductSearch] = useState('')
+  const [scanDevice,    setScanDevice]    = useState(false)
   const [scanProduct,   setScanProduct]   = useState(false)
-  const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── helpers ──────────────────────────────────────────────────────────────
+  // Scan preview state
+  const [scanPreview,   setScanPreview]   = useState<ScanPreview | null>(null)
+  const [notFoundCode,  setNotFoundCode]  = useState<string | null>(null)
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function showFeedback(msg: string, ok: boolean) {
-    if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
-    setScanFeedback({ msg, ok })
-    feedbackTimer.current = setTimeout(() => setScanFeedback(null), 2500)
+  // ── helpers ───────────────────────────────────────────────────────────────
+
+  function showPreview(preview: ScanPreview) {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    setNotFoundCode(null)
+    setScanPreview(preview)
+    // Auto-dismiss after 8 seconds
+    dismissTimer.current = setTimeout(() => setScanPreview(null), 8000)
+  }
+
+  function showNotFound(code: string) {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    setScanPreview(null)
+    setNotFoundCode(code)
+    dismissTimer.current = setTimeout(() => setNotFoundCode(null), 4000)
+  }
+
+  function dismissPreview() {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    setScanPreview(null)
+    setNotFoundCode(null)
   }
 
   const filteredDevices = useMemo(() => {
@@ -73,7 +226,6 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
     setProductLines(prev => {
       const exists = prev.find(l => l.product_id === productId)
       if (exists) {
-        // increment qty if already added
         return prev.map(l => l.product_id === productId
           ? { ...l, quantity: Math.min(l.quantity + 1, product.stock_qty) }
           : l)
@@ -90,52 +242,71 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
     setProductLines(prev => prev.filter(l => l.product_id !== productId))
   }
 
-  // ── Barcode scan handlers ─────────────────────────────────────────────────
+  // ── Scan handlers — show preview instead of auto-add ─────────────────────
 
   const handleDeviceScan = useCallback((imei: string) => {
-    setDeviceSearch(imei)
     setScanDevice(false)
     setTab('devices')
     const match = inStock.find(d => d.imei1 === imei || d.imei2 === imei)
     if (match) {
-      if (!deviceLines.find(l => l.device_id === match.id)) {
-        toggleDevice(match)
-        showFeedback(`✓ ${match.brand_name} ${match.model_name} — تمت الإضافة`, true)
+      if (deviceLines.find(l => l.device_id === match.id)) {
+        showNotFound(`${match.brand_name} ${match.model_name} مضاف بالفعل`)
       } else {
-        showFeedback('الجهاز مضاف بالفعل', false)
+        showPreview({ type: 'device', device: match })
       }
     } else {
-      showFeedback(`لم يُعثر على IMEI: ${imei}`, false)
+      // Try as product too
+      const productMatch = products.find(p =>
+        p.is_active && p.stock_qty > 0 && (p.barcode === imei || p.sku === imei)
+      )
+      if (productMatch) {
+        showPreview({ type: 'product', product: productMatch })
+      } else {
+        showNotFound(imei)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inStock, deviceLines])
+  }, [inStock, products, deviceLines])
 
   const handleProductScan = useCallback((code: string) => {
     setScanProduct(false)
-    const match = products.find(p =>
-      p.is_active && p.stock_qty > 0 &&
-      (p.barcode === code || p.sku === code)
+    const productMatch = products.find(p =>
+      p.is_active && p.stock_qty > 0 && (p.barcode === code || p.sku === code)
     )
-    if (match) {
-      addProduct(match.id)
-      showFeedback(`✓ ${match.name} — تمت الإضافة`, true)
+    if (productMatch) {
+      showPreview({ type: 'product', product: productMatch })
     } else {
-      setProductSearch(code)
-      showFeedback(`لم يُعثر على باركود: ${code}`, false)
+      // Try as device IMEI
+      const deviceMatch = inStock.find(d => d.imei1 === code || d.imei2 === code)
+      if (deviceMatch) {
+        showPreview({ type: 'device', device: deviceMatch })
+      } else {
+        showNotFound(code)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products])
+  }, [products, inStock])
 
-  // ── USB always-on: barcode auto-routes to current tab ────────────────────
+  // USB always-on — smart routing: tries both devices and products
   const handleUsbScan = useCallback((code: string) => {
-    if (tab === 'devices') {
-      handleDeviceScan(code)
-    } else {
-      handleProductScan(code)
-    }
-  }, [tab, handleDeviceScan, handleProductScan])
+    handleDeviceScan(code)
+  }, [handleDeviceScan])
 
   useUsbScanner(handleUsbScan, !scanDevice && !scanProduct)
+
+  // ── Confirm add from preview ──────────────────────────────────────────────
+
+  function confirmAddFromPreview() {
+    if (!scanPreview) return
+    if (scanPreview.type === 'device' && scanPreview.device) {
+      toggleDevice(scanPreview.device)
+      setTab('devices')
+    } else if (scanPreview.type === 'product' && scanPreview.product) {
+      addProduct(scanPreview.product.id)
+      setTab('products')
+    }
+    dismissPreview()
+  }
 
   // ── Totals ────────────────────────────────────────────────────────────────
 
@@ -173,12 +344,12 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl shadow-2xl my-4">
 
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div>
             <h2 className="text-base font-bold text-gray-900 dark:text-white">فاتورة بيع جديدة</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">نقطة البيع</p>
           </div>
-          {/* USB scan indicator */}
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-1.5">
               <Zap size={11} className="text-green-600 dark:text-green-400" />
@@ -194,19 +365,23 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={e => void handleSubmit(e)}>
           <div className="px-6 py-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
 
-            {/* Scan feedback toast */}
-            {scanFeedback && (
-              <div className={cn(
-                'rounded-lg px-4 py-2.5 flex items-center gap-2 text-sm font-medium transition-all',
-                scanFeedback.ok
-                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
-                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
-              )}>
-                {scanFeedback.msg}
+            {/* ── Scan Preview (أهم حاجة — فوق كل حاجة) ── */}
+            {(scanPreview || notFoundCode) && (
+              <div>
+                {scanPreview && (
+                  <ScanPreviewCard
+                    preview={scanPreview}
+                    onAdd={confirmAddFromPreview}
+                    onDismiss={dismissPreview}
+                  />
+                )}
+                {notFoundCode && (
+                  <NotFoundCard code={notFoundCode} onDismiss={dismissPreview} />
+                )}
               </div>
             )}
 
-            {/* Header */}
+            {/* Header fields */}
             <div>
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">بيانات الفاتورة</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -243,7 +418,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
-            {/* Items */}
+            {/* Items tabs */}
             <div>
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">بنود البيع</p>
               <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-4">
@@ -260,7 +435,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
 
-              {/* ── Devices tab ── */}
+              {/* Devices tab */}
               {tab === 'devices' && (
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -321,18 +496,15 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
-              {/* ── Products tab ── */}
+              {/* Products tab */}
               {tab === 'products' && (
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        value={productSearch}
-                        onChange={e => setProductSearch(e.target.value)}
+                      <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
                         placeholder="بحث بالاسم أو الباركود..."
-                        className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
-                      />
+                        className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" />
                     </div>
                     <button type="button" onClick={() => setScanProduct(true)}
                       className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
@@ -348,7 +520,8 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
                         (p.sku ?? '').toLowerCase().includes(productSearch.toLowerCase()) ||
                         (p.barcode ?? '').includes(productSearch))
                       .map(p => (
-                        <button key={p.id} type="button" onClick={() => { addProduct(p.id); setProductSearch('') }}
+                        <button key={p.id} type="button"
+                          onClick={() => { addProduct(p.id); setProductSearch('') }}
                           className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 transition-colors text-right group">
                           <div className="text-right min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{p.name}</p>
@@ -359,8 +532,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
                             <Plus size={14} className="mx-auto text-gray-300 group-hover:text-blue-500 mt-0.5" />
                           </div>
                         </button>
-                      ))
-                    }
+                      ))}
                     {products.filter(p => p.is_active && p.stock_qty > 0 && !productLines.find(l => l.product_id === p.id)).length === 0 && (
                       <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-3">لا توجد منتجات متاحة</p>
                     )}
@@ -450,8 +622,8 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
         )}
         {scanDevice && (
           <BarcodeScanner
-            title="مسح IMEI الجهاز"
-            placeholder="355XXXXXXXXXXXX"
+            title="مسح IMEI أو باركود"
+            placeholder="امسح الباركود..."
             onScan={handleDeviceScan}
             onClose={() => setScanDevice(false)}
           />
