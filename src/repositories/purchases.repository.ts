@@ -221,14 +221,13 @@ export const purchasesRepository = {
       .eq('id', id)
     if (invErr) throw invErr
 
-    // 2. Get linked device lines
+    // 2. Get linked device lines → update purchase_invoice_id
     const { data: devLines, error: devErr } = await supabase
       .from('purchase_invoice_devices')
       .select('device_id')
       .eq('invoice_id', id)
     if (devErr) throw devErr
 
-    // 3. Update each device's purchase_invoice_id
     if (devLines && devLines.length > 0) {
       const deviceIds = (devLines as { device_id: string }[]).map(d => d.device_id)
       const { error: updateErr } = await supabase
@@ -236,6 +235,34 @@ export const purchasesRepository = {
         .update({ purchase_invoice_id: id } as never)
         .in('id', deviceIds)
       if (updateErr) throw updateErr
+    }
+
+    // 3. Get product lines → update stock_qty (add purchased quantity)
+    const { data: prodLines, error: prodErr } = await supabase
+      .from('purchase_invoice_products')
+      .select('product_id, quantity')
+      .eq('invoice_id', id)
+    if (prodErr) throw prodErr
+
+    if (prodLines && prodLines.length > 0) {
+      for (const line of prodLines as { product_id: string; quantity: number }[]) {
+        // Fetch current stock
+        const { data: prod, error: fetchErr } = await supabase
+          .from('products')
+          .select('stock_qty')
+          .eq('id', line.product_id)
+          .single()
+        if (fetchErr) throw fetchErr
+
+        const currentQty = (prod as { stock_qty: number }).stock_qty ?? 0
+        const newQty = currentQty + line.quantity
+
+        const { error: stockErr } = await supabase
+          .from('products')
+          .update({ stock_qty: newQty } as never)
+          .eq('id', line.product_id)
+        if (stockErr) throw stockErr
+      }
     }
   },
 
