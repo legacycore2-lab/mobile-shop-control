@@ -274,17 +274,12 @@ export const posRepository = {
     }
   },
 
-  // ── إلغاء فاتورة (مسودة أو مؤكدة) مع استرجاع الأجهزة والمنتجات ─────────
+  // ── إلغاء فاتورة مع استرجاع المخزون ─────────────────────────────────────
+  // الترتيب مهم: نحدّث الأجهزة الأول ثم الفاتورة
+  // لا نمسح sale_invoice_id من الجهاز — نخلّيه للتاريخ — فقط نغيّر status
   cancel: async (id: string, isConfirmed: boolean): Promise<void> => {
-    // 1. غيّر حالة الفاتورة
-    const { error: invErr } = await supabase
-      .from('sale_invoices')
-      .update({ status: 'cancelled' } as never)
-      .eq('id', id)
-    if (invErr) throw invErr
-
     if (isConfirmed) {
-      // 2. أرجع الأجهزة لـ in_stock
+      // 1. أرجع status الأجهزة لـ in_stock — نحتفظ بـ sale_invoice_id للتاريخ
       const { data: devLines, error: devErr } = await supabase
         .from('sale_invoice_devices')
         .select('device_id')
@@ -292,20 +287,20 @@ export const posRepository = {
       if (devErr) throw devErr
 
       for (const line of (devLines ?? []) as { device_id: string }[]) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from('mobile_devices')
           .update({
             status:               'in_stock',
-            sale_invoice_id:      null,
             sold_to_customer_id:  null,
             actual_selling_price: null,
             sold_at:              null,
             sold_by:              null,
           } as never)
           .eq('id', line.device_id)
+        if (updateErr) throw updateErr
       }
 
-      // 3. أرجع stock المنتجات
+      // 2. أرجع stock المنتجات
       const { data: prdLines, error: prdErr } = await supabase
         .from('sale_invoice_products')
         .select('product_id, quantity')
@@ -326,6 +321,13 @@ export const posRepository = {
         }
       }
     }
+
+    // 3. غيّر حالة الفاتورة أخيراً
+    const { error: invErr } = await supabase
+      .from('sale_invoices')
+      .update({ status: 'cancelled' } as never)
+      .eq('id', id)
+    if (invErr) throw invErr
   },
 
   remove: async (id: string): Promise<void> => {
