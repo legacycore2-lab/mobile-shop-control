@@ -1,19 +1,18 @@
 // src/pages/pos/SaleDrawer.tsx
-import { useState, useEffect } from 'react'
-import { X, Smartphone, Tag, CheckCircle, CreditCard, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { X, Smartphone, Tag, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { useSaleInvoice, useConfirmSale, useCancelSale } from '@/hooks/usePos'
-import { useCustomers } from '@/hooks/useCustomers'
 import { useAuth } from '@/lib/auth'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { STATUS_MAP, fmt } from './constants'
 
 export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
-  const { profile }              = useAuth()
+  const { profile }                 = useAuth()
   const { data: detail, isLoading } = useSaleInvoice(invoiceId)
-  const confirmMutation          = useConfirmSale()
-  const cancelMutation           = useCancelSale()
-  const [error, setError]        = useState('')
+  const confirmMutation             = useConfirmSale()
+  const cancelMutation              = useCancelSale()
+  const [error, setError]           = useState('')
 
   const inv = detail?.invoice
 
@@ -29,7 +28,10 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
   }
 
   async function handleCancel() {
-    if (!confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')) return
+    const msg = inv?.status === 'confirmed'
+      ? 'سيتم إرجاع الأجهزة والمنتجات للمخزون. هل أنت متأكد من إلغاء الفاتورة المؤكدة؟'
+      : 'هل أنت متأكد من إلغاء هذه الفاتورة؟'
+    if (!confirm(msg)) return
     setError('')
     try { await cancelMutation.mutateAsync(invoiceId) }
     catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
@@ -47,6 +49,7 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white dark:bg-gray-900 h-full w-full max-w-md shadow-2xl flex flex-col overflow-hidden">
 
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           <div>
             <p className="text-base font-bold text-gray-900 dark:text-white font-mono">{inv?.invoice_number ?? '...'}</p>
@@ -61,6 +64,7 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
           </div>
         </div>
 
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {isLoading ? (
             <div className="space-y-3">
@@ -97,6 +101,16 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
                   </div>
                 )}
               </div>
+
+              {/* Confirmed warning */}
+              {inv.status === 'confirmed' && (
+                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-start gap-2">
+                  <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    إلغاء الفاتورة المؤكدة سيُرجع الأجهزة تلقائياً للمخزون ويُستعاد stock المنتجات.
+                  </p>
+                </div>
+              )}
 
               {/* Devices */}
               {detail.devices.length > 0 && (
@@ -156,16 +170,26 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
           ) : null}
         </div>
 
-        {inv && inv.status === 'draft' && (
+        {/* Footer actions */}
+        {inv && inv.status !== 'cancelled' && (
           <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 p-4 flex gap-2">
-            <button onClick={handleConfirm} disabled={confirmMutation.isPending}
-              className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {confirmMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              <CheckCircle size={14} /> تأكيد البيع
-            </button>
+            {inv.status === 'draft' && (
+              <button onClick={handleConfirm} disabled={confirmMutation.isPending}
+                className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {confirmMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                <CheckCircle size={14} /> تأكيد البيع
+              </button>
+            )}
             <button onClick={handleCancel} disabled={cancelMutation.isPending}
-              className="h-9 px-3 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
-              إلغاء
+              className={cn(
+                'h-9 px-4 text-sm font-medium rounded-lg border transition-colors disabled:opacity-50 flex items-center justify-center gap-2',
+                inv.status === 'draft'
+                  ? 'border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                  : 'flex-1 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20',
+              )}>
+              {cancelMutation.isPending && <span className="w-4 h-4 border-2 border-red-400/30 border-t-red-600 rounded-full animate-spin" />}
+              <XCircle size={14} />
+              {inv.status === 'confirmed' ? 'إلغاء الفاتورة وإرجاع المخزون' : 'إلغاء'}
             </button>
           </div>
         )}
@@ -173,6 +197,3 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
     </div>
   )
 }
-
-// ── Create Sale Modal ─────────────────────────────────────────────────────────
-
