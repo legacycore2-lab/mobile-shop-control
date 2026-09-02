@@ -223,7 +223,12 @@ export function PosPage() {
         <BarcodeScanner
           title="مسح باركود البيع"
           placeholder="IMEI أو باركود منتج..."
-          onScan={code => { setSearch(code); setScanner(false) }}
+          onScan={code => {
+            setScanner(false)
+            // Open sale modal with IMEI pre-searched
+            setShowCreate(true)
+            setSearch(code)
+          }}
           onClose={() => setScanner(false)}
         />
       )}
