@@ -15,6 +15,7 @@ import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/lib/auth'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
+import { StatCard } from '@/components/shared/StatCard'
 import type { SaleInvoiceView } from '@/repositories/pos.repository'
 import type { SaleDeviceLine, SaleProductLine } from '@/services/pos.service'
 
@@ -33,33 +34,6 @@ type FilterStatus = 'all' | 'draft' | 'confirmed' | 'cancelled'
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, icon: Icon, color }: {
-  label: string; value: string | number; sub?: string
-  icon: React.ElementType; color: 'blue' | 'green' | 'amber' | 'red' | 'purple' | 'teal'
-}) {
-  const C: Record<string, string> = {
-    blue:   'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-    green:  'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-    amber:  'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
-    red:    'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
-    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-    teal:   'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400',
-  }
-  return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
-          {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{sub}</p>}
-        </div>
-        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', C[color])}>
-          <Icon size={18} />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ── Sale Detail Drawer ────────────────────────────────────────────────────────
 
