@@ -3,6 +3,7 @@ import {
   TrendingUp, Package, Truck, Users,
   DollarSign, BarChart2, AlertTriangle,
   RefreshCw, ChevronUp, ChevronDown, Minus,
+  Download, Calendar, Smartphone, Tag,
 } from 'lucide-react'
 import {
   useReportSummary,
@@ -12,6 +13,8 @@ import {
   useDailyActivityReport,
   useLowStockReport,
   useTopCustomersReport,
+  useProductMovementReport,
+  useDeviceMovementReport,
 } from '@/hooks/useReports'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
@@ -263,7 +266,7 @@ function Skeleton({ rows = 4, cols = 5 }: { rows?: number; cols?: number }) {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'sales' | 'stock' | 'suppliers' | 'customers' | 'alerts'
+type Tab = 'overview' | 'sales' | 'stock' | 'suppliers' | 'customers' | 'alerts' | 'movement'
 
 const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
   { value: 'overview',   label: 'نظرة عامة',    icon: BarChart2     },
@@ -272,6 +275,7 @@ const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
   { value: 'suppliers',  label: 'الموردون',       icon: Truck        },
   { value: 'customers',  label: 'العملاء',        icon: Users        },
   { value: 'alerts',     label: 'التنبيهات',      icon: AlertTriangle },
+  { value: 'movement',   label: 'SOH + حركة المخزون', icon: RefreshCw   },
 ]
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -286,6 +290,35 @@ export function ReportsPage() {
   const { data: activity = [], isLoading: actLoad } = useDailyActivityReport()
   const { data: lowStock = [], isLoading: lowLoad } = useLowStockReport()
   const { data: customers = [], isLoading: custLoad } = useTopCustomersReport()
+
+  // SOH + Movement
+  const today = new Date().toISOString().split('T')[0]
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+  const [movFrom, setMovFrom] = useState(firstOfMonth)
+  const [movTo,   setMovTo]   = useState(today)
+  const [movType, setMovType] = useState<'products' | 'devices'>('products')
+  const { data: prodMovement = [], isLoading: prodMovLoad, refetch: refetchProd } = useProductMovementReport(movFrom, movTo)
+  const { data: devMovement  = [], isLoading: devMovLoad,  refetch: refetchDev  } = useDeviceMovementReport(movFrom, movTo)
+
+  function exportMovementCsv() {
+    if (movType === 'products') {
+      const rows = [
+        ['المنتج','التصنيف','SKU','رصيد أول الفترة','مشتريات','مبيعات','رصيد آخر','سعر الشراء','قيمة المخزون','حد التنبيه'],
+        ...prodMovement.map(r => [r.name, r.category_name, r.sku ?? '', r.opening_stock, r.purchased, r.sold, r.current_stock, r.cost_price, r.stock_value, r.reorder_level]),
+      ]
+      const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
+      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+      a.download = `soh-products-${movFrom}-${movTo}.csv`; a.click()
+    } else {
+      const rows = [
+        ['الماركة','الموديل','إجمالي','في المخزون','مشتريات الفترة','مبيعات الفترة','إيرادات','أرباح'],
+        ...devMovement.map(r => [r.brand_name, r.model_name, r.total, r.in_stock, r.purchased_in_period, r.sold_in_period, r.total_revenue, r.total_profit]),
+      ]
+      const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
+      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+      a.download = `soh-devices-${movFrom}-${movTo}.csv`; a.click()
+    }
+  }
 
   // Status donut data derived from summary
   const statusData = useMemo(() => {
@@ -746,6 +779,227 @@ export function ReportsPage() {
           )}
         </div>
       )}
+    </div>
+  
+      {/* ── SOH + Movement Tab ── */}
+      {tab === 'movement' && (
+        <div className="space-y-5">
+
+          {/* Controls */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1"><Calendar size={12} /> من</label>
+              <input type="date" value={movFrom} onChange={e => setMovFrom(e.target.value)}
+                className="h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1"><Calendar size={12} /> إلى</label>
+              <input type="date" value={movTo} onChange={e => setMovTo(e.target.value)}
+                className="h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500" />
+            </div>
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button onClick={() => setMovType('products')}
+                className={cn('flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-md transition-all',
+                  movType === 'products' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
+                <Tag size={12} /> منتجات
+              </button>
+              <button onClick={() => setMovType('devices')}
+                className={cn('flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-md transition-all',
+                  movType === 'devices' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
+                <Smartphone size={12} /> أجهزة
+              </button>
+            </div>
+            <button onClick={() => { void refetchProd(); void refetchDev() }}
+              className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 text-sm">
+              <RefreshCw size={13} /> تحديث
+            </button>
+            <button onClick={exportMovementCsv}
+              className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 text-sm mr-auto">
+              <Download size={13} /> تصدير CSV
+            </button>
+          </div>
+
+          {/* Products Movement Table */}
+          {movType === 'products' && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">حركة المنتجات</p>
+                <p className="text-xs text-gray-400 dark:text-gray-600">{prodMovement.length} منتج</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                      {['المنتج','التصنيف','رصيد أول الفترة','+ مشتريات','- مبيعات','رصيد الآن','قيمة المخزون','القرار'].map((h, i) => (
+                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap text-right', i >= 2 && 'text-center')}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prodMovLoad ? (
+                      Array.from({length: 6}).map((_, i) => (
+                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+                          {Array.from({length: 8}).map((_, j) => (
+                            <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" /></td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : prodMovement.length === 0 ? (
+                      <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-600 text-sm">لا توجد بيانات</td></tr>
+                    ) : prodMovement.map(r => (
+                      <tr key={r.id} className={cn('border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors', r.needs_reorder && 'bg-red-50/30 dark:bg-red-900/5')}>
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm">{r.name}</p>
+                          {r.sku && <p className="text-xs text-gray-400 font-mono mt-0.5">{r.sku}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.category_name}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{r.opening_stock} {r.unit}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.purchased > 0
+                            ? <span className="text-sm font-bold text-blue-600 dark:text-blue-400">+{r.purchased}</span>
+                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.sold > 0
+                            ? <span className="text-sm font-bold text-green-600 dark:text-green-400">-{r.sold}</span>
+                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={cn('text-sm font-bold', r.needs_reorder ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white')}>
+                            {r.current_stock} {r.unit}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {r.stock_value.toLocaleString('ar-EG')} ج
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.needs_reorder ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs font-bold text-red-700 dark:text-red-400">
+                              اطلب الآن
+                            </span>
+                          ) : r.sold === 0 ? (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">راكد</span>
+                          ) : (
+                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ جيد</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Summary bar */}
+              {prodMovement.length > 0 && (
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap gap-6">
+                  {[
+                    ['إجمالي المبيعات', prodMovement.reduce((s,r)=>s+r.sold,0) + ' قطعة', 'text-green-600 dark:text-green-400'],
+                    ['إجمالي المشتريات', prodMovement.reduce((s,r)=>s+r.purchased,0) + ' قطعة', 'text-blue-600 dark:text-blue-400'],
+                    ['قيمة المخزون الكلية', prodMovement.reduce((s,r)=>s+r.stock_value,0).toLocaleString('ar-EG') + ' ج', 'text-gray-900 dark:text-white'],
+                    ['يحتاج طلب', prodMovement.filter(r=>r.needs_reorder).length + ' منتج', 'text-red-600 dark:text-red-400'],
+                  ].map(([l,v,c]) => (
+                    <div key={l}>
+                      <p className="text-xs text-gray-400 dark:text-gray-600">{l}</p>
+                      <p className={cn('text-sm font-bold', c)}>{v}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Devices Movement Table */}
+          {movType === 'devices' && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">حركة الأجهزة</p>
+                <p className="text-xs text-gray-400 dark:text-gray-600">{devMovement.length} موديل</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                      {['الجهاز','إجمالي المخزون','في المخزون الآن','اشتري في الفترة','بيع في الفترة','إيرادات','أرباح','القرار'].map((h, i) => (
+                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap text-right', i >= 1 && 'text-center')}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {devMovLoad ? (
+                      Array.from({length: 5}).map((_, i) => (
+                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+                          {Array.from({length: 8}).map((_, j) => (
+                            <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" /></td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : devMovement.length === 0 ? (
+                      <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-600 text-sm">لا توجد بيانات</td></tr>
+                    ) : devMovement.map((r, i) => (
+                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm">{r.brand_name}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{r.model_name}</p>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">{r.total}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={cn('text-sm font-bold', r.in_stock === 0 ? 'text-gray-400' : 'text-blue-600 dark:text-blue-400')}>{r.in_stock}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.purchased_in_period > 0
+                            ? <span className="text-sm font-bold text-blue-600 dark:text-blue-400">+{r.purchased_in_period}</span>
+                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.sold_in_period > 0
+                            ? <span className="text-sm font-bold text-green-600 dark:text-green-400">{r.sold_in_period}</span>
+                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+                          {r.total_revenue > 0 ? r.total_revenue.toLocaleString('ar-EG') + ' ج' : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          {r.total_profit !== 0 ? (
+                            <span className={cn('text-sm font-bold', r.total_profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+                              {r.total_profit.toLocaleString('ar-EG')} ج
+                            </span>
+                          ) : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.in_stock === 0 && r.sold_in_period > 0 ? (
+                            <span className="text-xs text-red-600 dark:text-red-400 font-bold">اطلب الآن</span>
+                          ) : r.sold_in_period === 0 ? (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">راكد</span>
+                          ) : (
+                            <span className="text-xs text-green-600 dark:text-green-400">✓ يتحرك</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {devMovement.length > 0 && (
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap gap-6">
+                  {[
+                    ['إجمالي المبيعات', devMovement.reduce((s,r)=>s+r.sold_in_period,0) + ' جهاز', 'text-green-600 dark:text-green-400'],
+                    ['إجمالي الإيرادات', devMovement.reduce((s,r)=>s+r.total_revenue,0).toLocaleString('ar-EG') + ' ج', 'text-blue-600 dark:text-blue-400'],
+                    ['إجمالي الأرباح', devMovement.reduce((s,r)=>s+r.total_profit,0).toLocaleString('ar-EG') + ' ج', 'text-gray-900 dark:text-white'],
+                    ['موديلات راكدة', devMovement.filter(r=>r.sold_in_period===0).length + ' موديل', 'text-amber-600 dark:text-amber-400'],
+                  ].map(([l,v,c]) => (
+                    <div key={l}>
+                      <p className="text-xs text-gray-400 dark:text-gray-600">{l}</p>
+                      <p className={cn('text-sm font-bold', c)}>{v}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   )
 }
