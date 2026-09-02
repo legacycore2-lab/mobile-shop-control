@@ -1,3 +1,4 @@
+// src/services/devices.service.ts
 import { devicesRepository } from '@/repositories/devices.repository'
 import type { MobileDevice, MobileDeviceView, MobileBrand, MobileModel, DeviceStatus } from '@/types/database'
 
@@ -162,6 +163,7 @@ export const devicesService = {
     return devicesRepository.update(id, payload)
   },
 
+  // ── Soft Delete — يختفي من الواجهة ويبقى في التاريخ ─────────────────────
   remove: (id: string): Promise<void> =>
-    devicesRepository.remove(id),
+    devicesRepository.softDelete(id),
 }
