@@ -31,6 +31,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const [deviceSearch,  setDeviceSearch]  = useState('')
   const [scanDevice,    setScanDevice]    = useState(false)
   const [productSearch, setProductSearch] = useState('')
+  const [scanProduct,   setScanProduct]   = useState(false)
 
   const filteredDevices = useMemo(() => {
     const q = deviceSearch.toLowerCase()
@@ -107,6 +108,19 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
     const match = filteredDevices.find(d => d.imei1 === imei || d.imei2 === imei)
     if (match && !deviceLines.find(l => l.device_id === match.id)) {
       toggleDevice(match)
+    }
+  }
+
+  function handleProductScan(code: string) {
+    setScanProduct(false)
+    const match = products.find(p =>
+      p.is_active && p.stock_qty > 0 &&
+      (p.barcode === code || p.sku === code)
+    )
+    if (match) {
+      addProduct(match.id)
+    } else {
+      setProductSearch(code)
     }
   }
 
@@ -239,14 +253,21 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
               {tab === 'products' && (
                 <div className="space-y-3">
                   {/* Product search + list */}
-                  <div className="relative">
-                    <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      value={productSearch}
-                      onChange={e => setProductSearch(e.target.value)}
-                      placeholder="بحث بالاسم أو الكود..."
-                      className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        value={productSearch}
+                        onChange={e => setProductSearch(e.target.value)}
+                        placeholder="بحث بالاسم أو الكود..."
+                        className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                      />
+                    </div>
+                    <button type="button" onClick={() => setScanProduct(true)}
+                      className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
+                      title="مسح باركود المنتج">
+                      <ScanLine size={15} />
+                    </button>
                   </div>
                   <div className="max-h-44 overflow-y-auto space-y-1.5 border border-gray-100 dark:border-gray-800 rounded-xl p-2">
                     {products
@@ -343,6 +364,14 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </form>
+      {scanProduct && (
+        <BarcodeScanner
+          title="مسح باركود المنتج"
+          placeholder="باركود أو SKU..."
+          onScan={handleProductScan}
+          onClose={() => setScanProduct(false)}
+        />
+      )}
       {scanDevice && (
         <BarcodeScanner
           title="مسح IMEI الجهاز"
