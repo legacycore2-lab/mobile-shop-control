@@ -1,3 +1,4 @@
+import React from 'react'
 // src/components/shared/BarcodeLabelModal.tsx
 // ── Barcode Label Generator — QR + CODE-128 ───────────────────────────────────
 // Pure SVG — zero external libs needed
@@ -72,7 +73,7 @@ function encode128(text: string): string {
 function Barcode128({ value, width = 280, height = 60 }: { value: string; width?: number; height?: number }) {
   const bits = encode128(value)
   const moduleWidth = (width - 20) / bits.length
-  const bars: JSX.Element[] = []
+  const bars: React.ReactElement[] = []
   let x = 10
   for (let i = 0; i < bits.length; i++) {
     if (bits[i] === '1') {
