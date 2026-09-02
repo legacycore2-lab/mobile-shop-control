@@ -4,13 +4,14 @@ import {
   Search, Plus, Download, Smartphone,
   Package, CheckCircle, Wrench, AlertTriangle,
   Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
-  TrendingUp, DollarSign,
+  TrendingUp, DollarSign, ScanLine,
 } from 'lucide-react'
 import { useDevices, useDeviceStats, useDeleteDevice } from '@/hooks/useDevices'
 import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { ImeiLookup }   from './ImeiLookup'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { DeviceModal }  from './DeviceModal'
 import { DeviceDrawer } from './DeviceDrawer'
 import { STATUS_MAP, CONDITION_MAP, PAGE_SIZE, type FilterStatus } from './constants'
@@ -27,6 +28,7 @@ export function DevicesPage() {
   const [modal,    setModal]    = useState<'add' | 'edit' | null>(null)
   const [selected, setSelected] = useState<MobileDeviceView | null>(null)
   const [drawer,   setDrawer]   = useState<MobileDeviceView | null>(null)
+  const [scanner,  setScanner]  = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -91,6 +93,10 @@ export function DevicesPage() {
         <div className="flex gap-2">
           <button className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
             <Download size={14} /> تصدير
+          </button>
+          <button onClick={() => setScanner(true)}
+            className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
+            <ScanLine size={14} /> مسح IMEI
           </button>
           <button onClick={() => setModal('add')}
             className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
@@ -265,6 +271,15 @@ export function DevicesPage() {
       )}
       {drawer && (
         <DeviceDrawer device={drawer} onClose={() => setDrawer(null)} />
+      )}
+      {scanner && (
+        <BarcodeScanner
+          title="مسح IMEI الجهاز"
+          placeholder="IMEI (15 رقم)..."
+          validate={/^\d{14,16}$/}
+          onScan={code => { setSearch(code); setScanner(false) }}
+          onClose={() => setScanner(false)}
+        />
       )}
     </div>
   )
