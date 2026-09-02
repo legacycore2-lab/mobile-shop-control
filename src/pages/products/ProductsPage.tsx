@@ -15,6 +15,7 @@ import { useSuppliers } from '@/hooks/useSuppliers'
 import { useAuth } from '@/lib/auth'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
+import { StatCard } from '@/components/shared/StatCard'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 import type { ProductType } from '@/types/database'
 
@@ -31,23 +32,6 @@ type FilterType = 'all' | ProductType | 'low_stock' | 'inactive'
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon: Icon, colorClass, bgClass, sub }: {
-  label: string; value: string | number; sub?: string
-  icon: React.ElementType; colorClass: string; bgClass: string
-}) {
-  return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-4">
-      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', bgClass)}>
-        <Icon size={18} className={colorClass} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{label}</p>
-        <p className="text-xl font-bold text-gray-900 dark:text-white mt-0.5">{value}</p>
-        {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{sub}</p>}
-      </div>
-    </div>
-  )
-}
 
 // ── Stock Adjust Modal ────────────────────────────────────────────────────────
 
