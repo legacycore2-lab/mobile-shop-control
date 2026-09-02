@@ -66,6 +66,7 @@ function KpiCard({ label, value, sub, icon: Icon, color }: {
           <Icon size={18} />
         </div>
       </div>
+
     </div>
   )
 }
@@ -779,8 +780,7 @@ export function ReportsPage() {
           )}
         </div>
       )}
-    </div>
-  
+
       {/* ── SOH + Movement Tab ── */}
       {tab === 'movement' && (
         <div className="space-y-5">
@@ -999,6 +999,7 @@ export function ReportsPage() {
           )}
         </div>
       )}
+
 
     </div>
   )
