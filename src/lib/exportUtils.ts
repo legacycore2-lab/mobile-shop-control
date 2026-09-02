@@ -1,7 +1,9 @@
 // src/lib/exportUtils.ts
 // ── CSV / Excel Export Utility ─────────────────────────────────────────────
 
-type Row = Record<string, string | number | boolean | null | undefined>
+// Use unknown index signature to accept any typed interface
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>
 
 function escapeCsv(val: unknown): string {
   if (val === null || val === undefined) return ''
