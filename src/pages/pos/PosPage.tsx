@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import {
   Search, Plus, ShoppingCart, DollarSign,
   CheckCircle, Clock, XCircle, TrendingUp, Users,
-  ChevronLeft, ChevronRight, Trash2, Eye, CreditCard, Smartphone, Tag,
+  ChevronLeft, ChevronRight, Trash2, Eye, ScanLine, CreditCard, Smartphone, Tag,
 } from 'lucide-react'
 import {
   useSaleInvoices, useSaleStats,
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { SaleDrawer }       from './SaleDrawer'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { CreateSaleModal }  from './CreateSaleModal'
 import { STATUS_MAP, PAGE_SIZE, fmt, type FilterStatus } from './constants'
 import type { SaleInvoiceView } from '@/repositories/pos.repository'
@@ -27,6 +28,7 @@ export function PosPage() {
   const [page,       setPage]       = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [detailId,   setDetailId]   = useState<string | null>(null)
+  const [scanner,    setScanner]    = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -217,6 +219,14 @@ export function PosPage() {
 
       {showCreate && <CreateSaleModal onClose={() => setShowCreate(false)} />}
       {detailId   && <SaleDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
+      {scanner && (
+        <BarcodeScanner
+          title="مسح باركود البيع"
+          placeholder="IMEI أو باركود منتج..."
+          onScan={code => { setSearch(code); setScanner(false) }}
+          onClose={() => setScanner(false)}
+        />
+      )}
     </div>
   )
 }
