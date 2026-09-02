@@ -5,7 +5,8 @@ import {
   AlertTriangle, TrendingUp, Archive,
   Eye, Pencil, Trash2, ChevronLeft, ChevronRight, DollarSign,
   CheckCircle, BarChart2,
-} from 'lucide-react'
+  ScanLine,
+} from "lucide-react"
 import {
   useProducts, useProductStats, useProductCategories,
   useDeleteProduct,
@@ -16,6 +17,7 @@ import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { exportToCsv, PRODUCT_EXPORT_HEADERS } from '@/lib/exportUtils'
 import { StockModal }   from './StockModal'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { ProductModal } from './ProductModal'
 import { TYPE_MAP, PAGE_SIZE, fmt, type FilterType } from './constants'
 import type { ProductWithCategory } from '@/repositories/products.repository'
@@ -30,6 +32,7 @@ export function ProductsPage() {
   const [page,      setPage]      = useState(1)
   const [modal,     setModal]     = useState<'add' | 'edit' | null>(null)
   const [selected,  setSelected]  = useState<ProductWithCategory | null>(null)
+  const [scanner,   setScanner]   = useState(false)
   const [stockProd, setStockProd] = useState<ProductWithCategory | null>(null)
 
   const filtered = useMemo(() => {
@@ -96,6 +99,10 @@ export function ProductsPage() {
         <div className="flex gap-2">
           <button onClick={() => exportToCsv('products', PRODUCT_EXPORT_HEADERS, filtered)} className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
             <Download size={14} /> تصدير
+          </button>
+          <button onClick={() => setScanner(true)}
+            className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
+            <ScanLine size={14} /> مسح
           </button>
           <button onClick={() => setModal('add')}
             className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
@@ -264,6 +271,14 @@ export function ProductsPage() {
       {/* Modals */}
       {modal && <ProductModal product={modal === 'edit' ? selected : null} onClose={closeModal} />}
       {stockProd && <StockModal product={stockProd} onClose={() => setStockProd(null)} />}
+      {scanner && (
+        <BarcodeScanner
+          title="مسح باركود المنتج"
+          placeholder="باركود أو SKU..."
+          onScan={code => { setSearch(code); setScanner(false) }}
+          onClose={() => setScanner(false)}
+        />
+      )}
     </div>
   )
 }
