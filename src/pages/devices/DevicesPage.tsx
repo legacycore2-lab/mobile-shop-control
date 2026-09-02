@@ -278,7 +278,6 @@ export function DevicesPage() {
         <BarcodeScanner
           title="مسح IMEI الجهاز"
           placeholder="IMEI (15 رقم)..."
-          validate={/^\d{14,16}$/}
           onScan={code => {
             setScanner(false)
             const found = devices.find(d => d.imei1 === code || d.imei2 === code)
