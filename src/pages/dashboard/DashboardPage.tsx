@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import type { MobileDeviceView } from '@/types/database'
+import { DEVICE_STATUS_MAP, CONDITION_MAP, fmt } from '@/constants/statusMaps'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -22,8 +23,6 @@ const STATUS_MAP: Record<string, { label: string; variant: 'success' | 'info' | 
   defective:      { label: 'تالف',        variant: 'danger'  },
   sent_to_repair: { label: 'في الصيانة', variant: 'warning' },
 }
-
-function fmt(n: number) { return n.toLocaleString('ar-EG') }
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
@@ -88,7 +87,7 @@ function SectionHeader({ title, sub, to, navigate }: {
 // ── Device Row ────────────────────────────────────────────────────────────────
 
 function DeviceRow({ d }: { d: MobileDeviceView }) {
-  const st = STATUS_MAP[d.status]
+  const st = DEVICE_STATUS_MAP[d.status]
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
       <div className="flex-1 min-w-0">
