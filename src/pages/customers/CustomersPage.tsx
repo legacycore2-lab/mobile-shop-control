@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/lib/auth'
 import type { Customer } from '@/types/database'
 import { cn } from '@/lib/cn'
+import { StatCard } from '@/components/shared/StatCard'
 
 type FilterStatus = 'all' | 'active' | 'inactive'
 
@@ -33,22 +34,6 @@ const EMPTY_FORM: FormState = {
 const PAGE_SIZE = 10
 
 // ── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon: Icon, colorClass, bgClass }: {
-  label: string; value: string | number
-  icon: React.ElementType; colorClass: string; bgClass: string
-}) {
-  return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-4">
-      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', bgClass)}>
-        <Icon size={18} className={colorClass} />
-      </div>
-      <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-xl font-bold text-gray-900 dark:text-white mt-0.5">{value}</p>
-      </div>
-    </div>
-  )
-}
 
 // ── Modal ────────────────────────────────────────────────────────────────────
 function CustomerModal({ customer, onClose }: {
