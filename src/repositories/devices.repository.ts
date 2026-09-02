@@ -1,3 +1,4 @@
+// src/repositories/devices.repository.ts
 import { supabase } from '@/lib/supabase'
 import type { MobileDevice, MobileDeviceView, MobileBrand, MobileModel } from '@/types/database'
 
@@ -10,79 +11,21 @@ export const devicesRepository = {
 
   getAll: async (): Promise<MobileDeviceView[]> => {
     const { data, error } = await supabase
-      .from('mobile_devices')
-      .select(`
-        *,
-        mobile_models!model_id (
-          name,
-          mobile_brands!brand_id ( name )
-        ),
-        suppliers!supplier_id ( name ),
-        customers!sold_to_customer_id ( name, phone ),
-        added_by_profile:profiles!added_by ( full_name ),
-        sold_by_profile:profiles!sold_by ( full_name )
-      `)
+      .from('mobile_devices_view')
+      .select('*')
       .order('created_at', { ascending: false })
     if (error) throw error
-
-    return ((data ?? []) as unknown[]).map((row) => {
-      const r = row as Record<string, unknown>
-      const model   = r['mobile_models']  as Record<string, unknown> | null
-      const brand   = model ? (model['mobile_brands'] as Record<string, unknown> | null) : null
-      const sup     = r['suppliers']      as Record<string, unknown> | null
-      const cust    = r['customers']      as Record<string, unknown> | null
-      const addedBy = r['added_by_profile'] as Record<string, unknown> | null
-      const soldBy  = r['sold_by_profile']  as Record<string, unknown> | null
-      return {
-        ...r,
-        brand_name:      (brand?.['name']      as string)  ?? '—',
-        model_name:      (model?.['name']      as string)  ?? '—',
-        supplier_name:   (sup?.['name']        as string)  ?? '—',
-        customer_name:   (cust?.['name']       as string | null) ?? null,
-        customer_phone:  (cust?.['phone']      as string | null) ?? null,
-        added_by_name:   (addedBy?.['full_name'] as string) ?? '—',
-        sold_by_name:    (soldBy?.['full_name']  as string | null) ?? null,
-      } as MobileDeviceView
-    })
+    return (data ?? []) as unknown as MobileDeviceView[]
   },
 
   getById: async (id: string): Promise<MobileDeviceView | null> => {
     const { data, error } = await supabase
-      .from('mobile_devices')
-      .select(`
-        *,
-        mobile_models!model_id (
-          name,
-          mobile_brands!brand_id ( name )
-        ),
-        suppliers!supplier_id ( name ),
-        customers!sold_to_customer_id ( name, phone ),
-        added_by_profile:profiles!added_by ( full_name ),
-        sold_by_profile:profiles!sold_by ( full_name )
-      `)
+      .from('mobile_devices_view')
+      .select('*')
       .eq('id', id)
       .single()
     if (error) throw error
-    if (!data) return null
-
-    const r       = data as unknown as Record<string, unknown>
-    const model   = r['mobile_models']    as Record<string, unknown> | null
-    const brand   = model ? (model['mobile_brands'] as Record<string, unknown> | null) : null
-    const sup     = r['suppliers']        as Record<string, unknown> | null
-    const cust    = r['customers']        as Record<string, unknown> | null
-    const addedBy = r['added_by_profile'] as Record<string, unknown> | null
-    const soldBy  = r['sold_by_profile']  as Record<string, unknown> | null
-
-    return {
-      ...r,
-      brand_name:     (brand?.['name']        as string)        ?? '—',
-      model_name:     (model?.['name']        as string)        ?? '—',
-      supplier_name:  (sup?.['name']          as string)        ?? '—',
-      customer_name:  (cust?.['name']         as string | null) ?? null,
-      customer_phone: (cust?.['phone']        as string | null) ?? null,
-      added_by_name:  (addedBy?.['full_name'] as string)        ?? '—',
-      sold_by_name:   (soldBy?.['full_name']  as string | null) ?? null,
-    } as MobileDeviceView
+    return data as unknown as MobileDeviceView | null
   },
 
   lookupByImei: async (imei: string): Promise<MobileDeviceView[]> => {
