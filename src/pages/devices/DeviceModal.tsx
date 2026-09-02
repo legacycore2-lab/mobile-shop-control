@@ -413,12 +413,12 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
           </div>
 
           {scanImei1 && (
-            <BarcodeScanner title="مسح IMEI 1" placeholder="355XXXXXXXXXXXX" validate={/^\d{14,16}$/}
+            <BarcodeScanner title="مسح IMEI 1" placeholder="355XXXXXXXXXXXX"
               onScan={code => { set('imei1', code); setScanImei1(false) }}
               onClose={() => setScanImei1(false)} />
           )}
           {scanImei2 && (
-            <BarcodeScanner title="مسح IMEI 2" placeholder="355XXXXXXXXXXXX" validate={/^\d{14,16}$/}
+            <BarcodeScanner title="مسح IMEI 2" placeholder="355XXXXXXXXXXXX"
               onScan={code => { set('imei2', code); setScanImei2(false) }}
               onClose={() => setScanImei2(false)} />
           )}
