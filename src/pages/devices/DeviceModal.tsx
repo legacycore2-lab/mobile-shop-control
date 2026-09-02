@@ -29,9 +29,10 @@ const EMPTY_FORM: FormState = {
   warranty_months: '12', location: '', notes: '',
 }
 
-export function DeviceModal({ device, onClose }: {
-  device: MobileDeviceView | null
-  onClose: () => void
+export function DeviceModal({ device, onClose, initImei = '' }: {
+  device:   MobileDeviceView | null
+  onClose:  () => void
+  initImei?: string
 }) {
   const { profile }     = useAuth()
   const { data: brands  = [] } = useBrands()
@@ -61,8 +62,15 @@ export function DeviceModal({ device, onClose }: {
           location:        device.location        ?? '',
           notes:           device.notes           ?? '',
         }
-      : EMPTY_FORM
+      : { ...EMPTY_FORM, imei1: initImei }
   )
+
+  // Update imei1 if initImei changes (e.g. scanner fires after mount)
+  useEffect(() => {
+    if (initImei && !device) {
+      setForm(f => ({ ...f, imei1: initImei }))
+    }
+  }, [initImei, device])
 
   const [newBrandName, setNewBrandName] = useState('')
   const [newModelName, setNewModelName] = useState('')
