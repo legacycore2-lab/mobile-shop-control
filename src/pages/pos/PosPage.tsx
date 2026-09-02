@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import {
   Search, Plus, ShoppingCart, DollarSign,
   CheckCircle, Clock, XCircle, TrendingUp, Users,
-  ChevronLeft, ChevronRight, Trash2, Eye, ScanLine, CreditCard, Smartphone, Tag,
+  ChevronLeft, ChevronRight, Trash2, Eye, CreditCard, Smartphone, Tag,
 } from 'lucide-react'
 import {
   useSaleInvoices, useSaleStats,
@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { SaleDrawer }       from './SaleDrawer'
-import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { CreateSaleModal }  from './CreateSaleModal'
 import { STATUS_MAP, PAGE_SIZE, fmt, type FilterStatus } from './constants'
 import type { SaleInvoiceView } from '@/repositories/pos.repository'
@@ -21,6 +20,7 @@ import type { SaleInvoiceView } from '@/repositories/pos.repository'
 export function PosPage() {
   const { data: invoices = [], isLoading } = useSaleInvoices()
   const { data: stats }                    = useSaleStats()
+  const cancelMutation                     = useCancelSale()
   const deleteMutation                     = useDeleteSale()
 
   const [search,     setSearch]     = useState('')
@@ -28,7 +28,6 @@ export function PosPage() {
   const [page,       setPage]       = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [detailId,   setDetailId]   = useState<string | null>(null)
-  const [scanner,    setScanner]    = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -43,6 +42,15 @@ export function PosPage() {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  async function handleCancel(inv: SaleInvoiceView) {
+    if (inv.status === 'cancelled') return
+    const msg = inv.status === 'confirmed'
+      ? `إلغاء فاتورة مؤكدة سيُرجع الأجهزة والمنتجات للمخزون.\nهل أنت متأكد من إلغاء ${inv.invoice_number}؟`
+      : `هل أنت متأكد من إلغاء ${inv.invoice_number}؟`
+    if (!confirm(msg)) return
+    await cancelMutation.mutateAsync(inv.id)
+  }
 
   async function handleDelete(inv: SaleInvoiceView) {
     if (inv.status === 'confirmed') return
@@ -178,10 +186,22 @@ export function PosPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-center">
+                      {/* View */}
                       <button title="عرض" onClick={() => setDetailId(inv.id)}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <Eye size={13} />
                       </button>
+                      {/* Cancel — draft or confirmed */}
+                      {inv.status !== 'cancelled' && (
+                        <button
+                          title={inv.status === 'confirmed' ? 'إلغاء وإرجاع المخزون' : 'إلغاء'}
+                          onClick={() => void handleCancel(inv)}
+                          disabled={cancelMutation.isPending}
+                          className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-colors disabled:opacity-50">
+                          <XCircle size={13} />
+                        </button>
+                      )}
+                      {/* Delete — draft only */}
                       {inv.status === 'draft' && (
                         <button title="حذف" onClick={() => void handleDelete(inv)}
                           disabled={deleteMutation.isPending}
@@ -219,20 +239,6 @@ export function PosPage() {
 
       {showCreate && <CreateSaleModal onClose={() => setShowCreate(false)} />}
       {detailId   && <SaleDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
-      {scanner && (
-        <BarcodeScanner
-          title="مسح باركود البيع"
-          placeholder="IMEI أو باركود منتج..."
-          onScan={code => {
-            setScanner(false)
-            // Open sale modal with IMEI pre-searched
-            setShowCreate(true)
-            setSearch(code)
-          }}
-          onClose={() => setScanner(false)}
-        />
-      )}
     </div>
   )
 }
-
