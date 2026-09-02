@@ -1,6 +1,7 @@
 // src/pages/pos/CreateSaleModal.tsx
 import { useState, useMemo } from 'react'
-import { Plus, X, Smartphone, Tag, AlertCircle, FileText, CreditCard, Users, Search } from 'lucide-react'
+import { Plus, X, Smartphone, Tag, AlertCircle, FileText, CreditCard, Users, Search, ScanLine } from 'lucide-react'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import {
   useCreateSale, useConfirmSale, useInStockDevices,
 } from '@/hooks/usePos'
@@ -28,6 +29,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const [error,         setError]         = useState('')
   const [tab,           setTab]           = useState<'devices' | 'products'>('devices')
   const [deviceSearch,  setDeviceSearch]  = useState('')
+  const [scanDevice,    setScanDevice]    = useState(false)
 
   const filteredDevices = useMemo(() => {
     const q = deviceSearch.toLowerCase()
@@ -96,6 +98,16 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
 
   const inputCls = 'h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
   const labelCls = 'text-sm font-semibold text-gray-700 dark:text-gray-300'
+
+  function handleDeviceScan(imei: string) {
+    setDeviceSearch(imei)
+    setScanDevice(false)
+    // Auto-select if exact match
+    const match = filteredDevices.find(d => d.imei1 === imei || d.imei2 === imei)
+    if (match && !deviceLines.find(l => l.device_id === match.id)) {
+      toggleDevice(match)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
@@ -305,6 +317,15 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </form>
+      {scanDevice && (
+        <BarcodeScanner
+          title="مسح IMEI الجهاز"
+          placeholder="355XXXXXXXXXXXX"
+          validate={/^\d{14,16}$/}
+          onScan={handleDeviceScan}
+          onClose={() => setScanDevice(false)}
+        />
+      )}
       </div>
     </div>
   )
