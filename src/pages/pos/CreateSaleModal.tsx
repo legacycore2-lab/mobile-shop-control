@@ -452,7 +452,6 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
           <BarcodeScanner
             title="مسح IMEI الجهاز"
             placeholder="355XXXXXXXXXXXX"
-            validate={/^\d{14,16}$/}
             onScan={handleDeviceScan}
             onClose={() => setScanDevice(false)}
           />
