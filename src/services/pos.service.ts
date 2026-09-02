@@ -1,3 +1,4 @@
+// src/services/pos.service.ts
 import { posRepository, type SaleInvoiceView, type SaleInvoiceDetail, type SaleDeviceLine, type SaleProductLine } from '@/repositories/pos.repository'
 import type { MobileDeviceView } from '@/types/database'
 
@@ -66,11 +67,13 @@ export const posService = {
     await posRepository.confirm(id, customerId, soldById)
   },
 
+  // يدعم إلغاء المسودات والمؤكدات — الأجهزة والمنتجات بترجع تلقائياً
   cancel: async (id: string): Promise<void> => {
     const detail = await posRepository.getById(id)
     if (!detail) throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن إلغاء فاتورة مؤكدة')
-    await posRepository.cancel(id)
+    if (detail.invoice.status === 'cancelled') throw new Error('الفاتورة ملغاة بالفعل')
+    const isConfirmed = detail.invoice.status === 'confirmed'
+    await posRepository.cancel(id, isConfirmed)
   },
 
   remove: async (id: string): Promise<void> => {
