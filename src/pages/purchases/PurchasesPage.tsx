@@ -19,10 +19,9 @@ import { cn } from '@/lib/cn'
 import { StatCard } from '@/components/shared/StatCard'
 import type { PurchaseInvoiceView, InvoiceStatus } from '@/types/database'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
+import { INVOICE_STATUS_MAP, fmt } from '@/constants/statusMaps'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmt(n: number) { return n.toLocaleString('ar-EG') }
 
 const STATUS_MAP: Record<InvoiceStatus, { label: string; variant: 'neutral' | 'success' | 'danger'; icon: React.ElementType }> = {
   draft:     { label: 'مسودة',  variant: 'neutral', icon: Clock       },
@@ -96,7 +95,7 @@ function InvoiceDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () 
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{inv?.supplier_name ?? ''}</p>
           </div>
           <div className="flex items-center gap-2">
-            {inv && <Badge variant={STATUS_MAP[inv.status].variant}>{STATUS_MAP[inv.status].label}</Badge>}
+            {inv && <Badge variant={INVOICE_STATUS_MAP[inv.status].variant}>{INVOICE_STATUS_MAP[inv.status].label}</Badge>}
             <button onClick={onClose}
               className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               <X size={16} />
@@ -664,7 +663,7 @@ export function PurchasesPage() {
                   </td>
                 </tr>
               ) : paginated.map(inv => {
-                const st = STATUS_MAP[inv.status]
+                const st = INVOICE_STATUS_MAP[inv.status]
                 return (
                   <tr key={inv.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-4 py-3">
