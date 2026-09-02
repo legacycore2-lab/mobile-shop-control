@@ -56,6 +56,16 @@ export const devicesRepository = {
     return data as MobileDevice
   },
 
+  // ── Soft Delete — يضع is_deleted = true بدل الحذف الفعلي ──────────────
+  softDelete: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('mobile_devices')
+      .update({ is_deleted: true } as never)
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // ── Hard Delete — للطوارئ فقط (مش مستخدم في الواجهة) ────────────────
   remove: async (id: string): Promise<void> => {
     const { error } = await supabase
       .from('mobile_devices')
