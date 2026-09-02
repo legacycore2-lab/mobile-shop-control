@@ -12,7 +12,6 @@ interface BarcodeScannerProps {
   onClose:      () => void
   title?:       string
   placeholder?: string
-  validate?:    RegExp
 }
 
 // ── USB hook (used both inside modal and externally) ──────────────────────────
@@ -145,7 +144,6 @@ export function BarcodeScanner({
   onScan, onClose,
   title = 'مسح الباركود',
   placeholder,
-  validate,
 }: BarcodeScannerProps) {
   const uid         = useId().replace(/:/g, '')
   const divId       = `bcs-${uid}`
@@ -159,16 +157,12 @@ export function BarcodeScanner({
     if (cooldown.current) return
     const code = raw.trim()
     if (!code) return
-    if (validate && !validate.test(code)) {
-      setError(`كود غير صالح: ${code}`)
-      return
-    }
     cooldown.current = true
     setLastScan(code)
     setError('')
     onScan(code)
     setTimeout(() => { cooldown.current = false }, 1500)
-  }, [onScan, validate])
+  }, [onScan])
 
   useUsbScanner(handleScan, mode === 'usb')
 
