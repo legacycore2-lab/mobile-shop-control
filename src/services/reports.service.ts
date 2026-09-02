@@ -1,11 +1,16 @@
+// src/services/reports.service.ts
 import { reportsRepository } from '@/repositories/reports.repository'
 import type {
   DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
   DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
+  ProductMovementRow, DeviceMovementRow,
 } from '@/repositories/reports.repository'
 
-export type { DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
-  DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer }
+export type {
+  DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
+  DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
+  ProductMovementRow, DeviceMovementRow,
+}
 
 export interface ReportSummary {
   totalSoldDevices:  number
@@ -20,20 +25,19 @@ export interface ReportSummary {
 }
 
 export const reportsService = {
-
   getDeviceSalesSummary: () => reportsRepository.getDeviceSalesSummary(),
-
-  getStockValue: () => reportsRepository.getStockValue(),
-
-  getSupplierPurchases: () => reportsRepository.getSupplierPurchases(),
-
+  getStockValue:         () => reportsRepository.getStockValue(),
+  getSupplierPurchases:  () => reportsRepository.getSupplierPurchases(),
   getDeviceStatusCounts: () => reportsRepository.getDeviceStatusCounts(),
+  getDailyActivity:      () => reportsRepository.getDailyActivity(),
+  getLowStockDetailed:   () => reportsRepository.getLowStockDetailed(),
+  getTopCustomers:       () => reportsRepository.getTopCustomers(),
 
-  getDailyActivity: () => reportsRepository.getDailyActivity(),
+  getProductMovement: (from: string, to: string): Promise<ProductMovementRow[]> =>
+    reportsRepository.getProductMovement(from, to),
 
-  getLowStockDetailed: () => reportsRepository.getLowStockDetailed(),
-
-  getTopCustomers: () => reportsRepository.getTopCustomers(),
+  getDeviceMovement: (from: string, to: string): Promise<DeviceMovementRow[]> =>
+    reportsRepository.getDeviceMovement(from, to),
 
   getSummary: async (): Promise<ReportSummary> => {
     const [sales, stock, lowStock] = await Promise.all([
@@ -41,7 +45,6 @@ export const reportsService = {
       reportsRepository.getStockValue(),
       reportsRepository.getLowStockDetailed(),
     ])
-
     const totalRevenue   = sales.reduce((s, r) => s + r.total_revenue, 0)
     const totalCostSold  = sales.reduce((s, r) => s + r.total_cost,    0)
     const totalProfit    = totalRevenue - totalCostSold
@@ -49,15 +52,13 @@ export const reportsService = {
     const stockDevices   = stock.reduce((s, r) => s + r.count,         0)
     const stockCostValue = stock.reduce((s, r) => s + r.total_cost,    0)
     const stockSellValue = stock.reduce((s, r) => s + r.total_selling, 0)
-
     return {
       totalSoldDevices:  totalUnits,
       totalRevenue,
       totalCostSold,
       totalProfit,
-      avgMargin:         totalCostSold > 0
-        ? parseFloat(((totalProfit / totalCostSold) * 100).toFixed(1))
-        : 0,
+      avgMargin: totalCostSold > 0
+        ? parseFloat(((totalProfit / totalCostSold) * 100).toFixed(1)) : 0,
       stockDevices,
       stockCostValue,
       stockSellingValue: stockSellValue,
