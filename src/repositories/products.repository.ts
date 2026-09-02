@@ -1,3 +1,4 @@
+// src/repositories/products.repository.ts
 import { supabase } from '@/lib/supabase'
 import type { Product, ProductCategory, ProductType } from '@/types/database'
 
@@ -70,6 +71,7 @@ export const productsRepository = {
         product_categories!category_id ( name, type ),
         suppliers!default_supplier_id ( name )
       `)
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false })
     if (error) throw error
 
@@ -95,6 +97,7 @@ export const productsRepository = {
         suppliers!default_supplier_id ( name )
       `)
       .eq('id', id)
+      .eq('is_deleted', false)
       .single()
     if (error) throw error
     if (!data) return null
@@ -154,6 +157,16 @@ export const productsRepository = {
     return data as Product
   },
 
+  // ── Soft Delete — يضع is_deleted = true بدل الحذف الفعلي ──────────────
+  softDelete: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_deleted: true } as never)
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  // ── Hard Delete — للطوارئ فقط ────────────────────────────────────────────
   remove: async (id: string): Promise<void> => {
     const { error } = await supabase
       .from('products')
