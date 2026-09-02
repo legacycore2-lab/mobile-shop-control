@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Plus, X, Smartphone, Tag, AlertCircle, FileText, CreditCard } from 'lucide-react'
+// src/pages/purchases/CreatePurchaseModal.tsx
+import { useState, useCallback, useRef } from 'react'
+import { Plus, X, Smartphone, Tag, AlertCircle, FileText, Search, ScanLine, Zap } from 'lucide-react'
+import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import { useCreatePurchase, useUnlinkedDevices } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
@@ -23,10 +25,25 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const [productLines,  setProductLines]  = useState<InvoiceProductLine[]>([])
   const [error,         setError]         = useState('')
   const [tab,           setTab]           = useState<'devices' | 'products'>('devices')
+  const [deviceSearch,  setDeviceSearch]  = useState('')
+  const [scanDevice,    setScanDevice]    = useState(false)
+  const [productSearch, setProductSearch] = useState('')
+  const [scanProduct,   setScanProduct]   = useState(false)
+  const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: unlinkedDevices = [] } = useUnlinkedDevices(supplierId)
 
-  // ── Device selection
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  function showFeedback(msg: string, ok: boolean) {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
+    setScanFeedback({ msg, ok })
+    feedbackTimer.current = setTimeout(() => setScanFeedback(null), 2500)
+  }
+
+  // ── Device selection ──────────────────────────────────────────────────────
+
   function toggleDevice(device: { id: string; cost_price: number }) {
     setDeviceLines(prev => {
       const exists = prev.find(l => l.device_id === device.id)
@@ -39,13 +56,18 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     setDeviceLines(prev => prev.map(l => l.device_id === deviceId ? { ...l, cost_price: cost } : l))
   }
 
-  // ── Product lines
+  // ── Product lines ─────────────────────────────────────────────────────────
+
   function addProduct(productId: string) {
     const product = products.find(p => p.id === productId)
     if (!product) return
     setProductLines(prev => {
       const exists = prev.find(l => l.product_id === productId)
-      if (exists) return prev
+      if (exists) {
+        return prev.map(l => l.product_id === productId
+          ? { ...l, quantity: l.quantity + 1 }
+          : l)
+      }
       return [...prev, { product_id: productId, quantity: 1, unit_price: product.cost_price }]
     })
   }
@@ -57,6 +79,55 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   function removeProductLine(productId: string) {
     setProductLines(prev => prev.filter(l => l.product_id !== productId))
   }
+
+  // ── Barcode scan handlers ─────────────────────────────────────────────────
+
+  const handleDeviceScan = useCallback((imei: string) => {
+    setScanDevice(false)
+    setTab('devices')
+    setDeviceSearch(imei)
+    const match = unlinkedDevices.find(d => d.imei1 === imei)
+    if (match) {
+      if (!deviceLines.find(l => l.device_id === match.id)) {
+        toggleDevice(match)
+        showFeedback(`✓ ${match.brand_name} ${match.model_name} — تمت الإضافة`, true)
+      } else {
+        showFeedback('الجهاز مضاف بالفعل', false)
+      }
+    } else {
+      showFeedback(`لم يُعثر على IMEI: ${imei}`, false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlinkedDevices, deviceLines])
+
+  const handleProductScan = useCallback((code: string) => {
+    setScanProduct(false)
+    const match = products.find(p =>
+      p.is_active &&
+      (p.barcode === code || p.sku === code)
+    )
+    if (match) {
+      addProduct(match.id)
+      showFeedback(`✓ ${match.name} — تمت الإضافة`, true)
+    } else {
+      setProductSearch(code)
+      showFeedback(`لم يُعثر على باركود: ${code}`, false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products])
+
+  // ── USB always-on: routes to current tab ──────────────────────────────────
+  const handleUsbScan = useCallback((code: string) => {
+    if (tab === 'devices') {
+      handleDeviceScan(code)
+    } else {
+      handleProductScan(code)
+    }
+  }, [tab, handleDeviceScan, handleProductScan])
+
+  useUsbScanner(handleUsbScan, !scanDevice && !scanProduct)
+
+  // ── Totals ────────────────────────────────────────────────────────────────
 
   const deviceTotal  = deviceLines .reduce((s, l) => s + l.cost_price,             0)
   const productTotal = productLines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
@@ -87,6 +158,12 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const inputCls = 'h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
   const labelCls = 'text-sm font-semibold text-gray-700 dark:text-gray-300'
 
+  // filtered devices for search
+  const filteredUnlinked = unlinkedDevices.filter(d => {
+    const q = deviceSearch.toLowerCase()
+    return !q || d.imei1.includes(q) || d.brand_name.toLowerCase().includes(q) || d.model_name.toLowerCase().includes(q)
+  })
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -98,14 +175,32 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
             <h2 className="text-base font-bold text-gray-900 dark:text-white">فاتورة شراء جديدة</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">أجهزة ومنتجات من الموردين</p>
           </div>
-          <button onClick={onClose}
-            className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1.5">
+              <Zap size={11} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">USB جاهز</span>
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={e => void handleSubmit(e)}>
           <div className="px-6 py-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
+
+            {/* Scan feedback */}
+            {scanFeedback && (
+              <div className={cn(
+                'rounded-lg px-4 py-2.5 flex items-center gap-2 text-sm font-medium',
+                scanFeedback.ok
+                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+              )}>
+                {scanFeedback.msg}
+              </div>
+            )}
 
             {/* Header fields */}
             <div>
@@ -161,66 +256,119 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
 
-              {/* Devices tab */}
+              {/* ── Devices tab ── */}
               {tab === 'devices' && (
-                <div>
+                <div className="space-y-2">
                   {!supplierId ? (
                     <div className="py-6 text-center text-gray-400 dark:text-gray-600 text-sm">
                       اختر المورد أولاً لعرض أجهزته غير المرتبطة بفواتير
                     </div>
-                  ) : unlinkedDevices.length === 0 ? (
-                    <div className="py-6 text-center text-gray-400 dark:text-gray-600 text-sm">
-                      <Smartphone size={28} className="mx-auto mb-2 opacity-30" />
-                      <p>لا توجد أجهزة غير مرتبطة لهذا المورد</p>
-                    </div>
                   ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {unlinkedDevices.map(d => {
-                        const selected = deviceLines.find(l => l.device_id === d.id)
-                        return (
-                          <div key={d.id}
-                            className={cn('flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-all',
-                              selected
-                                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                                : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}
-                            onClick={() => toggleDevice(d)}>
-                            <input type="checkbox" checked={!!selected} onChange={() => toggleDevice(d)}
-                              className="accent-blue-600 flex-shrink-0" onClick={e => e.stopPropagation()} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.brand_name} {d.model_name}</p>
-                              <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">{d.imei1}</p>
-                            </div>
-                            {selected ? (
-                              <input type="number" min="0" step="0.01"
-                                value={selected.cost_price}
-                                onChange={e => { e.stopPropagation(); updateDeviceCost(d.id, Number(e.target.value)) }}
-                                onClick={e => e.stopPropagation()}
-                                className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center" />
-                            ) : (
-                              <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.cost_price)} ج</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
+                    <>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input value={deviceSearch} onChange={e => setDeviceSearch(e.target.value)}
+                            placeholder="بحث بـ IMEI أو الماركة..."
+                            className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" />
+                        </div>
+                        <button type="button" onClick={() => setScanDevice(true)}
+                          className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
+                          title="مسح IMEI بالكاميرا">
+                          <ScanLine size={15} />
+                        </button>
+                      </div>
+                      {filteredUnlinked.length === 0 ? (
+                        <div className="py-6 text-center text-gray-400 dark:text-gray-600 text-sm">
+                          <Smartphone size={28} className="mx-auto mb-2 opacity-30" />
+                          <p>لا توجد أجهزة غير مرتبطة لهذا المورد</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {filteredUnlinked.map(d => {
+                            const selected = deviceLines.find(l => l.device_id === d.id)
+                            return (
+                              <div key={d.id}
+                                className={cn('flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-all',
+                                  selected
+                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}
+                                onClick={() => toggleDevice(d)}>
+                                <input type="checkbox" checked={!!selected} onChange={() => toggleDevice(d)}
+                                  className="accent-blue-600 flex-shrink-0" onClick={e => e.stopPropagation()} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.brand_name} {d.model_name}</p>
+                                  <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">{d.imei1}</p>
+                                </div>
+                                {selected ? (
+                                  <input type="number" min="0" step="0.01"
+                                    value={selected.cost_price}
+                                    onChange={e => { e.stopPropagation(); updateDeviceCost(d.id, Number(e.target.value)) }}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center" />
+                                ) : (
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.cost_price)} ج</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
 
-              {/* Products tab */}
+              {/* ── Products tab ── */}
               {tab === 'products' && (
                 <div className="space-y-3">
-                  <select onChange={e => { addProduct(e.target.value); e.target.value = '' }}
-                    className={inputCls + ' cursor-pointer'} defaultValue="">
-                    <option value="">+ إضافة منتج</option>
-                    {products.filter(p => p.is_active && !productLines.find(l => l.product_id === p.id)).map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
-                    ))}
-                  </select>
-                  {productLines.length === 0 ? (
-                    <div className="py-4 text-center text-gray-400 dark:text-gray-600 text-sm">
-                      لم تتم إضافة منتجات بعد
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        value={productSearch}
+                        onChange={e => setProductSearch(e.target.value)}
+                        placeholder="بحث بالاسم أو الباركود..."
+                        className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                      />
                     </div>
+                    <button type="button" onClick={() => setScanProduct(true)}
+                      className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
+                      title="مسح باركود المنتج بالكاميرا">
+                      <ScanLine size={15} />
+                    </button>
+                  </div>
+
+                  {/* Product list */}
+                  <div className="max-h-44 overflow-y-auto space-y-1.5 border border-gray-100 dark:border-gray-800 rounded-xl p-2">
+                    {products
+                      .filter(p => p.is_active && !productLines.find(l => l.product_id === p.id))
+                      .filter(p => !productSearch ||
+                        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                        (p.sku ?? '').toLowerCase().includes(productSearch.toLowerCase()) ||
+                        (p.barcode ?? '').includes(productSearch))
+                      .map(p => (
+                        <button key={p.id} type="button"
+                          onClick={() => { addProduct(p.id); setProductSearch('') }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-right group">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{p.name}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-600">{p.category_name}{p.barcode ? ` · ${p.barcode}` : ''}</p>
+                          </div>
+                          <div className="text-left flex-shrink-0 mr-2">
+                            <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{fmt(p.cost_price)} ج</p>
+                            <Plus size={14} className="mx-auto text-gray-300 group-hover:text-blue-500 mt-0.5" />
+                          </div>
+                        </button>
+                      ))
+                    }
+                    {products.filter(p => p.is_active).length === 0 && (
+                      <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-3">لا توجد منتجات</p>
+                    )}
+                  </div>
+
+                  {productLines.length === 0 ? (
+                    <div className="py-4 text-center text-gray-400 dark:text-gray-600 text-sm">لم تتم إضافة منتجات بعد</div>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {productLines.map(line => {
@@ -292,10 +440,25 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </form>
+
+        {scanProduct && (
+          <BarcodeScanner
+            title="مسح باركود المنتج"
+            placeholder="باركود أو SKU..."
+            onScan={handleProductScan}
+            onClose={() => setScanProduct(false)}
+          />
+        )}
+        {scanDevice && (
+          <BarcodeScanner
+            title="مسح IMEI الجهاز"
+            placeholder="355XXXXXXXXXXXX"
+            validate={/^\d{14,16}$/}
+            onScan={handleDeviceScan}
+            onClose={() => setScanDevice(false)}
+          />
+        )}
       </div>
     </div>
   )
 }
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
