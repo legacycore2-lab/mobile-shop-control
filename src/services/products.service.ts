@@ -1,3 +1,4 @@
+// src/services/products.service.ts
 import { productsRepository, type ProductWithCategory, type LowStockProduct } from '@/repositories/products.repository'
 import type { Product, ProductCategory, ProductType } from '@/types/database'
 
@@ -128,6 +129,7 @@ export const productsService = {
   adjustStock: (id: string, delta: number): Promise<Product> =>
     productsRepository.adjustStock(id, delta),
 
+  // ── Soft Delete ───────────────────────────────────────────────────────────
   remove: (id: string): Promise<void> =>
-    productsRepository.remove(id),
+    productsRepository.softDelete(id),
 }
