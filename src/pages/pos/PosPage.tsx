@@ -18,10 +18,9 @@ import { cn } from '@/lib/cn'
 import { StatCard } from '@/components/shared/StatCard'
 import type { SaleInvoiceView } from '@/repositories/pos.repository'
 import type { SaleDeviceLine, SaleProductLine } from '@/services/pos.service'
+import { INVOICE_STATUS_MAP, fmt } from '@/constants/statusMaps'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmt(n: number) { return n.toLocaleString('ar-EG') }
 
 const STATUS_MAP: Record<string, { label: string; variant: 'neutral' | 'success' | 'danger' }> = {
   draft:     { label: 'مسودة', variant: 'neutral' },
@@ -82,7 +81,7 @@ function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => 
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{inv?.customer_name ?? 'عميل نقدي'}</p>
           </div>
           <div className="flex items-center gap-2">
-            {inv && <Badge variant={STATUS_MAP[inv.status]?.variant ?? 'neutral'}>{STATUS_MAP[inv.status]?.label}</Badge>}
+            {inv && <Badge variant={INVOICE_STATUS_MAP[inv.status]?.variant ?? 'neutral'}>{INVOICE_STATUS_MAP[inv.status]?.label}</Badge>}
             <button onClick={onClose}
               className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               <X size={16} />
@@ -659,8 +658,8 @@ export function PosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Badge variant={STATUS_MAP[inv.status]?.variant ?? 'neutral'}>
-                      {STATUS_MAP[inv.status]?.label}
+                    <Badge variant={INVOICE_STATUS_MAP[inv.status]?.variant ?? 'neutral'}>
+                      {INVOICE_STATUS_MAP[inv.status]?.label}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
