@@ -17,6 +17,7 @@ import {
   useDeviceMovementReport,
 } from '@/hooks/useReports'
 import { Badge } from '@/components/ui/Badge'
+import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
 import { cn } from '@/lib/cn'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -303,21 +304,21 @@ export function ReportsPage() {
 
   function exportMovementCsv() {
     if (movType === 'products') {
-      const rows = [
-        ['المنتج','التصنيف','SKU','رصيد أول الفترة','مشتريات','مبيعات','رصيد آخر','سعر الشراء','قيمة المخزون','حد التنبيه'],
-        ...prodMovement.map(r => [r.name, r.category_name, r.sku ?? '', r.opening_stock, r.purchased, r.sold, r.current_stock, r.cost_price, r.stock_value, r.reorder_level]),
-      ]
-      const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
-      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
-      a.download = `soh-products-${movFrom}-${movTo}.csv`; a.click()
+      exportToExcel(
+        `تقرير-حركة-المنتجات-${movFrom}-${movTo}`,
+        SOH_PRODUCT_HEADERS,
+        prodMovement,
+        'حركة المنتجات',
+        `الفترة من ${movFrom} إلى ${movTo}`,
+      )
     } else {
-      const rows = [
-        ['الماركة','الموديل','إجمالي','في المخزون','مشتريات الفترة','مبيعات الفترة','إيرادات','أرباح'],
-        ...devMovement.map(r => [r.brand_name, r.model_name, r.total, r.in_stock, r.purchased_in_period, r.sold_in_period, r.total_revenue, r.total_profit]),
-      ]
-      const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
-      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
-      a.download = `soh-devices-${movFrom}-${movTo}.csv`; a.click()
+      exportToExcel(
+        `تقرير-حركة-الأجهزة-${movFrom}-${movTo}`,
+        SOH_DEVICE_HEADERS,
+        devMovement,
+        'حركة الأجهزة',
+        `الفترة من ${movFrom} إلى ${movTo}`,
+      )
     }
   }
 
