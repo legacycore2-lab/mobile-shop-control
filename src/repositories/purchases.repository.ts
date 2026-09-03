@@ -38,35 +38,21 @@ export const purchasesRepository = {
 
   getAll: async (): Promise<PurchaseInvoiceView[]> => {
     const { data, error } = await supabase
-      .from('purchase_invoices')
-      .select(`
-        id, invoice_number, supplier_id, invoice_date,
-        total_amount, paid_amount, discount, remaining,
-        notes, status, created_by, created_at, updated_at,
-        suppliers!supplier_id ( name ),
-        profiles!created_by ( full_name ),
-        devices_agg:purchase_invoice_devices ( id ),
-        products_agg:purchase_invoice_products ( id )
-      `)
-      .order('created_at', { ascending: false })
+      .rpc('get_purchase_invoices')
     if (error) throw error
 
     return ((data ?? []) as unknown[]).map(row => {
-      const r   = row as Record<string, unknown>
-      const sup = r['suppliers']    as Record<string, unknown> | null
-      const cby = r['profiles']     as Record<string, unknown> | null
-      const dev = r['devices_agg']  as unknown[] | null
-      const prd = r['products_agg'] as unknown[] | null
+      const r = row as Record<string, unknown>
       return {
         ...(r as unknown as PurchaseInvoiceView),
-        total_amount:    Number(r['total_amount'] ?? 0),
-        paid_amount:     Number(r['paid_amount']  ?? 0),
-        discount:        Number(r['discount']     ?? 0),
-        remaining:       Number(r['remaining']    ?? 0),
-        supplier_name:   String(sup?.['name']       ?? '—'),
-        created_by_name: String(cby?.['full_name']  ?? '—'),
-        devices_count:   (dev  ?? []).length,
-        products_count:  (prd  ?? []).length,
+        total_amount:    Number(r['total_amount']  ?? 0),
+        paid_amount:     Number(r['paid_amount']   ?? 0),
+        discount:        Number(r['discount']      ?? 0),
+        remaining:       Number(r['remaining']     ?? 0),
+        devices_count:   Number(r['devices_count'] ?? 0),
+        products_count:  Number(r['products_count'] ?? 0),
+        supplier_name:   String(r['supplier_name']   ?? '—'),
+        created_by_name: String(r['created_by_name'] ?? '—'),
       } as PurchaseInvoiceView
     })
   },
