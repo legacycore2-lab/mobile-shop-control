@@ -60,4 +60,10 @@ export const paymentsService = {
     paymentsRepository.getCustomerLedgerById(id),
 
   getStats: () => paymentsRepository.getStats(),
+
+  getPurchaseInvoicesBySupplier: (supplierId: string) =>
+    paymentsRepository.getPurchaseInvoicesBySupplier(supplierId),
+
+  getSaleInvoicesByCustomer: (customerId: string) =>
+    paymentsRepository.getSaleInvoicesByCustomer(customerId),
 }
