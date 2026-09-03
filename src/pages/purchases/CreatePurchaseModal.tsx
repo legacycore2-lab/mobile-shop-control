@@ -40,11 +40,9 @@ const BLANK_DEVICE: NewDeviceForm = {
 }
 
 const CONDITIONS = [
-  { value: 'new',           label: 'جديد'        },
-  { value: 'used_like_new', label: 'مستعمل كالجديد' },
-  { value: 'used_good',     label: 'مستعمل جيد'  },
-  { value: 'used_fair',     label: 'مستعمل مقبول' },
-  { value: 'refurbished',   label: 'مجدد'         },
+  { value: 'new',         label: 'جديد'    },
+  { value: 'used',        label: 'مستعمل'  },
+  { value: 'refurbished', label: 'مجدد'    },
 ]
 
 const STORAGES = ['16GB','32GB','64GB','128GB','256GB','512GB','1TB']
