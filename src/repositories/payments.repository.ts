@@ -19,6 +19,9 @@ export interface PaymentWithParty extends Payment {
   party_name: string
 }
 
+// ── Safe number helper: Supabase numeric columns return as strings ─────────────
+function n(v: unknown): number { return Number(v ?? 0) }
+
 export const paymentsRepository = {
 
   // ── Create payment ────────────────────────────────────────────────────────
@@ -42,7 +45,10 @@ export const paymentsRepository = {
       .eq('invoice_id', invoiceId)
       .order('payment_date', { ascending: false })
     if (error) throw error
-    return (data ?? []) as Payment[]
+    return (data ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      amount: n(r['amount']),
+    })) as Payment[]
   },
 
   // ── Get payments by party (supplier or customer) ──────────────────────────
@@ -54,7 +60,10 @@ export const paymentsRepository = {
       .eq('party_id', partyId)
       .order('payment_date', { ascending: false })
     if (error) throw error
-    return (data ?? []) as Payment[]
+    return (data ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      amount: n(r['amount']),
+    })) as Payment[]
   },
 
   // ── Delete payment ────────────────────────────────────────────────────────
@@ -75,7 +84,13 @@ export const paymentsRepository = {
       .select('*')
       .order('supplier_name')
     if (error) throw error
-    return (data ?? []) as SupplierLedger[]
+    return (data ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      opening_balance: n(r['opening_balance']),
+      total_invoiced:  n(r['total_invoiced']),
+      total_paid:      n(r['total_paid']),
+      balance:         n(r['balance']),
+    })) as SupplierLedger[]
   },
 
   getSupplierLedgerById: async (supplierId: string): Promise<SupplierLedger | null> => {
@@ -85,7 +100,14 @@ export const paymentsRepository = {
       .eq('supplier_id', supplierId)
       .single()
     if (error) return null
-    return data as SupplierLedger
+    const r = data as Record<string, unknown>
+    return {
+      ...r,
+      opening_balance: n(r['opening_balance']),
+      total_invoiced:  n(r['total_invoiced']),
+      total_paid:      n(r['total_paid']),
+      balance:         n(r['balance']),
+    } as SupplierLedger
   },
 
   // ── Customer ledger ───────────────────────────────────────────────────────
@@ -96,7 +118,13 @@ export const paymentsRepository = {
       .select('*')
       .order('customer_name')
     if (error) throw error
-    return (data ?? []) as CustomerLedger[]
+    return (data ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      opening_balance: n(r['opening_balance']),
+      total_invoiced:  n(r['total_invoiced']),
+      total_paid:      n(r['total_paid']),
+      balance:         n(r['balance']),
+    })) as CustomerLedger[]
   },
 
   getCustomerLedgerById: async (customerId: string): Promise<CustomerLedger | null> => {
@@ -106,10 +134,17 @@ export const paymentsRepository = {
       .eq('customer_id', customerId)
       .single()
     if (error) return null
-    return data as CustomerLedger
+    const r = data as Record<string, unknown>
+    return {
+      ...r,
+      opening_balance: n(r['opening_balance']),
+      total_invoiced:  n(r['total_invoiced']),
+      total_paid:      n(r['total_paid']),
+      balance:         n(r['balance']),
+    } as CustomerLedger
   },
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // ── Purchase invoices by supplier ─────────────────────────────────────────
 
   getPurchaseInvoicesBySupplier: async (supplierId: string) => {
     const { data, error } = await supabase
@@ -119,18 +154,25 @@ export const paymentsRepository = {
       .eq('status', 'confirmed')
       .order('invoice_date', { ascending: true })
     if (error) throw error
-    return (data ?? []).map((r: Record<string, unknown>) => ({
-      id:            r['id']             as string,
-      invoice_number: r['invoice_number'] as string,
-      invoice_date:  r['invoice_date']   as string,
-      status:        r['status']         as string,
-      notes:         r['notes']          as string | null,
-      total_amount:  Number(r['total_amount'] ?? 0),
-      paid_amount:   Number(r['paid_amount']  ?? 0),
-      discount:      Number(r['discount']     ?? 0),
-      remaining:     Math.max(0, Number(r['total_amount'] ?? 0) - Number(r['paid_amount'] ?? 0) - Number(r['discount'] ?? 0)),
-    }))
+    return (data ?? []).map((r: Record<string, unknown>) => {
+      const total    = n(r['total_amount'])
+      const paid     = n(r['paid_amount'])
+      const discount = n(r['discount'])
+      return {
+        id:             r['id']             as string,
+        invoice_number: r['invoice_number'] as string,
+        invoice_date:   r['invoice_date']   as string,
+        status:         r['status']         as string,
+        notes:          r['notes']          as string | null,
+        total_amount:   total,
+        paid_amount:    paid,
+        discount:       discount,
+        remaining:      Math.max(0, total - paid - discount),
+      }
+    })
   },
+
+  // ── Sale invoices by customer ─────────────────────────────────────────────
 
   getSaleInvoicesByCustomer: async (customerId: string) => {
     const { data, error } = await supabase
@@ -140,25 +182,35 @@ export const paymentsRepository = {
       .eq('status', 'confirmed')
       .order('invoice_date', { ascending: true })
     if (error) throw error
-    return (data ?? []).map((r: Record<string, unknown>) => ({
-      id:            r['id']             as string,
-      invoice_number: r['invoice_number'] as string,
-      invoice_date:  r['invoice_date']   as string,
-      status:        r['status']         as string,
-      notes:         r['notes']          as string | null,
-      total_amount:  Number(r['total_amount'] ?? 0),
-      paid_amount:   Number(r['paid_amount']  ?? 0),
-      discount:      Number(r['discount']     ?? 0),
-      remaining:     Math.max(0, Number(r['total_amount'] ?? 0) - Number(r['paid_amount'] ?? 0) - Number(r['discount'] ?? 0)),
-    }))
+    return (data ?? []).map((r: Record<string, unknown>) => {
+      const total    = n(r['total_amount'])
+      const paid     = n(r['paid_amount'])
+      const discount = n(r['discount'])
+      return {
+        id:             r['id']             as string,
+        invoice_number: r['invoice_number'] as string,
+        invoice_date:   r['invoice_date']   as string,
+        status:         r['status']         as string,
+        notes:          r['notes']          as string | null,
+        total_amount:   total,
+        paid_amount:    paid,
+        discount:       discount,
+        remaining:      Math.max(0, total - paid - discount),
+      }
+    })
   },
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
   getStats: async () => {
     const { data, error } = await supabase
       .from('payments')
       .select('payment_type, amount')
     if (error) throw error
-    const rows = (data ?? []) as { payment_type: string; amount: number }[]
+    const rows = (data ?? []).map((r: Record<string, unknown>) => ({
+      payment_type: r['payment_type'] as string,
+      amount:       n(r['amount']),
+    }))
     return {
       totalPurchasePayments: rows.filter(r => r.payment_type === 'purchase').reduce((s, r) => s + r.amount, 0),
       totalSalePayments:     rows.filter(r => r.payment_type === 'sale').reduce((s, r) => s + r.amount, 0),
