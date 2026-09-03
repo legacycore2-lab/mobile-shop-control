@@ -544,7 +544,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={e => void handleSubmit(e)}>
-          <div className="px-6 py-5 flex flex-col gap-5 max-h-[75vh] overflow-y-auto">
+          <div className="px-6 py-5 flex flex-col gap-5 max-h-[80vh] overflow-y-auto">
 
             {/* Scan feedback */}
             {scanFeedback && (
@@ -680,7 +680,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
 
               {/* ── Products tab ── */}
               {tab === 'products' && (
-                <div className="space-y-3">
+                <div className="space-y-3 min-h-[200px]">
 
                   {/* Add new product inline */}
                   {showAddProduct ? (
