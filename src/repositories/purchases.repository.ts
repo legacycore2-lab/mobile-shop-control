@@ -4,7 +4,7 @@ import type {
   PurchaseInvoiceDevice, PurchaseInvoiceProduct,
 } from '@/types/database'
 
-type InvoiceInsert = Omit<PurchaseInvoice, 'id' | 'created_at' | 'updated_at'>
+type InvoiceInsert = Omit<PurchaseInvoice, 'id' | 'created_at' | 'updated_at' | 'remaining'>
 type InvoiceUpdate = Partial<Omit<PurchaseInvoice, 'id' | 'created_at' | 'updated_at'>>
 
 export interface InvoiceDeviceLine {
