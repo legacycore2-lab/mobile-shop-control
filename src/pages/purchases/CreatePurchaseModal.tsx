@@ -1,14 +1,219 @@
 // src/pages/purchases/CreatePurchaseModal.tsx
 import { useState, useCallback, useRef } from 'react'
-import { Plus, X, Smartphone, Tag, AlertCircle, FileText, Search, ScanLine, Zap } from 'lucide-react'
+import {
+  Plus, X, Smartphone, Tag, AlertCircle, FileText,
+  Search, ScanLine, Zap, ChevronDown, ChevronUp,
+} from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
-import { useCreatePurchase, useUnlinkedDevices } from '@/hooks/usePurchases'
+import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
+import { useBrands, useModelsByBrand, useCreateDevice } from '@/hooks/useDevices'
+import type { DeviceFormData } from '@/services/devices.service'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { fmt } from './constants'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
+
+// ── New Device Form (inline inside modal) ─────────────────────────────────────
+
+interface NewDeviceForm {
+  brand_id:       string
+  model_id:       string
+  imei1:          string
+  imei2:          string
+  storage:        string
+  color:          string
+  condition:      string
+  cost_price:     string
+  selling_price:  string
+  warranty_months: string
+  notes:          string
+}
+
+const BLANK_DEVICE: NewDeviceForm = {
+  brand_id: '', model_id: '', imei1: '', imei2: '',
+  storage: '', color: '', condition: 'new',
+  cost_price: '', selling_price: '', warranty_months: '12', notes: '',
+}
+
+const CONDITIONS = [
+  { value: 'new',           label: 'جديد'        },
+  { value: 'used_like_new', label: 'مستعمل كالجديد' },
+  { value: 'used_good',     label: 'مستعمل جيد'  },
+  { value: 'used_fair',     label: 'مستعمل مقبول' },
+  { value: 'refurbished',   label: 'مجدد'         },
+]
+
+const STORAGES = ['16GB','32GB','64GB','128GB','256GB','512GB','1TB']
+
+function AddDeviceInlineForm({
+  supplierId,
+  onAdded,
+  onCancel,
+}: {
+  supplierId: string
+  onAdded: (line: InvoiceDeviceLine & { label: string }) => void
+  onCancel: () => void
+}) {
+  const { data: brands = [] } = useBrands()
+  const [form, setForm]       = useState<NewDeviceForm>(BLANK_DEVICE)
+  const [error, setError]     = useState('')
+  const [saving, setSaving]   = useState(false)
+  const createDevice          = useCreateDevice()
+
+  const { data: models = [] } = useModelsByBrand(form.brand_id)
+
+  function set(field: keyof NewDeviceForm, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleAdd() {
+    setError('')
+    if (!form.brand_id)      return setError('اختر الماركة')
+    if (!form.model_id)      return setError('اختر الموديل')
+    if (!form.imei1.trim())  return setError('IMEI مطلوب')
+    if (!form.cost_price)    return setError('سعر الشراء مطلوب')
+    if (!supplierId)         return setError('اختر المورد أولاً')
+
+    setSaving(true)
+    try {
+      const deviceForm: DeviceFormData = {
+        imei1:           form.imei1.trim(),
+        imei2:           form.imei2.trim(),
+        serial_number:   '',
+        brand_id:        form.brand_id,
+        model_id:        form.model_id,
+        storage:         form.storage,
+        color:           form.color.trim(),
+        condition:       form.condition,
+        supplier_id:     supplierId,
+        purchase_date:   new Date().toISOString().split('T')[0],
+        cost_price:      Number(form.cost_price),
+        selling_price:   form.selling_price ? Number(form.selling_price) : 0,
+        warranty_months: Number(form.warranty_months) || 12,
+        location:        '',
+        notes:           form.notes.trim(),
+        added_by:        '',
+      }
+      const device = await createDevice.mutateAsync(deviceForm)
+
+      const brand = brands.find(b => b.id === form.brand_id)
+      const model = models.find(m => m.id === form.model_id)
+      const label = `${brand?.name ?? ''} ${model?.name ?? ''} — ${form.imei1}`
+
+      onAdded({ device_id: device.id, cost_price: Number(form.cost_price), label })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = 'h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
+      <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest">إضافة جهاز جديد</p>
+
+      {/* Brand + Model */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الماركة *</label>
+          <select value={form.brand_id} onChange={e => { set('brand_id', e.target.value); set('model_id', '') }} className={inp + ' cursor-pointer'}>
+            <option value="">اختر الماركة</option>
+            {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الموديل *</label>
+          <select value={form.model_id} onChange={e => set('model_id', e.target.value)} disabled={!form.brand_id} className={inp + ' cursor-pointer disabled:opacity-50'}>
+            <option value="">اختر الموديل</option>
+            {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* IMEI 1 + IMEI 2 */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">IMEI 1 *</label>
+          <input value={form.imei1} onChange={e => set('imei1', e.target.value)}
+            placeholder="355XXXXXXXXXXXX" className={inp} maxLength={20} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">IMEI 2</label>
+          <input value={form.imei2} onChange={e => set('imei2', e.target.value)}
+            placeholder="اختياري" className={inp} maxLength={20} />
+        </div>
+      </div>
+
+      {/* Storage + Color + Condition */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">التخزين</label>
+          <select value={form.storage} onChange={e => set('storage', e.target.value)} className={inp + ' cursor-pointer'}>
+            <option value="">—</option>
+            {STORAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">اللون</label>
+          <input value={form.color} onChange={e => set('color', e.target.value)} placeholder="أسود..." className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الحالة</label>
+          <select value={form.condition} onChange={e => set('condition', e.target.value)} className={inp + ' cursor-pointer'}>
+            {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Cost + Selling + Warranty */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">سعر الشراء * (ج)</label>
+          <input type="number" min="0" step="0.01" value={form.cost_price}
+            onChange={e => set('cost_price', e.target.value)} placeholder="0.00" className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">سعر البيع (ج)</label>
+          <input type="number" min="0" step="0.01" value={form.selling_price}
+            onChange={e => set('selling_price', e.target.value)} placeholder="0.00" className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الضمان (شهر)</label>
+          <input type="number" min="0" value={form.warranty_months}
+            onChange={e => set('warranty_months', e.target.value)} className={inp} />
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+          <AlertCircle size={12} /> {error}
+        </p>
+      )}
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button type="button" onClick={onCancel}
+          className="h-8 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          إلغاء
+        </button>
+        <button type="button" onClick={() => void handleAdd()} disabled={saving}
+          className="h-8 px-4 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5">
+          {saving && <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+          <Plus size={12} /> إضافة الجهاز
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Modal ────────────────────────────────────────────────────────────────
+
+interface AddedDevice extends InvoiceDeviceLine {
+  label: string
+}
 
 export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const { profile }              = useAuth()
@@ -21,20 +226,15 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const [paidAmount,    setPaidAmount]    = useState('')
   const [discount,      setDiscount]      = useState('0')
   const [notes,         setNotes]         = useState('')
-  const [deviceLines,   setDeviceLines]   = useState<InvoiceDeviceLine[]>([])
+  const [deviceLines,   setDeviceLines]   = useState<AddedDevice[]>([])
   const [productLines,  setProductLines]  = useState<InvoiceProductLine[]>([])
   const [error,         setError]         = useState('')
   const [tab,           setTab]           = useState<'devices' | 'products'>('devices')
-  const [deviceSearch,  setDeviceSearch]  = useState('')
-  const [scanDevice,    setScanDevice]    = useState(false)
   const [productSearch, setProductSearch] = useState('')
   const [scanProduct,   setScanProduct]   = useState(false)
+  const [showAddDevice, setShowAddDevice] = useState(false)
   const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const { data: unlinkedDevices = [] } = useUnlinkedDevices(supplierId)
-
-  // ── helpers ──────────────────────────────────────────────────────────────
 
   function showFeedback(msg: string, ok: boolean) {
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
@@ -42,18 +242,20 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     feedbackTimer.current = setTimeout(() => setScanFeedback(null), 2500)
   }
 
-  // ── Device selection ──────────────────────────────────────────────────────
+  // ── Device lines ──────────────────────────────────────────────────────────
 
-  function toggleDevice(device: { id: string; cost_price: number }) {
-    setDeviceLines(prev => {
-      const exists = prev.find(l => l.device_id === device.id)
-      if (exists) return prev.filter(l => l.device_id !== device.id)
-      return [...prev, { device_id: device.id, cost_price: device.cost_price }]
-    })
+  function handleDeviceAdded(line: AddedDevice) {
+    setDeviceLines(prev => [...prev, line])
+    setShowAddDevice(false)
+    showFeedback(`✓ ${line.label} — تمت الإضافة`, true)
   }
 
   function updateDeviceCost(deviceId: string, cost: number) {
     setDeviceLines(prev => prev.map(l => l.device_id === deviceId ? { ...l, cost_price: cost } : l))
+  }
+
+  function removeDevice(deviceId: string) {
+    setDeviceLines(prev => prev.filter(l => l.device_id !== deviceId))
   }
 
   // ── Product lines ─────────────────────────────────────────────────────────
@@ -63,11 +265,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     if (!product) return
     setProductLines(prev => {
       const exists = prev.find(l => l.product_id === productId)
-      if (exists) {
-        return prev.map(l => l.product_id === productId
-          ? { ...l, quantity: l.quantity + 1 }
-          : l)
-      }
+      if (exists) return prev.map(l => l.product_id === productId ? { ...l, quantity: l.quantity + 1 } : l)
       return [...prev, { product_id: productId, quantity: 1, unit_price: product.cost_price }]
     })
   }
@@ -80,32 +278,11 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     setProductLines(prev => prev.filter(l => l.product_id !== productId))
   }
 
-  // ── Barcode scan handlers ─────────────────────────────────────────────────
-
-  const handleDeviceScan = useCallback((imei: string) => {
-    setScanDevice(false)
-    setTab('devices')
-    setDeviceSearch(imei)
-    const match = unlinkedDevices.find(d => d.imei1 === imei)
-    if (match) {
-      if (!deviceLines.find(l => l.device_id === match.id)) {
-        toggleDevice(match)
-        showFeedback(`✓ ${match.brand_name} ${match.model_name} — تمت الإضافة`, true)
-      } else {
-        showFeedback('الجهاز مضاف بالفعل', false)
-      }
-    } else {
-      showFeedback(`لم يُعثر على IMEI: ${imei}`, false)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlinkedDevices, deviceLines])
+  // ── Barcode scan ──────────────────────────────────────────────────────────
 
   const handleProductScan = useCallback((code: string) => {
     setScanProduct(false)
-    const match = products.find(p =>
-      p.is_active &&
-      (p.barcode === code || p.sku === code)
-    )
+    const match = products.find(p => p.is_active && (p.barcode === code || p.sku === code))
     if (match) {
       addProduct(match.id)
       showFeedback(`✓ ${match.name} — تمت الإضافة`, true)
@@ -116,16 +293,11 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products])
 
-  // ── USB always-on: routes to current tab ──────────────────────────────────
   const handleUsbScan = useCallback((code: string) => {
-    if (tab === 'devices') {
-      handleDeviceScan(code)
-    } else {
-      handleProductScan(code)
-    }
-  }, [tab, handleDeviceScan, handleProductScan])
+    if (tab === 'products') handleProductScan(code)
+  }, [tab, handleProductScan])
 
-  useUsbScanner(handleUsbScan, !scanDevice && !scanProduct)
+  useUsbScanner(handleUsbScan, !scanProduct)
 
   // ── Totals ────────────────────────────────────────────────────────────────
 
@@ -146,7 +318,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
         discount:      Number(discount)    || 0,
         notes,
         created_by:    profile?.id         ?? '',
-        device_lines:  deviceLines,
+        device_lines:  deviceLines.map(({ device_id, cost_price }) => ({ device_id, cost_price })),
         product_lines: productLines,
       })
       onClose()
@@ -157,12 +329,6 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
 
   const inputCls = 'h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
   const labelCls = 'text-sm font-semibold text-gray-700 dark:text-gray-300'
-
-  // filtered devices for search
-  const filteredUnlinked = unlinkedDevices.filter(d => {
-    const q = deviceSearch.toLowerCase()
-    return !q || d.imei1.includes(q) || d.brand_name.toLowerCase().includes(q) || d.model_name.toLowerCase().includes(q)
-  })
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
@@ -188,7 +354,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={e => void handleSubmit(e)}>
-          <div className="px-6 py-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
+          <div className="px-6 py-5 flex flex-col gap-5 max-h-[75vh] overflow-y-auto">
 
             {/* Scan feedback */}
             {scanFeedback && (
@@ -208,7 +374,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <label className={labelCls}>المورد <span className="text-red-500">*</span></label>
-                  <select value={supplierId} onChange={e => { setSupplierId(e.target.value); setDeviceLines([]) }}
+                  <select value={supplierId} onChange={e => setSupplierId(e.target.value)}
                     required className={inputCls + ' cursor-pointer'}>
                     <option value="">اختر المورد</option>
                     {suppliers.filter(s => s.is_active).map(s => (
@@ -258,61 +424,64 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
 
               {/* ── Devices tab ── */}
               {tab === 'devices' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {!supplierId ? (
                     <div className="py-6 text-center text-gray-400 dark:text-gray-600 text-sm">
-                      اختر المورد أولاً لعرض أجهزته غير المرتبطة بفواتير
+                      اختر المورد أولاً لإضافة الأجهزة
                     </div>
                   ) : (
                     <>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input value={deviceSearch} onChange={e => setDeviceSearch(e.target.value)}
-                            placeholder="بحث بـ IMEI أو الماركة..."
-                            className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" />
-                        </div>
-                        <button type="button" onClick={() => setScanDevice(true)}
-                          className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
-                          title="مسح IMEI بالكاميرا">
-                          <ScanLine size={15} />
-                        </button>
-                      </div>
-                      {filteredUnlinked.length === 0 ? (
-                        <div className="py-6 text-center text-gray-400 dark:text-gray-600 text-sm">
-                          <Smartphone size={28} className="mx-auto mb-2 opacity-30" />
-                          <p>لا توجد أجهزة غير مرتبطة لهذا المورد</p>
-                        </div>
-                      ) : (
+                      {/* Added devices list */}
+                      {deviceLines.length > 0 && (
                         <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {filteredUnlinked.map(d => {
-                            const selected = deviceLines.find(l => l.device_id === d.id)
-                            return (
-                              <div key={d.id}
-                                className={cn('flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-all',
-                                  selected
-                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}
-                                onClick={() => toggleDevice(d)}>
-                                <input type="checkbox" checked={!!selected} onChange={() => toggleDevice(d)}
-                                  className="accent-blue-600 flex-shrink-0" onClick={e => e.stopPropagation()} />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.brand_name} {d.model_name}</p>
-                                  <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">{d.imei1}</p>
-                                </div>
-                                {selected ? (
-                                  <input type="number" min="0" step="0.01"
-                                    value={selected.cost_price}
-                                    onChange={e => { e.stopPropagation(); updateDeviceCost(d.id, Number(e.target.value)) }}
-                                    onClick={e => e.stopPropagation()}
-                                    className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center" />
-                                ) : (
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.cost_price)} ج</span>
-                                )}
+                          {deviceLines.map(line => (
+                            <div key={line.device_id}
+                              className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+                              <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                                <Smartphone size={14} className="text-blue-600 dark:text-blue-400" />
                               </div>
-                            )
-                          })}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{line.label}</p>
+                              </div>
+                              <input
+                                type="number" min="0" step="0.01"
+                                value={line.cost_price}
+                                onChange={e => updateDeviceCost(line.device_id, Number(e.target.value))}
+                                className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center"
+                              />
+                              <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">ج</span>
+                              <button type="button" onClick={() => removeDevice(line.device_id)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
+                                <X size={13} />
+                              </button>
+                            </div>
+                          ))}
                         </div>
+                      )}
+
+                      {/* Add device form (inline) */}
+                      {showAddDevice ? (
+                        <AddDeviceInlineForm
+                          supplierId={supplierId}
+                          onAdded={handleDeviceAdded}
+                          onCancel={() => setShowAddDevice(false)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddDevice(true)}
+                          className="w-full h-10 flex items-center justify-center gap-2 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        >
+                          <Plus size={16} />
+                          إضافة جهاز جديد للفاتورة
+                          <ChevronDown size={14} />
+                        </button>
+                      )}
+
+                      {deviceLines.length === 0 && !showAddDevice && (
+                        <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-1">
+                          اضغط الزر بالأعلى لإضافة جهاز جديد مباشرةً
+                        </p>
                       )}
                     </>
                   )}
@@ -339,7 +508,6 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                     </button>
                   </div>
 
-                  {/* Product list */}
                   <div className="max-h-44 overflow-y-auto space-y-1.5 border border-gray-100 dark:border-gray-800 rounded-xl p-2">
                     {products
                       .filter(p => p.is_active && !productLines.find(l => l.product_id === p.id))
@@ -406,15 +574,18 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
               <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-2">
                 <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">ملخص الفاتورة</p>
                 {[
-                  ['أجهزة',        `${fmt(deviceTotal)} ج`],
-                  ['منتجات',       `${fmt(productTotal)} ج`],
-                  ['الإجمالي',     `${fmt(grandTotal)} ج`],
-                  ['بعد الخصم',   `${fmt(afterDisc)} ج`],
-                  ['المتبقي',      `${fmt(remaining)} ج`],
+                  ['أجهزة',      `${deviceLines.length} جهاز — ${fmt(deviceTotal)} ج`],
+                  ['منتجات',     `${fmt(productTotal)} ج`],
+                  ['الإجمالي',   `${fmt(grandTotal)} ج`],
+                  ['بعد الخصم', `${fmt(afterDisc)} ج`],
+                  ['المتبقي',    `${fmt(remaining)} ج`],
                 ].map(([l, v]) => (
                   <div key={l} className="flex items-center justify-between">
                     <span className="text-xs text-blue-700 dark:text-blue-400">{l}</span>
-                    <span className={cn('text-sm font-bold', l === 'المتبقي' && remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-100')}>{v}</span>
+                    <span className={cn('text-sm font-bold',
+                      l === 'المتبقي' && remaining > 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-blue-900 dark:text-blue-100')}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -447,14 +618,6 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
             placeholder="باركود أو SKU..."
             onScan={handleProductScan}
             onClose={() => setScanProduct(false)}
-          />
-        )}
-        {scanDevice && (
-          <BarcodeScanner
-            title="مسح IMEI الجهاز"
-            placeholder="355XXXXXXXXXXXX"
-            onScan={handleDeviceScan}
-            onClose={() => setScanDevice(false)}
           />
         )}
       </div>
