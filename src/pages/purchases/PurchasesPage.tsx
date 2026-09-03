@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Search, Plus, Package, Truck, DollarSign, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag, Banknote } from 'lucide-react'
+import { Search, Plus, Package, Truck, DollarSign, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag, Banknote, Pencil } from 'lucide-react'
 import { usePurchases, usePurchaseStats, useConfirmPurchase, useCancelPurchase, useDeletePurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
 import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
@@ -7,6 +7,7 @@ import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { PurchaseInvoiceDrawer } from './InvoiceDrawer'
 import { CreatePurchaseModal } from './CreatePurchaseModal'
+import { EditPurchaseModal } from './EditPurchaseModal'
 import { STATUS_MAP, PAGE_SIZE, fmt, type FilterStatus } from './constants'
 import type { PurchaseInvoiceView, InvoiceStatus } from '@/types/database'
 
@@ -15,10 +16,11 @@ export function PurchasesPage() {
   const { data: stats }                    = usePurchaseStats()
   const deleteMutation                     = useDeletePurchase()
 
-  const [search,   setSearch]   = useState('')
-  const [filter,   setFilter]   = useState<FilterStatus>('all')
-  const [page,     setPage]     = useState(1)
+  const [search,     setSearch]     = useState('')
+  const [filter,     setFilter]     = useState<FilterStatus>('all')
+  const [page,       setPage]       = useState(1)
   const [showCreate, setShowCreate] = useState(false)
+  const [editId,     setEditId]     = useState<string | null>(null)
   const [detailId,   setDetailId]   = useState<string | null>(null)
   const [payInvoice, setPayInvoice] = useState<PurchaseInvoiceView | null>(null)
 
@@ -43,10 +45,10 @@ export function PurchasesPage() {
   }
 
   const STATS = [
-    { label: 'إجمالي الفواتير', value: stats?.total      ?? 0, sub: `${stats?.confirmed ?? 0} مؤكدة`,     icon: FileText,    color: 'blue'   as const },
-    { label: 'مسودات',          value: stats?.draft       ?? 0, icon: Clock,       color: 'amber'  as const },
-    { label: 'إجمالي المشتريات', value: `${fmt(stats?.totalSpent ?? 0)} ج`, sub: 'من الفواتير المؤكدة', icon: DollarSign,  color: 'purple' as const },
-    { label: 'المتبقي (مديونية)', value: `${fmt(stats?.totalDue  ?? 0)} ج`, sub: `مدفوع: ${fmt(stats?.totalPaid ?? 0)} ج`,  icon: CreditCard,  color: (stats?.totalDue ?? 0) > 0 ? 'red' as const : 'green' as const },
+    { label: 'إجمالي الفواتير',   value: stats?.total      ?? 0, sub: `${stats?.confirmed ?? 0} مؤكدة`,                  icon: FileText,   color: 'blue'   as const },
+    { label: 'مسودات',            value: stats?.draft       ?? 0,                                                          icon: Clock,      color: 'amber'  as const },
+    { label: 'إجمالي المشتريات',  value: `${fmt(stats?.totalSpent ?? 0)} ج`, sub: 'من الفواتير المؤكدة',                  icon: DollarSign, color: 'purple' as const },
+    { label: 'المتبقي (مديونية)', value: `${fmt(stats?.totalDue  ?? 0)} ج`,  sub: `مدفوع: ${fmt(stats?.totalPaid ?? 0)} ج`, icon: CreditCard, color: (stats?.totalDue ?? 0) > 0 ? 'red' as const : 'green' as const },
   ]
 
   const FILTER_TABS: { value: FilterStatus; label: string }[] = [
@@ -173,10 +175,21 @@ export function PurchasesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-center">
+                        {/* View */}
                         <button title="عرض التفاصيل" onClick={() => setDetailId(inv.id)}
                           className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                           <Eye size={13} />
                         </button>
+
+                        {/* Edit — confirmed invoices only */}
+                        {inv.status === 'confirmed' && (
+                          <button title="تعديل الفاتورة" onClick={() => setEditId(inv.id)}
+                            className="w-7 h-7 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                            <Pencil size={13} />
+                          </button>
+                        )}
+
+                        {/* Pay — confirmed with remaining balance */}
                         {inv.status === 'confirmed' && inv.remaining > 0 && (
                           <button
                             title="تسجيل دفعة"
@@ -186,6 +199,8 @@ export function PurchasesPage() {
                             {fmt(inv.remaining)} ج
                           </button>
                         )}
+
+                        {/* Delete — draft only */}
                         {inv.status === 'draft' && (
                           <button title="حذف" onClick={() => void handleDelete(inv.id, inv.status)}
                             disabled={deleteMutation.isPending}
@@ -225,9 +240,10 @@ export function PurchasesPage() {
       </div>
 
       {/* Modals */}
-      {showCreate && <CreatePurchaseModal onClose={() => setShowCreate(false)} />}
-      {detailId   && <PurchaseInvoiceDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
-      {payInvoice && (
+      {showCreate  && <CreatePurchaseModal onClose={() => setShowCreate(false)} />}
+      {editId      && <EditPurchaseModal invoiceId={editId} onClose={() => setEditId(null)} />}
+      {detailId    && <PurchaseInvoiceDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
+      {payInvoice  && (
         <AddPaymentModal
           invoiceId={payInvoice.id}
           invoiceNumber={payInvoice.invoice_number}
