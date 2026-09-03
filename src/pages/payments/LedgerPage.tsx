@@ -61,10 +61,12 @@ function SupplierLedgerTable({ search }: { search: string }) {
                   'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold',
                   s.balance > 0
                     ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                    : s.balance < 0
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                     : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                 )}>
                   {fmt(Math.abs(s.balance))} ج
-                  {s.balance > 0 ? ' (مديونية)' : ' (مسدد)'}
+                  {s.balance > 0 ? ' (مديونية)' : s.balance < 0 ? ' (رصيد دائن)' : ' (مسدد)'}
                 </span>
               </td>
               <td className="px-4 py-3 text-gray-400">
@@ -126,10 +128,12 @@ function CustomerLedgerTable({ search }: { search: string }) {
                   'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold',
                   c.balance > 0
                     ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                    : c.balance < 0
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                     : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                 )}>
                   {fmt(Math.abs(c.balance))} ج
-                  {c.balance > 0 ? ' (مديونية)' : ' (مسدد)'}
+                  {c.balance > 0 ? ' (مديونية)' : c.balance < 0 ? ' (رصيد دائن)' : ' (مسدد)'}
                 </span>
               </td>
               <td className="px-4 py-3 text-gray-400">
@@ -241,3 +245,4 @@ export function LedgerPage() {
     </div>
   )
 }
+
