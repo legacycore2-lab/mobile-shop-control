@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Printer, DollarSign, FileText,
   TrendingDown, TrendingUp, Truck, Users,
-  CheckCircle, AlertCircle,
+  CheckCircle, AlertCircle, ChevronDown, ChevronUp, Smartphone, Tag,
 } from 'lucide-react'
 import { useSupplierLedgerById, useCustomerLedgerById, usePaymentsByParty } from '@/hooks/usePayments'
 import { useQuery } from '@tanstack/react-query'
@@ -18,6 +18,12 @@ const METHOD_LABELS: Record<string, string> = {
 }
 
 // ── Invoice type for both purchase and sale ───────────────────────────────────
+interface DeviceLine {
+  imei1: string; brand: string; model: string; cost_price?: number; price?: number
+}
+interface ProductLine {
+  name: string; unit: string; quantity: number; unit_price: number
+}
 interface InvoiceRow {
   id:             string
   invoice_number: string
@@ -28,6 +34,8 @@ interface InvoiceRow {
   remaining:      number
   status:         string
   notes:          string | null
+  devices?:       DeviceLine[]
+  products?:      ProductLine[]
 }
 
 // ── Print function ────────────────────────────────────────────────────────────
@@ -212,10 +220,10 @@ export function PartyStatementPage() {
   const { data: payments = [] }  = usePaymentsByParty(id ?? '')
 
   const { data: invoices = [] } = useQuery({
-    queryKey: ['statement-invoices', type, id],
+    queryKey: ['statement-invoices-lines', type, id],
     queryFn: () => isSupplier
-      ? paymentsService.getPurchaseInvoicesBySupplier(id ?? '')
-      : paymentsService.getSaleInvoicesByCustomer(id ?? ''),
+      ? paymentsService.getPurchaseInvoiceLinesBySupplier(id ?? '')
+      : paymentsService.getSaleInvoiceLinesByCustomer(id ?? ''),
     enabled: !!id,
   })
 
@@ -224,6 +232,15 @@ export function PartyStatementPage() {
   const partyPhone = isSupplier ? supplierLedger?.supplier_phone : customerLedger?.customer_phone
 
   const [payModal, setPayModal] = useState<{ invoiceId: string; invoiceNumber: string; remaining: number } | null>(null)
+  const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set())
+
+  function toggleInvoice(id: string) {
+    setExpandedInvoices(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   const totalInvoiceRemaining = useMemo(() =>
     invoices.reduce((s, i) => s + i.remaining, 0), [invoices])
@@ -331,34 +348,101 @@ export function PartyStatementPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {invoices.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">لا توجد فواتير مؤكدة</td></tr>
-              ) : invoices.map(inv => (
-                <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs font-bold text-gray-700 dark:text-gray-300">{inv.invoice_number}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{new Date(inv.invoice_date).toLocaleDateString('ar-EG')}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{fmt(inv.total_amount)} ج</td>
-                  <td className="px-4 py-3 text-gray-400">{inv.discount > 0 ? `${fmt(inv.discount)} ج` : '—'}</td>
-                  <td className="px-4 py-3 text-green-600 dark:text-green-400 font-medium">{fmt(inv.paid_amount)} ج</td>
-                  <td className="px-4 py-3">
-                    <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold',
-                      inv.remaining > 0
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                        : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                    )}>
-                      {inv.remaining > 0 ? <AlertCircle size={10} /> : <CheckCircle size={10} />}
-                      {fmt(inv.remaining)} ج
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {inv.remaining > 0 && (
-                      <button
-                        onClick={() => setPayModal({ invoiceId: inv.id, invoiceNumber: inv.invoice_number, remaining: inv.remaining })}
-                        className="h-7 px-2.5 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-green-100 transition-colors flex items-center gap-1 whitespace-nowrap">
-                        <DollarSign size={11} /> دفع
-                      </button>
+              ) : invoices.map(inv => {
+                const isExpanded = expandedInvoices.has(inv.id)
+                const hasLines   = (inv.devices?.length ?? 0) + (inv.products?.length ?? 0) > 0
+                return (
+                  <>
+                    <tr key={inv.id} className={cn('transition-colors cursor-pointer',
+                      isExpanded ? 'bg-blue-50 dark:bg-blue-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/30')}
+                      onClick={() => hasLines && toggleInvoice(inv.id)}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {hasLines && (
+                            isExpanded
+                              ? <ChevronUp size={13} className="text-blue-500 flex-shrink-0" />
+                              : <ChevronDown size={13} className="text-gray-400 flex-shrink-0" />
+                          )}
+                          <span className="font-mono text-xs font-bold text-gray-700 dark:text-gray-300">{inv.invoice_number}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{new Date(inv.invoice_date).toLocaleDateString('ar-EG')}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{fmt(inv.total_amount)} ج</td>
+                      <td className="px-4 py-3 text-gray-400">{inv.discount > 0 ? `${fmt(inv.discount)} ج` : '—'}</td>
+                      <td className="px-4 py-3 text-green-600 dark:text-green-400 font-medium">{fmt(inv.paid_amount)} ج</td>
+                      <td className="px-4 py-3">
+                        <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold',
+                          inv.remaining > 0
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                            : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                        )}>
+                          {inv.remaining > 0 ? <AlertCircle size={10} /> : <CheckCircle size={10} />}
+                          {fmt(inv.remaining)} ج
+                        </span>
+                      </td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        {inv.remaining > 0 && (
+                          <button
+                            onClick={() => setPayModal({ invoiceId: inv.id, invoiceNumber: inv.invoice_number, remaining: inv.remaining })}
+                            className="h-7 px-2.5 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-green-100 transition-colors flex items-center gap-1 whitespace-nowrap">
+                            <DollarSign size={11} /> دفع
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+
+                    {/* Expanded lines */}
+                    {isExpanded && (
+                      <tr key={inv.id + '-lines'}>
+                        <td colSpan={7} className="px-0 py-0 border-b border-blue-100 dark:border-blue-900">
+                          <div className="bg-blue-50/60 dark:bg-blue-900/10 px-6 py-3 space-y-2">
+
+                            {/* Devices */}
+                            {(inv.devices?.length ?? 0) > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1.5">
+                                  <Smartphone size={11} /> أجهزة ({inv.devices!.length})
+                                </p>
+                                {inv.devices!.map((d, i) => (
+                                  <div key={i} className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-3 py-1.5 border border-blue-100 dark:border-blue-800">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{d.brand} {d.model}</span>
+                                      <span className="text-xs text-gray-400 font-mono">{d.imei1}</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                      {fmt(d.cost_price ?? d.price ?? 0)} ج
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Products */}
+                            {(inv.products?.length ?? 0) > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 mb-1.5">
+                                  <Tag size={11} /> منتجات ({inv.products!.length})
+                                </p>
+                                {inv.products!.map((p, i) => (
+                                  <div key={i} className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-3 py-1.5 border border-purple-100 dark:border-purple-800">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{p.name}</span>
+                                      <span className="text-xs text-gray-400">{p.quantity} {p.unit}</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                      {fmt(p.quantity * p.unit_price)} ج
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </>
+                )
+              })}
             </tbody>
             {invoices.length > 0 && (
               <tfoot>
