@@ -40,7 +40,9 @@ export const purchasesRepository = {
     const { data, error } = await supabase
       .from('purchase_invoices')
       .select(`
-        *,
+        id, invoice_number, supplier_id, invoice_date,
+        total_amount, paid_amount, discount, remaining,
+        notes, status, created_by, created_at, updated_at,
         suppliers!supplier_id ( name ),
         profiles!created_by ( full_name ),
         devices_agg:purchase_invoice_devices ( id ),
@@ -75,7 +77,9 @@ export const purchasesRepository = {
     const { data: inv, error: invErr } = await supabase
       .from('purchase_invoices')
       .select(`
-        *,
+        id, invoice_number, supplier_id, invoice_date,
+        total_amount, paid_amount, discount, remaining,
+        notes, status, created_by, created_at, updated_at,
         suppliers!supplier_id ( name ),
         profiles!created_by ( full_name ),
         devices_agg:purchase_invoice_devices ( id ),
