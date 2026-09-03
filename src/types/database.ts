@@ -108,6 +108,46 @@ export interface AuditLog {
   ip_address: string | null; created_at: string
 }
 
+export type PaymentType   = 'purchase' | 'sale'
+export type PartyType     = 'supplier' | 'customer'
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'check' | 'other'
+
+export interface Payment {
+  id:             string
+  payment_type:   PaymentType
+  invoice_id:     string
+  invoice_number: string
+  party_type:     PartyType
+  party_id:       string
+  amount:         number
+  payment_method: PaymentMethod
+  payment_date:   string
+  notes:          string | null
+  created_by:     string | null
+  created_at:     string
+}
+
+export interface SupplierLedger {
+  supplier_id:      string
+  supplier_name:    string
+  supplier_phone:   string | null
+  opening_balance:  number
+  total_invoiced:   number
+  total_paid:       number
+  balance:          number
+}
+
+export interface CustomerLedger {
+  customer_id:      string
+  customer_name:    string
+  customer_phone:   string | null
+  opening_balance:  number
+  total_invoiced:   number
+  total_paid:       number
+  balance:          number
+}
+
+
 export type Database = {
   public: {
     Tables: {
@@ -123,6 +163,7 @@ export type Database = {
       purchase_invoice_devices:  { Row: PurchaseInvoiceDevice; Insert: Omit<PurchaseInvoiceDevice, 'id'|'created_at'>;          Update: never }
       purchase_invoice_products: { Row: PurchaseInvoiceProduct;Insert: Omit<PurchaseInvoiceProduct, 'id'|'created_at'|'subtotal'>; Update: never }
       audit_logs:                { Row: AuditLog;              Insert: Omit<AuditLog, 'id'|'created_at'>;                       Update: never }
+      payments:                  { Row: Payment;               Insert: Omit<Payment, 'id'|'created_at'>;                        Update: never }
     }
     Functions: {
       lookup_device_by_imei:  { Args: { p_imei: string };      Returns: MobileDeviceView[] }
