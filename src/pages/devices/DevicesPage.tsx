@@ -4,7 +4,7 @@ import {
   Search, Plus, Download, Smartphone,
   Package, CheckCircle, Wrench, AlertTriangle,
   Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
-  TrendingUp, DollarSign, ScanLine,
+  TrendingUp, DollarSign, ScanLine, Printer,
 } from 'lucide-react'
 import { useDevices, useDeviceStats, useDeleteDevice } from '@/hooks/useDevices'
 import { Badge } from '@/components/ui/Badge'
@@ -12,6 +12,8 @@ import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { ImeiLookup }   from './ImeiLookup'
 import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
+import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
+import type { BarcodeLabel } from '@/components/shared/BarcodeLabelModal'
 import { DeviceModal }  from './DeviceModal'
 import { DeviceDrawer } from './DeviceDrawer'
 import { STATUS_MAP, CONDITION_MAP, PAGE_SIZE, type FilterStatus } from './constants'
@@ -30,6 +32,7 @@ export function DevicesPage() {
   const [selected, setSelected] = useState<MobileDeviceView | null>(null)
   const [drawer,   setDrawer]   = useState<MobileDeviceView | null>(null)
   const [scanner,  setScanner]  = useState(false)
+  const [printLabel, setPrintLabel] = useState<BarcodeLabel | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -224,6 +227,17 @@ export function DevicesPage() {
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <Eye size={13} />
                       </button>
+                      <button title="طباعة باركود" onClick={() => setPrintLabel({
+                          type: 'device',
+                          code: d.imei1,
+                          name: `${d.brand_name} ${d.model_name}`,
+                          subName: [d.storage, d.color].filter(Boolean).join(' · ') || undefined,
+                          extra: `IMEI: ${d.imei1}`,
+                          price: d.selling_price ?? undefined,
+                        })}
+                        className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-200 dark:hover:border-purple-800 transition-colors">
+                        <Printer size={13} />
+                      </button>
                       <button title="تعديل" onClick={() => openEdit(d)}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
                         <Pencil size={13} />
@@ -274,6 +288,13 @@ export function DevicesPage() {
       {drawer && (
         <DeviceDrawer device={drawer} onClose={() => setDrawer(null)} />
       )}
+      {printLabel && (
+        <BarcodeLabelModal
+          label={printLabel}
+          onClose={() => setPrintLabel(null)}
+        />
+      )}
+
       {scanner && (
         <BarcodeScanner
           title="مسح IMEI الجهاز"
