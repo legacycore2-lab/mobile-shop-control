@@ -38,40 +38,24 @@ export const purchasesRepository = {
 
   getAll: async (): Promise<PurchaseInvoiceView[]> => {
     const { data, error } = await supabase
-      .from('purchase_invoices')
-      .select(`
-        *,
-        suppliers!supplier_id ( name ),
-        profiles!created_by ( full_name ),
-        devices_agg:purchase_invoice_devices ( id ),
-        products_agg:purchase_invoice_products ( id )
-      `)
+      .from('purchase_invoices_view')
+      .select('*')
       .order('created_at', { ascending: false })
     if (error) throw error
 
     return ((data ?? []) as unknown[]).map(row => {
-      const r   = row as Record<string, unknown>
-      const sup = r['suppliers']   as Record<string, unknown> | null
-      const cby = r['profiles']    as Record<string, unknown> | null
-      const dev = r['devices_agg'] as unknown[] | null
-      const prd = r['products_agg'] as unknown[] | null
-      const total    = Number(r['total_amount'] ?? 0)
-      const paid     = Number(r['paid_amount']  ?? 0)
-      const discount = Number(r['discount']     ?? 0)
-      const remaining = Math.max(0, total - paid - discount)
-      // Note: explicit fields override ...r spread to avoid type coercion issues
-      const view: PurchaseInvoiceView = {
+      const r = row as Record<string, unknown>
+      return {
         ...(r as unknown as PurchaseInvoiceView),
-        total_amount:    total,
-        paid_amount:     paid,
-        discount:        discount,
-        remaining:       remaining,
-        supplier_name:   String(sup?.['name']       ?? '—'),
-        created_by_name: String(cby?.['full_name']  ?? '—'),
-        devices_count:   (dev  ?? []).length,
-        products_count:  (prd  ?? []).length,
-      }
-      return view
+        total_amount:    Number(r['total_amount'] ?? 0),
+        paid_amount:     Number(r['paid_amount']  ?? 0),
+        discount:        Number(r['discount']     ?? 0),
+        remaining:       Number(r['remaining']    ?? 0),
+        devices_count:   Number(r['devices_count']  ?? 0),
+        products_count:  Number(r['products_count'] ?? 0),
+        supplier_name:   String(r['supplier_name']   ?? '—'),
+        created_by_name: String(r['created_by_name'] ?? '—'),
+      } as PurchaseInvoiceView
     })
   },
 
