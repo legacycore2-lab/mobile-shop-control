@@ -65,8 +65,9 @@ function printStatement(opts: {
     .summary-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
     .summary-card .label { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
     .summary-card .value { font-size: 18px; font-weight: 800; color: #1a1a1a; }
-    .summary-card.balance-due .value { color: #dc2626; }
-    .summary-card.balance-ok  .value { color: #16a34a; }
+    .summary-card.balance-due    .value { color: #dc2626; }
+    .summary-card.balance-ok     .value { color: #16a34a; }
+    .summary-card.balance-credit  .value { color: #2563eb; }
     .section-title { font-size: 14px; font-weight: 700; color: #1d4ed8; border-bottom: 1px solid #dbeafe; padding-bottom: 6px; margin-bottom: 12px; margin-top: 20px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { background: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 8px 10px; text-align: right; border: 1px solid #bfdbfe; }
@@ -112,9 +113,9 @@ function printStatement(opts: {
       <div class="label">إجمالي المدفوع</div>
       <div class="value">${fmt(totalPaid)} ج</div>
     </div>
-    <div class="summary-card ${balance > 0 ? 'balance-due' : 'balance-ok'}">
+    <div class="summary-card ${balance > 0 ? 'balance-due' : balance < 0 ? 'balance-credit' : 'balance-ok'}">
       <div class="label">الرصيد المتبقي</div>
-      <div class="value">${fmt(Math.abs(balance))} ج ${balance > 0 ? '(مديونية)' : '(مسدد)'}</div>
+      <div class="value">${fmt(Math.abs(balance))} ج ${balance > 0 ? '(مديونية)' : balance < 0 ? '(رصيد دائن)' : '(مسدد)'}</div>
     </div>
   </div>
 
@@ -283,7 +284,7 @@ export function PartyStatementPage() {
           { label: 'رصيد افتتاحي',   value: openingBal,    color: 'gray' },
           { label: isSupplier ? 'إجمالي المشتريات' : 'إجمالي المبيعات', value: totalInvoiced, color: 'blue' },
           { label: 'إجمالي المدفوع', value: totalPaid,     color: 'green' },
-          { label: 'الرصيد المتبقي', value: balance,       color: balance > 0 ? 'red' : 'green' },
+          { label: 'الرصيد المتبقي', value: balance,       color: balance > 0 ? 'red' : balance < 0 ? 'blue' : 'green' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
             <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
@@ -297,7 +298,7 @@ export function PartyStatementPage() {
             </p>
             {label === 'الرصيد المتبقي' && (
               <p className={cn('text-xs mt-1', value > 0 ? 'text-red-500' : 'text-green-500')}>
-                {value > 0 ? 'مديونية' : 'مسدد بالكامل ✓'}
+                {value > 0 ? 'مديونية' : value < 0 ? '★ رصيد دائن — سيُخصم من الفواتير القادمة' : 'مسدد بالكامل ✓'}
               </p>
             )}
           </div>
@@ -432,3 +433,4 @@ export function PartyStatementPage() {
     </div>
   )
 }
+
