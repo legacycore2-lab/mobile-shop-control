@@ -1,16 +1,18 @@
 // src/pages/payments/AddPaymentModal.tsx
 import { useState } from 'react'
-import { X, DollarSign, AlertCircle } from 'lucide-react'
+import { X, DollarSign, AlertCircle, TrendingDown, Info } from 'lucide-react'
 import { useCreatePayment } from '@/hooks/usePayments'
+import { useSupplierLedgerById, useCustomerLedgerById } from '@/hooks/usePayments'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
+import { fmt } from '@/constants/statusMaps'
 import type { PaymentType, PartyType } from '@/types/database'
 
 const METHODS = [
-  { value: 'cash',          label: 'نقدي'        },
-  { value: 'bank_transfer', label: 'تحويل بنكي'  },
-  { value: 'check',         label: 'شيك'          },
-  { value: 'other',         label: 'أخرى'         },
+  { value: 'cash',          label: 'نقدي'       },
+  { value: 'bank_transfer', label: 'تحويل بنكي' },
+  { value: 'check',         label: 'شيك'         },
+  { value: 'other',         label: 'أخرى'        },
 ]
 
 interface AddPaymentModalProps {
@@ -28,16 +30,28 @@ export function AddPaymentModal({
   invoiceId, invoiceNumber, partyId, partyName,
   partyType, paymentType, remaining, onClose,
 }: AddPaymentModalProps) {
-  const { profile }     = useAuth()
-  const createPayment   = useCreatePayment()
+  const { profile }   = useAuth()
+  const createPayment = useCreatePayment()
 
-  const [amount,        setAmount]        = useState(String(remaining > 0 ? remaining : ''))
-  const [method,        setMethod]        = useState('cash')
-  const [paymentDate,   setPaymentDate]   = useState(new Date().toISOString().split('T')[0])
-  const [notes,         setNotes]         = useState('')
-  const [error,         setError]         = useState('')
+  // Load party ledger to show credit balance
+  const { data: supplierLedger } = useSupplierLedgerById(partyType === 'supplier' ? partyId : '')
+  const { data: customerLedger } = useCustomerLedgerById(partyType === 'customer' ? partyId : '')
+  const partyBalance = partyType === 'supplier'
+    ? (supplierLedger?.balance ?? null)
+    : (customerLedger?.balance ?? null)
+  const creditBalance = partyBalance !== null && partyBalance < 0 ? Math.abs(partyBalance) : 0
+
+  const [amount,      setAmount]      = useState(String(remaining > 0 ? remaining : ''))
+  const [method,      setMethod]      = useState('cash')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [notes,       setNotes]       = useState('')
+  const [error,       setError]       = useState('')
 
   const inp = 'h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
+
+  const amtNum        = Number(amount) || 0
+  const willExceed    = amtNum > remaining && remaining > 0
+  const newCredit     = willExceed ? amtNum - remaining : 0
 
   async function handleSubmit() {
     setError('')
@@ -85,21 +99,64 @@ export function AddPaymentModal({
         </div>
 
         <div className="px-6 py-5 space-y-4">
+
+          {/* Credit balance banner */}
+          {creditBalance > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex items-start gap-2">
+              <Info size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-blue-700 dark:text-blue-400">رصيد دائن متاح</p>
+                <p className="text-xs text-blue-600 dark:text-blue-300 mt-0.5">
+                  لدى {partyName} رصيد دائن <span className="font-bold">{fmt(creditBalance)} ج</span> — يمكن خصمه من هذه الفاتورة
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Remaining banner */}
           {remaining > 0 && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-2.5 flex items-center justify-between">
               <span className="text-xs text-amber-700 dark:text-amber-400">المتبقي على الفاتورة</span>
-              <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{remaining.toLocaleString('ar-EG')} ج</span>
+              <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{fmt(remaining)} ج</span>
             </div>
           )}
 
           {/* Amount */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">المبلغ المدفوع (ج) <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              المبلغ المدفوع (ج) <span className="text-red-500">*</span>
+            </label>
             <input type="number" min="0.01" step="0.01" value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder="0.00" className={inp} autoFocus />
           </div>
+
+          {/* Overpayment warning */}
+          {willExceed && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <TrendingDown size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <p className="text-xs font-bold text-blue-700 dark:text-blue-400">دفعة زيادة — رصيد دائن</p>
+              </div>
+              <div className="space-y-1 text-xs text-blue-600 dark:text-blue-300 pr-5">
+                <div className="flex justify-between">
+                  <span>المتبقي على الفاتورة</span>
+                  <span className="font-semibold">{fmt(remaining)} ج</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>المبلغ المدفوع</span>
+                  <span className="font-semibold">{fmt(amtNum)} ج</span>
+                </div>
+                <div className="flex justify-between border-t border-blue-200 dark:border-blue-700 pt-1 font-bold text-blue-700 dark:text-blue-300">
+                  <span>رصيد دائن جديد للمورد</span>
+                  <span>{fmt(newCredit)} ج</span>
+                </div>
+              </div>
+              <p className="text-xs text-blue-500 dark:text-blue-400 pr-5">
+                سيظهر في كشف الحساب كـ "رصيد دائن" ويُخصم تلقائياً من الفواتير القادمة
+              </p>
+            </div>
+          )}
 
           {/* Method + Date */}
           <div className="grid grid-cols-2 gap-3">
@@ -119,7 +176,8 @@ export function AddPaymentModal({
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">ملاحظات</label>
             <input value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="اختياري..." className={inp} />
+              placeholder={willExceed ? `دفعة زيادة ${fmt(newCredit)} ج رصيد دائن...` : 'اختياري...'}
+              className={inp} />
           </div>
 
           {error && (
@@ -137,10 +195,14 @@ export function AddPaymentModal({
           </button>
           <button onClick={() => void handleSubmit()} disabled={createPayment.isPending}
             className={cn(
-              'flex-1 h-10 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
+              'flex-1 h-10 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2',
+              willExceed
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-green-600 hover:bg-green-700'
             )}>
             {createPayment.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            <DollarSign size={14} /> تسجيل الدفعة
+            <DollarSign size={14} />
+            {willExceed ? `تسجيل مع رصيد دائن ${fmt(newCredit)} ج` : 'تسجيل الدفعة'}
           </button>
         </div>
       </div>
