@@ -9,7 +9,9 @@ import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
 import { useBrands, useModelsByBrand, useCreateDevice } from '@/hooks/useDevices'
+import { useProductCategories, useCreateProduct } from '@/hooks/useProducts'
 import type { DeviceFormData } from '@/services/devices.service'
+import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { fmt } from './constants'
@@ -207,6 +209,180 @@ function AddDeviceInlineForm({
       </div>
     </div>
   )
+
+// ── Add Product Inline Form ───────────────────────────────────────────────────
+
+interface NewProductForm {
+  category_id:   string
+  name:          string
+  sku:           string
+  barcode:       string
+  cost_price:    string
+  selling_price: string
+  stock_qty:     string
+  reorder_level: string
+  unit:          string
+  notes:         string
+}
+
+const BLANK_PRODUCT: NewProductForm = {
+  category_id: '', name: '', sku: '', barcode: '',
+  cost_price: '', selling_price: '',
+  stock_qty: '0', reorder_level: '5', unit: 'قطعة', notes: '',
+}
+
+const UNITS = ['قطعة', 'زوج', 'كرتون', 'متر', 'لتر']
+
+function AddProductInlineForm({
+  supplierId,
+  onAdded,
+  onCancel,
+  userId,
+}: {
+  supplierId: string
+  onAdded: (line: InvoiceProductLine & { label: string }) => void
+  onCancel: () => void
+  userId: string
+}) {
+  const { data: categories = [] } = useProductCategories()
+  const createProduct             = useCreateProduct()
+  const [form, setForm]           = useState<NewProductForm>(BLANK_PRODUCT)
+  const [error, setError]         = useState('')
+  const [saving, setSaving]       = useState(false)
+
+  function set(field: keyof NewProductForm, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleAdd() {
+    setError('')
+    if (!form.name.trim())    return setError('اسم المنتج مطلوب')
+    if (!form.category_id)    return setError('اختر التصنيف')
+    if (!form.cost_price)     return setError('سعر الشراء مطلوب')
+
+    setSaving(true)
+    try {
+      const productForm: ProductFormData = {
+        category_id:         form.category_id,
+        name:                form.name.trim(),
+        sku:                 form.sku.trim(),
+        barcode:             form.barcode.trim(),
+        product_type:        'accessory',
+        cost_price:          Number(form.cost_price),
+        selling_price:       form.selling_price ? Number(form.selling_price) : 0,
+        stock_qty:           Number(form.stock_qty) || 0,
+        reorder_level:       Number(form.reorder_level) || 5,
+        unit:                form.unit || 'قطعة',
+        default_supplier_id: supplierId,
+        is_active:           true,
+        notes:               form.notes.trim(),
+        created_by:          userId,
+      }
+      const product = await createProduct.mutateAsync(productForm)
+      const qty     = Number(form.stock_qty) || 1
+
+      onAdded({
+        product_id: product.id,
+        quantity:   qty,
+        unit_price: Number(form.cost_price),
+        label:      form.name.trim(),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = 'h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/10 transition-all w-full'
+
+  return (
+    <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-4 space-y-3">
+      <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-widest">إضافة منتج جديد</p>
+
+      {/* Name + Category */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">اسم المنتج *</label>
+          <input value={form.name} onChange={e => set('name', e.target.value)}
+            placeholder="كفر سيليكون..." className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">التصنيف *</label>
+          <select value={form.category_id} onChange={e => set('category_id', e.target.value)} className={inp + ' cursor-pointer'}>
+            <option value="">اختر التصنيف</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* SKU + Barcode */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">SKU</label>
+          <input value={form.sku} onChange={e => set('sku', e.target.value)}
+            placeholder="اختياري" className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">باركود</label>
+          <input value={form.barcode} onChange={e => set('barcode', e.target.value)}
+            placeholder="اختياري" className={inp} />
+        </div>
+      </div>
+
+      {/* Cost + Selling + Unit */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">سعر الشراء * (ج)</label>
+          <input type="number" min="0" step="0.01" value={form.cost_price}
+            onChange={e => set('cost_price', e.target.value)} placeholder="0.00" className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">سعر البيع (ج)</label>
+          <input type="number" min="0" step="0.01" value={form.selling_price}
+            onChange={e => set('selling_price', e.target.value)} placeholder="0.00" className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الوحدة</label>
+          <select value={form.unit} onChange={e => set('unit', e.target.value)} className={inp + ' cursor-pointer'}>
+            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Qty + Reorder */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الكمية المشتراة</label>
+          <input type="number" min="1" value={form.stock_qty}
+            onChange={e => set('stock_qty', e.target.value)} className={inp} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">حد إعادة الطلب</label>
+          <input type="number" min="0" value={form.reorder_level}
+            onChange={e => set('reorder_level', e.target.value)} className={inp} />
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+          <AlertCircle size={12} /> {error}
+        </p>
+      )}
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button type="button" onClick={onCancel}
+          className="h-8 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          إلغاء
+        </button>
+        <button type="button" onClick={() => void handleAdd()} disabled={saving}
+          className="h-8 px-4 text-xs font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5">
+          {saving && <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+          <Plus size={12} /> إضافة المنتج
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
@@ -233,6 +409,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const [productSearch, setProductSearch] = useState('')
   const [scanProduct,   setScanProduct]   = useState(false)
   const [showAddDevice, setShowAddDevice] = useState(false)
+  const [showAddProduct, setShowAddProduct] = useState(false)
   const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -248,6 +425,18 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     setDeviceLines(prev => [...prev, line])
     setShowAddDevice(false)
     showFeedback(`✓ ${line.label} — تمت الإضافة`, true)
+  }
+
+  function handleProductAdded(line: InvoiceProductLine & { label: string }) {
+    const { label, ...rest } = line
+    setProductLines(prev => {
+      const exists = prev.find(l => l.product_id === rest.product_id)
+      if (exists) return prev.map(l => l.product_id === rest.product_id
+        ? { ...l, quantity: l.quantity + rest.quantity } : l)
+      return [...prev, rest]
+    })
+    setShowAddProduct(false)
+    showFeedback(`✓ ${label} — تمت الإضافة`, true)
   }
 
   function updateDeviceCost(deviceId: string, cost: number) {
@@ -491,6 +680,28 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
               {/* ── Products tab ── */}
               {tab === 'products' && (
                 <div className="space-y-3">
+                  {/* Add new product inline form */}
+                  {showAddProduct ? (
+                    <AddProductInlineForm
+                      supplierId={supplierId}
+                      userId={profile?.id ?? ''}
+                      onAdded={handleProductAdded}
+                      onCancel={() => setShowAddProduct(false)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProduct(true)}
+                      className="w-full h-10 flex items-center justify-center gap-2 border-2 border-dashed border-green-300 dark:border-green-700 rounded-xl text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                    >
+                      <Plus size={16} />
+                      إضافة منتج جديد للكاتالوج والفاتورة
+                      <ChevronDown size={14} />
+                    </button>
+                  )}
+
+                  {/* Search existing products */}
+                  {!showAddProduct && (
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -534,8 +745,9 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                       <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-3">لا توجد منتجات</p>
                     )}
                   </div>
+                  )}
 
-                  {productLines.length === 0 ? (
+                  {productLines.length === 0 && !showAddProduct ? (
                     <div className="py-4 text-center text-gray-400 dark:text-gray-600 text-sm">لم تتم إضافة منتجات بعد</div>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
