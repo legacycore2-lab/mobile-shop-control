@@ -44,12 +44,17 @@ export const INVOICE_STATUS_MAP: Record<InvoiceStatus, {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Format number in Arabic locale */
-export function fmt(n: number): string {
-  return n.toLocaleString('ar-EG')
+/**
+ * Format a number with thousands separator using Western digits.
+ * e.g. 20000 → "20,000"
+ */
+export function fmt(n: number | string | null | undefined): string {
+  const num = Number(n ?? 0)
+  if (isNaN(num)) return '0'
+  return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-/** Format number as currency with ج.م suffix */
-export function fmtEGP(n: number): string {
-  return `${n.toLocaleString('ar-EG')} ج.م`
+/** Format number as currency with ج suffix */
+export function fmtEGP(n: number | string | null | undefined): string {
+  return `${fmt(n)} ج`
 }
