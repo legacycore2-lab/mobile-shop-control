@@ -5,9 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { useSupplierLedger, useCustomerLedger } from '@/hooks/usePayments'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
+import { fmt } from '@/lib/fmt'
 import type { SupplierLedger, CustomerLedger } from '@/types/database'
-
-function fmt(n: number) { return n.toLocaleString('ar-EG') }
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي', bank_transfer: 'تحويل بنكي', check: 'شيك', other: 'أخرى',
@@ -18,7 +17,6 @@ const METHOD_LABELS: Record<string, string> = {
 
 function SupplierLedgerTable({ search }: { search: string }) {
   const { data: ledger = [], isLoading } = useSupplierLedger()
-  const [expanded, setExpanded] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const filtered = useMemo(() => {
@@ -46,36 +44,33 @@ function SupplierLedgerTable({ search }: { search: string }) {
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {filtered.map(s => (
-            <>
-              <tr key={s.supplier_id}
-                className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                onClick={() => navigate(`/ledger/supplier/${s.supplier_id}`)}>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{s.supplier_name}</p>
-                    {s.supplier_phone && <p className="text-xs text-gray-400 dark:text-gray-600">{s.supplier_phone}</p>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{fmt(s.opening_balance)} ج</td>
-                <td className="px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">{fmt(s.total_invoiced)} ج</td>
-                <td className="px-4 py-3 text-sm font-medium text-green-600 dark:text-green-400">{fmt(s.total_paid)} ج</td>
-                <td className="px-4 py-3">
-                  <span className={cn(
-                    'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold',
-                    s.balance > 0
-                      ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                      : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                  )}>
-                    {fmt(Math.abs(s.balance))} ج
-                    {s.balance > 0 ? ' (مديونية)' : ' (مسدد)'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-gray-400">
-                  <ExternalLink size={14} />
-                </td>
-              </tr>
-
-            </>
+            <tr key={s.supplier_id}
+              className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+              onClick={() => navigate(`/ledger/supplier/${s.supplier_id}`)}>
+              <td className="px-4 py-3">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">{s.supplier_name}</p>
+                  {s.supplier_phone && <p className="text-xs text-gray-400 dark:text-gray-600">{s.supplier_phone}</p>}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{fmt(s.opening_balance)} ج</td>
+              <td className="px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">{fmt(s.total_invoiced)} ج</td>
+              <td className="px-4 py-3 text-sm font-medium text-green-600 dark:text-green-400">{fmt(s.total_paid)} ج</td>
+              <td className="px-4 py-3">
+                <span className={cn(
+                  'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold',
+                  s.balance > 0
+                    ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                    : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                )}>
+                  {fmt(Math.abs(s.balance))} ج
+                  {s.balance > 0 ? ' (مديونية)' : ' (مسدد)'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-gray-400">
+                <ExternalLink size={14} />
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -87,7 +82,6 @@ function SupplierLedgerTable({ search }: { search: string }) {
 
 function CustomerLedgerTable({ search }: { search: string }) {
   const { data: ledger = [], isLoading } = useCustomerLedger()
-  const [expanded, setExpanded] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const filtered = useMemo(() => {
@@ -115,36 +109,33 @@ function CustomerLedgerTable({ search }: { search: string }) {
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {filtered.map(c => (
-            <>
-              <tr key={c.customer_id}
-                className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                onClick={() => navigate(`/ledger/customer/${c.customer_id}`)}>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{c.customer_name}</p>
-                    {c.customer_phone && <p className="text-xs text-gray-400 dark:text-gray-600">{c.customer_phone}</p>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{fmt(c.opening_balance)} ج</td>
-                <td className="px-4 py-3 text-sm font-medium text-blue-600 dark:text-blue-400">{fmt(c.total_invoiced)} ج</td>
-                <td className="px-4 py-3 text-sm font-medium text-green-600 dark:text-green-400">{fmt(c.total_paid)} ج</td>
-                <td className="px-4 py-3">
-                  <span className={cn(
-                    'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold',
-                    c.balance > 0
-                      ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
-                      : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                  )}>
-                    {fmt(Math.abs(c.balance))} ج
-                    {c.balance > 0 ? ' (مديونية)' : ' (مسدد)'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-gray-400">
-                  <ExternalLink size={14} />
-                </td>
-              </tr>
-
-            </>
+            <tr key={c.customer_id}
+              className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+              onClick={() => navigate(`/ledger/customer/${c.customer_id}`)}>
+              <td className="px-4 py-3">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">{c.customer_name}</p>
+                  {c.customer_phone && <p className="text-xs text-gray-400 dark:text-gray-600">{c.customer_phone}</p>}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{fmt(c.opening_balance)} ج</td>
+              <td className="px-4 py-3 text-sm font-medium text-blue-600 dark:text-blue-400">{fmt(c.total_invoiced)} ج</td>
+              <td className="px-4 py-3 text-sm font-medium text-green-600 dark:text-green-400">{fmt(c.total_paid)} ج</td>
+              <td className="px-4 py-3">
+                <span className={cn(
+                  'inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold',
+                  c.balance > 0
+                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                    : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                )}>
+                  {fmt(Math.abs(c.balance))} ج
+                  {c.balance > 0 ? ' (مديونية)' : ' (مسدد)'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-gray-400">
+                <ExternalLink size={14} />
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -161,8 +152,8 @@ export function LedgerPage() {
   const { data: supplierLedger = [] } = useSupplierLedger()
   const { data: customerLedger = [] } = useCustomerLedger()
 
-  const supplierDebt  = supplierLedger.filter(s => s.balance > 0).reduce((s, r) => s + r.balance, 0)
-  const customerDebt  = customerLedger.filter(c => c.balance > 0).reduce((s, r) => s + r.balance, 0)
+  const supplierDebt  = supplierLedger.filter(s => s.balance > 0).reduce((s, r) => s + Number(r.balance), 0)
+  const customerDebt  = customerLedger.filter(c => c.balance > 0).reduce((s, r) => s + Number(r.balance), 0)
   const suppliersOwed = supplierLedger.filter(s => s.balance > 0).length
   const customersOwed = customerLedger.filter(c => c.balance > 0).length
 
