@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
-import { Search, Plus, Package, Truck, DollarSign, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag } from 'lucide-react'
+import { Search, Plus, Package, Truck, DollarSign, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag, Banknote } from 'lucide-react'
 import { usePurchases, usePurchaseStats, useConfirmPurchase, useCancelPurchase, useDeletePurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
+import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { PurchaseInvoiceDrawer } from './InvoiceDrawer'
@@ -18,7 +19,8 @@ export function PurchasesPage() {
   const [filter,   setFilter]   = useState<FilterStatus>('all')
   const [page,     setPage]     = useState(1)
   const [showCreate, setShowCreate] = useState(false)
-  const [detailId, setDetailId] = useState<string | null>(null)
+  const [detailId,   setDetailId]   = useState<string | null>(null)
+  const [payInvoice, setPayInvoice] = useState<PurchaseInvoiceView | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -216,7 +218,18 @@ export function PurchasesPage() {
       {/* Modals */}
       {showCreate && <CreatePurchaseModal onClose={() => setShowCreate(false)} />}
       {detailId   && <PurchaseInvoiceDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
+      {payInvoice && (
+        <AddPaymentModal
+          invoiceId={payInvoice.id}
+          invoiceNumber={payInvoice.invoice_number}
+          partyId={payInvoice.supplier_id}
+          partyName={payInvoice.supplier_name}
+          partyType="supplier"
+          paymentType="purchase"
+          remaining={payInvoice.remaining}
+          onClose={() => setPayInvoice(null)}
+        />
+      )}
     </div>
   )
 }
-
