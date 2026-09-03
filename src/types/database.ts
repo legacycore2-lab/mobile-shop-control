@@ -68,6 +68,7 @@ export interface PurchaseInvoice {
   total_amount:   number
   paid_amount:    number
   discount:       number
+  remaining:      number
   notes:          string | null
   status:         InvoiceStatus
   created_by:     string
@@ -159,7 +160,7 @@ export type Database = {
       mobile_brands:             { Row: MobileBrand;           Insert: Omit<MobileBrand, 'id'|'created_at'>;                    Update: Partial<MobileBrand> }
       mobile_models:             { Row: MobileModel;           Insert: Omit<MobileModel, 'id'|'created_at'>;                    Update: Partial<MobileModel> }
       mobile_devices:            { Row: MobileDevice;          Insert: Omit<MobileDevice, 'id'|'created_at'|'updated_at'>;      Update: Partial<MobileDevice> }
-      purchase_invoices:         { Row: PurchaseInvoice;       Insert: Omit<PurchaseInvoice, 'id'|'created_at'|'updated_at'>;   Update: Partial<PurchaseInvoice> }
+      purchase_invoices:         { Row: PurchaseInvoice;       Insert: Omit<PurchaseInvoice, 'id'|'created_at'|'updated_at'|'remaining'>;   Update: Partial<PurchaseInvoice> }
       purchase_invoice_devices:  { Row: PurchaseInvoiceDevice; Insert: Omit<PurchaseInvoiceDevice, 'id'|'created_at'>;          Update: never }
       purchase_invoice_products: { Row: PurchaseInvoiceProduct;Insert: Omit<PurchaseInvoiceProduct, 'id'|'created_at'|'subtotal'>; Update: never }
       audit_logs:                { Row: AuditLog;              Insert: Omit<AuditLog, 'id'|'created_at'>;                       Update: never }
