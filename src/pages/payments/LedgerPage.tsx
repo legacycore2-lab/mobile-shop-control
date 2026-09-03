@@ -1,7 +1,8 @@
 // src/pages/payments/LedgerPage.tsx
 import { useState, useMemo } from 'react'
-import { Search, TrendingDown, TrendingUp, Users, Truck, DollarSign, ChevronDown, ChevronUp, CreditCard, Trash2 } from 'lucide-react'
-import { useSupplierLedger, useCustomerLedger, usePaymentsByParty, useDeletePayment } from '@/hooks/usePayments'
+import { Search, TrendingDown, TrendingUp, Users, Truck, DollarSign, CreditCard, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useSupplierLedger, useCustomerLedger } from '@/hooks/usePayments'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import type { SupplierLedger, CustomerLedger } from '@/types/database'
@@ -12,57 +13,13 @@ const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي', bank_transfer: 'تحويل بنكي', check: 'شيك', other: 'أخرى',
 }
 
-// ── Party Payments Drawer ─────────────────────────────────────────────────────
-
-function PartyPaymentsRow({ partyId, partyName }: { partyId: string; partyName: string }) {
-  const { data: payments = [], isLoading } = usePaymentsByParty(partyId)
-  const deletePayment = useDeletePayment()
-
-  if (isLoading) return (
-    <tr><td colSpan={7} className="px-4 py-3 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
-  )
-
-  if (payments.length === 0) return (
-    <tr>
-      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-800/30">
-        لا توجد مدفوعات مسجلة لـ {partyName}
-      </td>
-    </tr>
-  )
-
-  return (
-    <>
-      {payments.map(p => (
-        <tr key={p.id} className="bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-800">
-          <td className="px-6 py-2.5 text-xs text-gray-400 dark:text-gray-500 font-mono">{p.invoice_number}</td>
-          <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
-            {new Date(p.payment_date).toLocaleDateString('ar-EG')}
-          </td>
-          <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</td>
-          <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{p.notes ?? '—'}</td>
-          <td className="px-4 py-2.5 text-sm font-bold text-green-600 dark:text-green-400 text-left" colSpan={2}>
-            {fmt(p.amount)} ج
-          </td>
-          <td className="px-4 py-2.5 text-center">
-            <button onClick={() => {
-              if (!confirm('حذف هذه الدفعة؟')) return
-              void deletePayment.mutateAsync(p.id)
-            }}
-              className="w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors">
-              <Trash2 size={12} />
-            </button>
-          </td>
-        </tr>
-      ))}
-    </>
-  )
-}
 
 // ── Supplier Ledger Table ─────────────────────────────────────────────────────
 
 function SupplierLedgerTable({ search }: { search: string }) {
   const { data: ledger = [], isLoading } = useSupplierLedger()
   const [expanded, setExpanded] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -92,7 +49,7 @@ function SupplierLedgerTable({ search }: { search: string }) {
             <>
               <tr key={s.supplier_id}
                 className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                onClick={() => setExpanded(expanded === s.supplier_id ? null : s.supplier_id)}>
+                onClick={() => navigate(`/ledger/supplier/${s.supplier_id}`)}>
                 <td className="px-4 py-3">
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">{s.supplier_name}</p>
@@ -114,12 +71,10 @@ function SupplierLedgerTable({ search }: { search: string }) {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">
-                  {expanded === s.supplier_id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <ExternalLink size={14} />
                 </td>
               </tr>
-              {expanded === s.supplier_id && (
-                <PartyPaymentsRow partyId={s.supplier_id} partyName={s.supplier_name} />
-              )}
+
             </>
           ))}
         </tbody>
@@ -133,6 +88,7 @@ function SupplierLedgerTable({ search }: { search: string }) {
 function CustomerLedgerTable({ search }: { search: string }) {
   const { data: ledger = [], isLoading } = useCustomerLedger()
   const [expanded, setExpanded] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -162,7 +118,7 @@ function CustomerLedgerTable({ search }: { search: string }) {
             <>
               <tr key={c.customer_id}
                 className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                onClick={() => setExpanded(expanded === c.customer_id ? null : c.customer_id)}>
+                onClick={() => navigate(`/ledger/customer/${c.customer_id}`)}>
                 <td className="px-4 py-3">
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">{c.customer_name}</p>
@@ -184,12 +140,10 @@ function CustomerLedgerTable({ search }: { search: string }) {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">
-                  {expanded === c.customer_id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <ExternalLink size={14} />
                 </td>
               </tr>
-              {expanded === c.customer_id && (
-                <PartyPaymentsRow partyId={c.customer_id} partyName={c.customer_name} />
-              )}
+
             </>
           ))}
         </tbody>
