@@ -59,17 +59,19 @@ export const purchasesRepository = {
       const paid     = Number(r['paid_amount']  ?? 0)
       const discount = Number(r['discount']     ?? 0)
       const remaining = Math.max(0, total - paid - discount)
-      return {
-        ...r,
+      // Note: explicit fields override ...r spread to avoid type coercion issues
+      const view: PurchaseInvoiceView = {
+        ...(r as unknown as PurchaseInvoiceView),
         total_amount:    total,
         paid_amount:     paid,
         discount:        discount,
+        remaining:       remaining,
         supplier_name:   String(sup?.['name']       ?? '—'),
         created_by_name: String(cby?.['full_name']  ?? '—'),
         devices_count:   (dev  ?? []).length,
         products_count:  (prd  ?? []).length,
-        remaining,
-      } as PurchaseInvoiceView
+      }
+      return view
     })
   },
 
