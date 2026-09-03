@@ -209,6 +209,7 @@ function AddDeviceInlineForm({
       </div>
     </div>
   )
+}
 
 // ── Add Product Inline Form ───────────────────────────────────────────────────
 
@@ -680,7 +681,8 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
               {/* ── Products tab ── */}
               {tab === 'products' && (
                 <div className="space-y-3">
-                  {/* Add new product inline form */}
+
+                  {/* Add new product inline */}
                   {showAddProduct ? (
                     <AddProductInlineForm
                       supplierId={supplierId}
@@ -689,96 +691,99 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                       onCancel={() => setShowAddProduct(false)}
                     />
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddProduct(true)}
-                      className="w-full h-10 flex items-center justify-center gap-2 border-2 border-dashed border-green-300 dark:border-green-700 rounded-xl text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                    >
-                      <Plus size={16} />
-                      إضافة منتج جديد للكاتالوج والفاتورة
-                      <ChevronDown size={14} />
-                    </button>
-                  )}
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddProduct(true)}
+                        className="w-full h-10 flex items-center justify-center gap-2 border-2 border-dashed border-green-300 dark:border-green-700 rounded-xl text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                      >
+                        <Plus size={16} />
+                        إضافة منتج جديد للكاتالوج والفاتورة
+                        <ChevronDown size={14} />
+                      </button>
 
-                  {/* Search existing products */}
-                  {!showAddProduct && (
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        value={productSearch}
-                        onChange={e => setProductSearch(e.target.value)}
-                        placeholder="بحث بالاسم أو الباركود..."
-                        className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
-                      />
-                    </div>
-                    <button type="button" onClick={() => setScanProduct(true)}
-                      className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
-                      title="مسح باركود المنتج بالكاميرا">
-                      <ScanLine size={15} />
-                    </button>
-                  </div>
-
-                  <div className="max-h-44 overflow-y-auto space-y-1.5 border border-gray-100 dark:border-gray-800 rounded-xl p-2">
-                    {products
-                      .filter(p => p.is_active && !productLines.find(l => l.product_id === p.id))
-                      .filter(p => !productSearch ||
-                        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                        (p.sku ?? '').toLowerCase().includes(productSearch.toLowerCase()) ||
-                        (p.barcode ?? '').includes(productSearch))
-                      .map(p => (
-                        <button key={p.id} type="button"
-                          onClick={() => { addProduct(p.id); setProductSearch('') }}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-right group">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{p.name}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-600">{p.category_name}{p.barcode ? ` · ${p.barcode}` : ''}</p>
-                          </div>
-                          <div className="text-left flex-shrink-0 mr-2">
-                            <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{fmt(p.cost_price)} ج</p>
-                            <Plus size={14} className="mx-auto text-gray-300 group-hover:text-blue-500 mt-0.5" />
-                          </div>
+                      {/* Search existing products */}
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            value={productSearch}
+                            onChange={e => setProductSearch(e.target.value)}
+                            placeholder="بحث بالاسم أو الباركود..."
+                            className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                        <button type="button" onClick={() => setScanProduct(true)}
+                          className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
+                          title="مسح باركود المنتج بالكاميرا">
+                          <ScanLine size={15} />
                         </button>
-                      ))
-                    }
-                    {products.filter(p => p.is_active).length === 0 && (
-                      <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-3">لا توجد منتجات</p>
-                    )}
-                  </div>
-                  )}
+                      </div>
 
-                  {productLines.length === 0 && !showAddProduct ? (
-                    <div className="py-4 text-center text-gray-400 dark:text-gray-600 text-sm">لم تتم إضافة منتجات بعد</div>
-                  ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {productLines.map(line => {
-                        const product = products.find(p => p.id === line.product_id)
-                        return (
-                          <div key={line.product_id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{product?.name}</p>
-                            </div>
-                            <input type="number" min="1" value={line.quantity}
-                              onChange={e => updateProductLine(line.product_id, 'quantity', Number(e.target.value))}
-                              className="w-16 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
-                            <span className="text-xs text-gray-400 dark:text-gray-600">×</span>
-                            <input type="number" min="0" step="0.01" value={line.unit_price}
-                              onChange={e => updateProductLine(line.product_id, 'unit_price', Number(e.target.value))}
-                              className="w-24 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
-                            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap w-20 text-left">
-                              = {fmt(line.quantity * line.unit_price)} ج
-                            </span>
-                            <button type="button" onClick={() => removeProductLine(line.product_id)}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
-                              <X size={13} />
+                      {/* Catalog list */}
+                      <div className="max-h-44 overflow-y-auto space-y-1.5 border border-gray-100 dark:border-gray-800 rounded-xl p-2">
+                        {products
+                          .filter(p => p.is_active && !productLines.find(l => l.product_id === p.id))
+                          .filter(p => !productSearch ||
+                            p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                            (p.sku ?? '').toLowerCase().includes(productSearch.toLowerCase()) ||
+                            (p.barcode ?? '').includes(productSearch))
+                          .map(p => (
+                            <button key={p.id} type="button"
+                              onClick={() => { addProduct(p.id); setProductSearch('') }}
+                              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-right group">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{p.name}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-600">{p.category_name}{p.barcode ? ` · ${p.barcode}` : ''}</p>
+                              </div>
+                              <div className="text-left flex-shrink-0 mr-2">
+                                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{fmt(p.cost_price)} ج</p>
+                                <Plus size={14} className="mx-auto text-gray-300 group-hover:text-blue-500 mt-0.5" />
+                              </div>
                             </button>
-                          </div>
-                        )
-                      })}
-                    </div>
+                          ))
+                        }
+                        {products.filter(p => p.is_active).length === 0 && (
+                          <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-3">لا توجد منتجات — اضغط الزر بالأعلى لإضافة جديد</p>
+                        )}
+                      </div>
+
+                      {/* Selected product lines */}
+                      {productLines.length === 0 ? (
+                        <div className="py-4 text-center text-gray-400 dark:text-gray-600 text-sm">لم تتم إضافة منتجات بعد</div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {productLines.map(line => {
+                            const product = products.find(p => p.id === line.product_id)
+                            return (
+                              <div key={line.product_id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{product?.name}</p>
+                                </div>
+                                <input type="number" min="1" value={line.quantity}
+                                  onChange={e => updateProductLine(line.product_id, 'quantity', Number(e.target.value))}
+                                  className="w-16 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
+                                <span className="text-xs text-gray-400 dark:text-gray-600">×</span>
+                                <input type="number" min="0" step="0.01" value={line.unit_price}
+                                  onChange={e => updateProductLine(line.product_id, 'unit_price', Number(e.target.value))}
+                                  className="w-24 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
+                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap w-20 text-left">
+                                  = {fmt(line.quantity * line.unit_price)} ج
+                                </span>
+                                <button type="button" onClick={() => removeProductLine(line.product_id)}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
+                                  <X size={13} />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
+
             </div>
 
             {/* Totals summary */}
