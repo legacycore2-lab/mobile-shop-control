@@ -111,6 +111,48 @@ export const paymentsRepository = {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
 
+  getPurchaseInvoicesBySupplier: async (supplierId: string) => {
+    const { data, error } = await supabase
+      .from('purchase_invoices')
+      .select('id, invoice_number, invoice_date, total_amount, paid_amount, discount, status, notes')
+      .eq('supplier_id', supplierId)
+      .eq('status', 'confirmed')
+      .order('invoice_date', { ascending: true })
+    if (error) throw error
+    return (data ?? []).map((r: Record<string, unknown>) => ({
+      id:            r['id']             as string,
+      invoice_number: r['invoice_number'] as string,
+      invoice_date:  r['invoice_date']   as string,
+      status:        r['status']         as string,
+      notes:         r['notes']          as string | null,
+      total_amount:  Number(r['total_amount'] ?? 0),
+      paid_amount:   Number(r['paid_amount']  ?? 0),
+      discount:      Number(r['discount']     ?? 0),
+      remaining:     Math.max(0, Number(r['total_amount'] ?? 0) - Number(r['paid_amount'] ?? 0) - Number(r['discount'] ?? 0)),
+    }))
+  },
+
+  getSaleInvoicesByCustomer: async (customerId: string) => {
+    const { data, error } = await supabase
+      .from('sale_invoices')
+      .select('id, invoice_number, invoice_date, total_amount, paid_amount, discount, status, notes')
+      .eq('customer_id', customerId)
+      .eq('status', 'confirmed')
+      .order('invoice_date', { ascending: true })
+    if (error) throw error
+    return (data ?? []).map((r: Record<string, unknown>) => ({
+      id:            r['id']             as string,
+      invoice_number: r['invoice_number'] as string,
+      invoice_date:  r['invoice_date']   as string,
+      status:        r['status']         as string,
+      notes:         r['notes']          as string | null,
+      total_amount:  Number(r['total_amount'] ?? 0),
+      paid_amount:   Number(r['paid_amount']  ?? 0),
+      discount:      Number(r['discount']     ?? 0),
+      remaining:     Math.max(0, Number(r['total_amount'] ?? 0) - Number(r['paid_amount'] ?? 0) - Number(r['discount'] ?? 0)),
+    }))
+  },
+
   getStats: async () => {
     const { data, error } = await supabase
       .from('payments')
