@@ -45,13 +45,18 @@ export const INVOICE_STATUS_MAP: Record<InvoiceStatus, {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Format a number with thousands separator using Western digits.
- * e.g. 20000 → "20,000"
+ * Format a number with Arabic thousands separator.
+ * Supabase numeric columns may return strings — always cast with Number() first.
+ * e.g. 20000 → "٢٠٬٠٠٠"
  */
 export function fmt(n: number | string | null | undefined): string {
   const num = Number(n ?? 0)
-  if (isNaN(num)) return '0'
-  return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  const safe = isNaN(num) ? 0 : num
+  try {
+    return safe.toLocaleString('ar-EG', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  } catch {
+    return safe.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  }
 }
 
 /** Format number as currency with ج suffix */
