@@ -21,6 +21,10 @@ const METHOD_LABELS: Record<string, string> = {
 interface DeviceLine {
   imei1: string; brand: string; model: string; cost_price?: number; price?: number
 }
+type InvoiceWithLines = InvoiceRow & {
+  devices?:  DeviceLine[]
+  products?: ProductLine[]
+}
 interface ProductLine {
   name: string; unit: string; quantity: number; unit_price: number
 }
@@ -34,8 +38,6 @@ interface InvoiceRow {
   remaining:      number
   status:         string
   notes:          string | null
-  devices?:       DeviceLine[]
-  products?:      ProductLine[]
 }
 
 // ── Print function ────────────────────────────────────────────────────────────
@@ -219,13 +221,17 @@ export function PartyStatementPage() {
   const { data: customerLedger } = useCustomerLedgerById(!isSupplier ? (id ?? '') : '')
   const { data: payments = [] }  = usePaymentsByParty(id ?? '')
 
-  const { data: invoices = [] } = useQuery({
+  const { data: invoicesRaw = [] } = useQuery({
     queryKey: ['statement-invoices-lines', type, id],
-    queryFn: () => isSupplier
-      ? paymentsService.getPurchaseInvoiceLinesBySupplier(id ?? '')
-      : paymentsService.getSaleInvoiceLinesByCustomer(id ?? ''),
+    queryFn: async () => {
+      const result = isSupplier
+        ? await paymentsService.getPurchaseInvoiceLinesBySupplier(id ?? '')
+        : await paymentsService.getSaleInvoiceLinesByCustomer(id ?? '')
+      return result as InvoiceWithLines[]
+    },
     enabled: !!id,
   })
+  const invoices = invoicesRaw as InvoiceWithLines[]
 
   const ledger = isSupplier ? supplierLedger : customerLedger
   const partyName  = isSupplier ? (supplierLedger?.supplier_name ?? '...') : (customerLedger?.customer_name ?? '...')
@@ -243,7 +249,7 @@ export function PartyStatementPage() {
   }
 
   const totalInvoiceRemaining = useMemo(() =>
-    invoices.reduce((s, i) => s + i.remaining, 0), [invoices])
+    invoices.reduce((s: number, i: InvoiceWithLines) => s + i.remaining, 0), [invoices])
 
   if (!ledger) return (
     <div className="flex items-center justify-center h-64">
@@ -281,7 +287,7 @@ export function PartyStatementPage() {
             partyName, partyPhone: partyPhone ?? null,
             partyType: isSupplier ? 'supplier' : 'customer',
             openingBal, totalInvoiced, totalPaid, balance,
-            invoices,
+            invoices: invoices as InvoiceRow[],
             payments: payments.map((p: {invoice_number:string;amount:number;payment_method:string;payment_date:string;notes:string|null}) => ({
               invoice_number: p.invoice_number,
               amount: Number(p.amount),
@@ -348,7 +354,7 @@ export function PartyStatementPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {invoices.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">لا توجد فواتير مؤكدة</td></tr>
-              ) : invoices.map(inv => {
+              ) : invoices.map((inv: InvoiceWithLines) => {
                 const isExpanded = expandedInvoices.has(inv.id)
                 const hasLines   = (inv.devices?.length ?? 0) + (inv.products?.length ?? 0) > 0
                 return (
@@ -448,9 +454,9 @@ export function PartyStatementPage() {
               <tfoot>
                 <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
                   <td className="px-4 py-3 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={2}>الإجمالي</td>
-                  <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">{fmt(invoices.reduce((s,i)=>s+i.total_amount,0))} ج</td>
-                  <td className="px-4 py-3 text-sm font-bold text-gray-500">{fmt(invoices.reduce((s,i)=>s+i.discount,0))} ج</td>
-                  <td className="px-4 py-3 text-sm font-bold text-green-600">{fmt(invoices.reduce((s,i)=>s+i.paid_amount,0))} ج</td>
+                  <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">{fmt(invoices.reduce((s:number,i:InvoiceWithLines)=>s+i.total_amount,0))} ج</td>
+                  <td className="px-4 py-3 text-sm font-bold text-gray-500">{fmt(invoices.reduce((s:number,i:InvoiceWithLines)=>s+i.discount,0))} ج</td>
+                  <td className="px-4 py-3 text-sm font-bold text-green-600">{fmt(invoices.reduce((s:number,i:InvoiceWithLines)=>s+i.paid_amount,0))} ج</td>
                   <td className="px-4 py-3 text-sm font-bold text-red-600">{fmt(totalInvoiceRemaining)} ج</td>
                   <td />
                 </tr>
