@@ -8,7 +8,7 @@ import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanne
 import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
-import { useBrands, useModelsByBrand, useCreateDevice } from '@/hooks/useDevices'
+import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel } from '@/hooks/useDevices'
 import { useProductCategories, useCreateProduct } from '@/hooks/useProducts'
 import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
@@ -63,8 +63,40 @@ function AddDeviceInlineForm({
   const [error, setError]     = useState('')
   const [saving, setSaving]   = useState(false)
   const createDevice          = useCreateDevice()
+  const createBrand           = useCreateBrand()
+  const createModel           = useCreateModel()
 
   const { data: models = [] } = useModelsByBrand(form.brand_id)
+
+  const [newBrandName, setNewBrandName] = useState('')
+  const [showNewBrand, setShowNewBrand] = useState(false)
+  const [newModelName, setNewModelName] = useState('')
+  const [showNewModel, setShowNewModel] = useState(false)
+
+  async function handleAddBrand() {
+    if (!newBrandName.trim()) return
+    try {
+      const brand = await createBrand.mutateAsync(newBrandName.trim())
+      set('brand_id', brand.id)
+      set('model_id', '')
+      setNewBrandName('')
+      setShowNewBrand(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطأ في إضافة الماركة')
+    }
+  }
+
+  async function handleAddModel() {
+    if (!newModelName.trim() || !form.brand_id) return
+    try {
+      const model = await createModel.mutateAsync({ brandId: form.brand_id, name: newModelName.trim() })
+      set('model_id', model.id)
+      setNewModelName('')
+      setShowNewModel(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطأ في إضافة الموديل')
+    }
+  }
 
   function set(field: keyof NewDeviceForm, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -118,22 +150,68 @@ function AddDeviceInlineForm({
     <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
       <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest">إضافة جهاز جديد</p>
 
-      {/* Brand + Model */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1">
+      {/* Brand */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الماركة *</label>
+          <button type="button" onClick={() => { setShowNewBrand(v => !v); setShowNewModel(false) }}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5">
+            <Plus size={11} /> ماركة جديدة
+          </button>
+        </div>
+        {showNewBrand ? (
+          <div className="flex gap-2">
+            <input value={newBrandName} onChange={e => setNewBrandName(e.target.value)}
+              placeholder="اسم الماركة..." className={inp}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleAddBrand() } }} />
+            <button type="button" onClick={() => void handleAddBrand()} disabled={createBrand.isPending}
+              className="h-9 px-3 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0">
+              {createBrand.isPending ? '...' : 'إضافة'}
+            </button>
+            <button type="button" onClick={() => setShowNewBrand(false)}
+              className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0">
+              <X size={13} />
+            </button>
+          </div>
+        ) : (
           <select value={form.brand_id} onChange={e => { set('brand_id', e.target.value); set('model_id', '') }} className={inp + ' cursor-pointer'}>
             <option value="">اختر الماركة</option>
             {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-        </div>
-        <div className="flex flex-col gap-1">
+        )}
+      </div>
+
+      {/* Model */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الموديل *</label>
+          {form.brand_id && (
+            <button type="button" onClick={() => { setShowNewModel(v => !v); setShowNewBrand(false) }}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5">
+              <Plus size={11} /> موديل جديد
+            </button>
+          )}
+        </div>
+        {showNewModel ? (
+          <div className="flex gap-2">
+            <input value={newModelName} onChange={e => setNewModelName(e.target.value)}
+              placeholder="اسم الموديل..." className={inp}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleAddModel() } }} />
+            <button type="button" onClick={() => void handleAddModel()} disabled={createModel.isPending}
+              className="h-9 px-3 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0">
+              {createModel.isPending ? '...' : 'إضافة'}
+            </button>
+            <button type="button" onClick={() => setShowNewModel(false)}
+              className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0">
+              <X size={13} />
+            </button>
+          </div>
+        ) : (
           <select value={form.model_id} onChange={e => set('model_id', e.target.value)} disabled={!form.brand_id} className={inp + ' cursor-pointer disabled:opacity-50'}>
             <option value="">اختر الموديل</option>
             {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
-        </div>
+        )}
       </div>
 
       {/* IMEI 1 + IMEI 2 */}
