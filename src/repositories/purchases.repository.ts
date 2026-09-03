@@ -58,13 +58,17 @@ export const purchasesRepository = {
       const total    = Number(r['total_amount'] ?? 0)
       const paid     = Number(r['paid_amount']  ?? 0)
       const discount = Number(r['discount']     ?? 0)
+      const remaining = Math.max(0, total - paid - discount)
       return {
         ...r,
+        total_amount:    total,
+        paid_amount:     paid,
+        discount:        discount,
         supplier_name:   String(sup?.['name']       ?? '—'),
         created_by_name: String(cby?.['full_name']  ?? '—'),
         devices_count:   (dev  ?? []).length,
         products_count:  (prd  ?? []).length,
-        remaining:       Math.max(0, total - paid - discount),
+        remaining,
       } as PurchaseInvoiceView
     })
   },
@@ -97,6 +101,9 @@ export const purchasesRepository = {
 
     const invoice: PurchaseInvoiceView = {
       ...r,
+      total_amount:    total,
+      paid_amount:     paid,
+      discount:        discount,
       supplier_name:   String(sup?.['name']       ?? '—'),
       created_by_name: String(cby?.['full_name']  ?? '—'),
       devices_count:   (dev  ?? []).length,
