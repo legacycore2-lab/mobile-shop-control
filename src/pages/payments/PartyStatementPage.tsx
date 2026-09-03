@@ -11,8 +11,7 @@ import { useQuery } from '@tanstack/react-query'
 import { paymentsService } from '@/services/payments.service'
 import { AddPaymentModal } from './AddPaymentModal'
 import { cn } from '@/lib/cn'
-
-function fmt(n: number) { return n.toLocaleString('ar-EG') }
+import { fmt } from '@/lib/fmt'
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي', bank_transfer: 'تحويل بنكي', check: 'شيك', other: 'أخرى',
@@ -148,10 +147,10 @@ function printStatement(opts: {
       `).join('')}
       <tr class="balance-row">
         <td colspan="2"><strong>الإجمالي</strong></td>
-        <td><strong>${fmt(invoices.reduce((s:number,i:{total_amount:number;discount:number;paid_amount:number;remaining:number}) => s + i.total_amount, 0))} ج</strong></td>
-        <td><strong>${fmt(invoices.reduce((s:number,i:{total_amount:number;discount:number;paid_amount:number;remaining:number}) => s + i.discount, 0))} ج</strong></td>
-        <td><strong>${fmt(invoices.reduce((s:number,i:{total_amount:number;discount:number;paid_amount:number;remaining:number}) => s + i.paid_amount, 0))} ج</strong></td>
-        <td><strong>${fmt(invoices.reduce((s:number,i:{total_amount:number;discount:number;paid_amount:number;remaining:number}) => s + i.remaining, 0))} ج</strong></td>
+        <td><strong>${fmt(invoices.reduce((s,i) => s + i.total_amount, 0))} ج</strong></td>
+        <td><strong>${fmt(invoices.reduce((s,i) => s + i.discount, 0))} ج</strong></td>
+        <td><strong>${fmt(invoices.reduce((s,i) => s + i.paid_amount, 0))} ج</strong></td>
+        <td><strong>${fmt(invoices.reduce((s,i) => s + i.remaining, 0))} ج</strong></td>
       </tr>
     </tbody>
   </table>
@@ -180,7 +179,7 @@ function printStatement(opts: {
       `).join('')}
       <tr class="balance-row">
         <td colspan="4"><strong>إجمالي المدفوعات</strong></td>
-        <td><strong>${fmt(payments.reduce((s:number,p:{amount:number}) => s + p.amount, 0))} ج</strong></td>
+        <td><strong>${fmt(payments.reduce((s,p) => s + p.amount, 0))} ج</strong></td>
       </tr>
     </tbody>
   </table>
@@ -234,6 +233,11 @@ export function PartyStatementPage() {
     </div>
   )
 
+  const openingBal   = Number(ledger.opening_balance)
+  const totalInvoiced = Number(ledger.total_invoiced)
+  const totalPaid    = Number(ledger.total_paid)
+  const balance      = Number(ledger.balance)
+
   return (
     <div className="space-y-6" dir="rtl">
 
@@ -258,14 +262,11 @@ export function PartyStatementPage() {
           onClick={() => printStatement({
             partyName, partyPhone: partyPhone ?? null,
             partyType: isSupplier ? 'supplier' : 'customer',
-            openingBal: ledger.opening_balance,
-            totalInvoiced: ledger.total_invoiced,
-            totalPaid: ledger.total_paid,
-            balance: ledger.balance,
+            openingBal, totalInvoiced, totalPaid, balance,
             invoices,
             payments: payments.map((p: {invoice_number:string;amount:number;payment_method:string;payment_date:string;notes:string|null}) => ({
               invoice_number: p.invoice_number,
-              amount: p.amount,
+              amount: Number(p.amount),
               payment_method: p.payment_method,
               payment_date: p.payment_date,
               notes: p.notes,
@@ -279,10 +280,10 @@ export function PartyStatementPage() {
       {/* KPI Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'رصيد افتتاحي',   value: ledger.opening_balance, color: 'gray' },
-          { label: isSupplier ? 'إجمالي المشتريات' : 'إجمالي المبيعات', value: ledger.total_invoiced, color: 'blue' },
-          { label: 'إجمالي المدفوع', value: ledger.total_paid,     color: 'green' },
-          { label: 'الرصيد المتبقي', value: ledger.balance,        color: ledger.balance > 0 ? 'red' : 'green' },
+          { label: 'رصيد افتتاحي',   value: openingBal,    color: 'gray' },
+          { label: isSupplier ? 'إجمالي المشتريات' : 'إجمالي المبيعات', value: totalInvoiced, color: 'blue' },
+          { label: 'إجمالي المدفوع', value: totalPaid,     color: 'green' },
+          { label: 'الرصيد المتبقي', value: balance,       color: balance > 0 ? 'red' : 'green' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
             <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
@@ -407,7 +408,7 @@ export function PartyStatementPage() {
               <tfoot>
                 <tr className="bg-green-50 dark:bg-green-900/10 border-t-2 border-green-200 dark:border-green-800">
                   <td className="px-4 py-3 text-xs font-bold text-green-700 dark:text-green-400" colSpan={4}>إجمالي المدفوعات</td>
-                  <td className="px-4 py-3 text-sm font-bold text-green-600">{fmt(payments.reduce((s,p)=>s+p.amount,0))} ج</td>
+                  <td className="px-4 py-3 text-sm font-bold text-green-600">{fmt(payments.reduce((s,p)=>s+Number(p.amount),0))} ج</td>
                 </tr>
               </tfoot>
             )}
