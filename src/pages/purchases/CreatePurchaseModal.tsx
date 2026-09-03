@@ -53,10 +53,12 @@ function AddDeviceInlineForm({
   supplierId,
   onAdded,
   onCancel,
+  userId,
 }: {
   supplierId: string
   onAdded: (line: InvoiceDeviceLine & { label: string }) => void
   onCancel: () => void
+  userId: string
 }) {
   const { data: brands = [] } = useBrands()
   const [form, setForm]       = useState<NewDeviceForm>(BLANK_DEVICE)
@@ -128,7 +130,7 @@ function AddDeviceInlineForm({
         warranty_months: Number(form.warranty_months) || 12,
         location:        '',
         notes:           form.notes.trim(),
-        added_by:        '',
+        added_by:        userId,
       }
       const device = await createDevice.mutateAsync(deviceForm)
 
@@ -731,6 +733,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                       {showAddDevice ? (
                         <AddDeviceInlineForm
                           supplierId={supplierId}
+                          userId={profile?.id ?? ''}
                           onAdded={handleDeviceAdded}
                           onCancel={() => setShowAddDevice(false)}
                         />
