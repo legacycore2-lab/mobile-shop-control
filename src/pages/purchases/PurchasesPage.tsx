@@ -177,6 +177,15 @@ export function PurchasesPage() {
                           className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                           <Eye size={13} />
                         </button>
+                        {inv.status === 'confirmed' && inv.remaining > 0 && (
+                          <button
+                            title="تسجيل دفعة"
+                            onClick={() => setPayInvoice(inv)}
+                            className="h-7 px-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors flex items-center gap-1 whitespace-nowrap">
+                            <Banknote size={12} />
+                            {fmt(inv.remaining)} ج
+                          </button>
+                        )}
                         {inv.status === 'draft' && (
                           <button title="حذف" onClick={() => void handleDelete(inv.id, inv.status)}
                             disabled={deleteMutation.isPending}
