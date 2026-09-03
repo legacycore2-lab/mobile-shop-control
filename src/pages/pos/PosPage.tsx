@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import {
   Search, Plus, ShoppingCart, DollarSign,
   CheckCircle, Clock, XCircle, TrendingUp, Users,
-  ChevronLeft, ChevronRight, Trash2, Eye, CreditCard, Smartphone, Tag,
+  ChevronLeft, ChevronRight, Trash2, Eye, CreditCard, Smartphone, Tag, Banknote,
 } from 'lucide-react'
 import {
   useSaleInvoices, useSaleStats,
@@ -16,6 +16,7 @@ import { SaleDrawer }       from './SaleDrawer'
 import { CreateSaleModal }  from './CreateSaleModal'
 import { STATUS_MAP, PAGE_SIZE, fmt, type FilterStatus } from './constants'
 import type { SaleInvoiceView } from '@/repositories/pos.repository'
+import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
 
 export function PosPage() {
   const { data: invoices = [], isLoading } = useSaleInvoices()
@@ -28,6 +29,7 @@ export function PosPage() {
   const [page,       setPage]       = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [detailId,   setDetailId]   = useState<string | null>(null)
+  const [payInvoice, setPayInvoice] = useState<SaleInvoiceView | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -187,6 +189,14 @@ export function PosPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-center">
                       {/* View */}
+                      <button
+                        title="تسجيل دفعة"
+                        onClick={() => setPayInvoice(inv)}
+                        disabled={inv.status !== 'confirmed' || inv.remaining <= 0}
+                        className="h-8 px-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 hover:border-green-200 dark:hover:border-green-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                        <Banknote size={12} />
+                        {inv.remaining > 0 ? `${inv.remaining.toLocaleString('ar-EG')} ج` : 'مسدد'}
+                      </button>
                       <button title="عرض" onClick={() => setDetailId(inv.id)}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <Eye size={13} />
@@ -239,6 +249,18 @@ export function PosPage() {
 
       {showCreate && <CreateSaleModal onClose={() => setShowCreate(false)} />}
       {detailId   && <SaleDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
+      {payInvoice && (
+        <AddPaymentModal
+          invoiceId={payInvoice.id}
+          invoiceNumber={payInvoice.invoice_number}
+          partyId={payInvoice.customer_id ?? ''}
+          partyName={payInvoice.customer_name ?? 'عميل نقدي'}
+          partyType="customer"
+          paymentType="sale"
+          remaining={payInvoice.remaining}
+          onClose={() => setPayInvoice(null)}
+        />
+      )}
     </div>
   )
 }
