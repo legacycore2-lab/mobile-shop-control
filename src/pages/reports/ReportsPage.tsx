@@ -3,7 +3,7 @@ import {
   TrendingUp, Package, Truck, Users,
   DollarSign, BarChart2, AlertTriangle,
   RefreshCw, ChevronUp, ChevronDown, Minus,
-  Download, Calendar, Smartphone, Tag, Printer,
+  Download, Calendar, Smartphone, Tag, Printer, X,
 } from 'lucide-react'
 import {
   useReportSummary,
@@ -17,6 +17,11 @@ import {
   useDeviceMovementReport,
 } from '@/hooks/useReports'
 import { useSupplierLedger } from '@/hooks/usePayments'
+import {
+  exportOverviewPdf, exportSalesPdf, exportStockPdf,
+  exportSuppliersPdf, exportCustomersPdf, exportAlertsPdf,
+  type PdfOutput,
+} from '@/lib/pdfExport'
 import { Badge } from '@/components/ui/Badge'
 import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
 import { cn } from '@/lib/cn'
@@ -616,16 +621,24 @@ const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
 
 export function ReportsPage() {
   const [tab, setTab] = useState<Tab>('overview')
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('all')
+  const [filterFrom, setFilterFrom] = useState<string>('')
+  const [filterTo,   setFilterTo]   = useState<string>('')
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [pdfLoading,   setPdfLoading]   = useState(false)
+
+  const dateRange = filterFrom && filterTo
+    ? `من ${filterFrom} إلى ${filterTo}`
+    : filterFrom ? `من ${filterFrom}` : filterTo ? `إلى ${filterTo}` : 'كل البيانات'
 
   const { data: summary,      isLoading: sumLoad  } = useReportSummary()
-  const { data: sales = [],   isLoading: saleLoad } = useDeviceSalesReport()
+  const { data: sales = [],   isLoading: saleLoad } = useDeviceSalesReport(filterFrom || undefined, filterTo || undefined)
   const { data: stock = [],   isLoading: stckLoad } = useStockValueReport()
-  const { data: suppliers = [], isLoading: supLoad } = useSupplierPurchasesReport()
+  const { data: suppliers = [], isLoading: supLoad } = useSupplierPurchasesReport(filterFrom || undefined, filterTo || undefined)
   const { data: activity = [], isLoading: actLoad } = useDailyActivityReport()
   const { data: lowStock = [], isLoading: lowLoad } = useLowStockReport()
-  const { data: customers = [], isLoading: custLoad } = useTopCustomersReport()
+  const { data: customers = [], isLoading: custLoad } = useTopCustomersReport(filterFrom || undefined, filterTo || undefined)
   const { data: supplierLedger = [] } = useSupplierLedger()
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('all')
 
   const today        = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
@@ -643,25 +656,40 @@ export function ReportsPage() {
     }
   }
 
-  // Print button per tab
-  function handlePrint() {
-    switch (tab) {
-      case 'overview':   return printOverview(summary as unknown as Record<string,number>|undefined, sales, stock, suppliers)
-      case 'sales':      return printSales(sales)
-      case 'stock':      return printStock(stock)
-      case 'suppliers': {
-        const ledgerToUse = selectedSupplierId === 'all'
-          ? supplierLedger
-          : supplierLedger.filter(s => s.supplier_id === selectedSupplierId)
-        const suppliersToUse = selectedSupplierId === 'all'
-          ? suppliers
-          : suppliers.filter((s: {supplier_name: string}) =>
-              ledgerToUse.some(l => l.supplier_name === s.supplier_name))
-        return void printSuppliers(suppliersToUse, ledgerToUse)
+  async function handlePdf(mode: PdfOutput) {
+    setShowPdfModal(false)
+    setPdfLoading(true)
+    try {
+      switch (tab) {
+        case 'overview':
+          exportOverviewPdf({ output: mode, dateRange, sales, stock, summary: summary ?? null })
+          break
+        case 'sales':
+          exportSalesPdf(sales, mode, dateRange)
+          break
+        case 'stock':
+          exportStockPdf(stock, mode)
+          break
+        case 'suppliers': {
+          const ledgerToUse = selectedSupplierId === 'all'
+            ? supplierLedger
+            : supplierLedger.filter(s => s.supplier_id === selectedSupplierId)
+          await exportSuppliersPdf(ledgerToUse, mode, dateRange)
+          break
+        }
+        case 'customers':
+          exportCustomersPdf(customers, mode, dateRange)
+          break
+        case 'alerts':
+          exportAlertsPdf(lowStock, mode)
+          break
+        case 'movement':
+          // fallback to print for movement
+          printMovement(movType, prodMovement, devMovement, movFrom, movTo)
+          break
       }
-      case 'customers':  return printCustomers(customers)
-      case 'alerts':     return printAlerts(lowStock)
-      case 'movement':   return printMovement(movType, prodMovement, devMovement, movFrom, movTo)
+    } finally {
+      setPdfLoading(false)
     }
   }
 
@@ -678,10 +706,57 @@ export function ReportsPage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">التقارير</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">تحليل المبيعات والمخزون والأداء</p>
         </div>
-        <button onClick={handlePrint}
-          className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
-          <Printer size={14} /> طباعة التقرير
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Date filter */}
+          <div className="flex items-center gap-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1">
+            <Calendar size={13} className="text-gray-400 flex-shrink-0" />
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
+              className="h-7 text-xs bg-transparent text-gray-900 dark:text-white focus:outline-none w-28" />
+            <span className="text-gray-300 text-xs">—</span>
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)}
+              className="h-7 text-xs bg-transparent text-gray-900 dark:text-white focus:outline-none w-28" />
+            {(filterFrom || filterTo) && (
+              <button onClick={() => { setFilterFrom(''); setFilterTo('') }}
+                className="text-gray-400 hover:text-red-500 transition-colors">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* PDF button */}
+          <button onClick={() => setShowPdfModal(true)} disabled={pdfLoading}
+            className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2 disabled:opacity-50">
+            {pdfLoading
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <Download size={14} />}
+            PDF
+          </button>
+        </div>
+
+        {/* PDF Mode Modal */}
+        {showPdfModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={e => { if (e.target === e.currentTarget) setShowPdfModal(false) }}>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl p-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">تصدير PDF</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">{dateRange}</p>
+              <div className="space-y-3">
+                <button onClick={() => void handlePdf('download')}
+                  className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+                  <Download size={16} /> تحميل PDF مباشرة
+                </button>
+                <button onClick={() => void handlePdf('preview')}
+                  className="w-full h-11 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <Printer size={16} /> فتح في تاب جديد
+                </button>
+                <button onClick={() => setShowPdfModal(false)}
+                  className="w-full h-9 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
