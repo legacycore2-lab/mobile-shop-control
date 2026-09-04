@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Smartphone, TrendingUp, AlertTriangle, Package,
-  ArrowLeft, CheckCircle, Wrench, DollarSign,
+  ArrowLeft, CheckCircle, Wrench, DollarSign, ScanLine,
   Users, Truck, BarChart2, RefreshCw,
 } from 'lucide-react'
 import { useDevices, useDeviceStats } from '@/hooks/useDevices'
@@ -10,6 +10,7 @@ import { useSupplierStats } from '@/hooks/useSuppliers'
 import { useCustomerStats } from '@/hooks/useCustomers'
 import { Badge } from '@/components/ui/Badge'
 import { useNavigate } from 'react-router-dom'
+import { QuickScanModal } from './QuickScanModal'
 import { cn } from '@/lib/cn'
 import type { MobileDeviceView } from '@/types/database'
 import { DEVICE_STATUS_MAP, CONDITION_MAP, fmt } from '@/constants/statusMaps'
@@ -110,6 +111,7 @@ function DeviceRow({ d }: { d: MobileDeviceView }) {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const [showScan, setShowScan] = useState(false)
 
   const { data: devices        = [], isLoading: devLoading } = useDevices()
   const { data: deviceStats,         isLoading: devStatLoad } = useDeviceStats()
@@ -146,12 +148,19 @@ export function DashboardPage() {
             {new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        {totalLoading && (
-          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-            <RefreshCw size={12} className="animate-spin" />
-            جاري التحديث...
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {totalLoading && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+              <RefreshCw size={12} className="animate-spin" />
+              جاري التحديث...
+            </div>
+          )}
+          <button
+            onClick={() => setShowScan(true)}
+            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/25">
+            <ScanLine size={16} /> مسح سريع
+          </button>
+        </div>
       </div>
 
       {/* ── KPI Row 1: Devices ── */}
@@ -338,6 +347,7 @@ export function DashboardPage() {
           )}
         </div>
       </div>
+      {showScan && <QuickScanModal onClose={() => setShowScan(false)} />}
     </div>
   )
 }
