@@ -25,13 +25,13 @@ export interface ReportSummary {
 }
 
 export const reportsService = {
-  getDeviceSalesSummary: () => reportsRepository.getDeviceSalesSummary(),
+  getDeviceSalesSummary: (from?: string, to?: string) => reportsRepository.getDeviceSalesSummary(from, to),
   getStockValue:         () => reportsRepository.getStockValue(),
-  getSupplierPurchases:  () => reportsRepository.getSupplierPurchases(),
+  getSupplierPurchases:  (from?: string, to?: string) => reportsRepository.getSupplierPurchases(from, to),
   getDeviceStatusCounts: () => reportsRepository.getDeviceStatusCounts(),
   getDailyActivity:      () => reportsRepository.getDailyActivity(),
   getLowStockDetailed:   () => reportsRepository.getLowStockDetailed(),
-  getTopCustomers:       () => reportsRepository.getTopCustomers(),
+  getTopCustomers:       (from?: string, to?: string) => reportsRepository.getTopCustomers(from, to),
 
   getProductMovement: (from: string, to: string): Promise<ProductMovementRow[]> =>
     reportsRepository.getProductMovement(from, to),
@@ -41,7 +41,7 @@ export const reportsService = {
 
   getSummary: async (): Promise<ReportSummary> => {
     const [sales, stock, lowStock] = await Promise.all([
-      reportsRepository.getDeviceSalesSummary(),
+      reportsRepository.getDeviceSalesSummary(undefined, undefined),
       reportsRepository.getStockValue(),
       reportsRepository.getLowStockDetailed(),
     ])
