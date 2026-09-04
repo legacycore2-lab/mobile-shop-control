@@ -5,6 +5,7 @@ import {
   Search, ScanLine, Zap, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
+import { LabelPrintModal, type LabelData } from './LabelPrintModal'
 import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
@@ -486,6 +487,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const [error,         setError]         = useState('')
   const [tab,           setTab]           = useState<'devices' | 'products'>('devices')
   const [productSearch, setProductSearch] = useState('')
+  const [labelData, setLabelData] = useState<LabelData | null>(null)
   const [scanProduct,   setScanProduct]   = useState(false)
   const [showAddDevice, setShowAddDevice] = useState(false)
   const [showAddProduct, setShowAddProduct] = useState(false)
@@ -718,6 +720,27 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                                 className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center"
                               />
                               <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">ج</span>
+                              <button type="button"
+                                onClick={() => {
+                                  const parts = line.label.split(' — ')
+                                  const namePart = parts[0] ?? ''
+                                  const imei = parts[1] ?? ''
+                                  const brandModel = namePart.trim().split(' ')
+                                  setLabelData({
+                                    type: 'device',
+                                    device_id: line.device_id,
+                                    brand: brandModel[0] ?? '',
+                                    model: brandModel.slice(1).join(' '),
+                                    imei1: imei,
+                                    condition: 'new',
+                                    cost_price: line.cost_price,
+                                    selling_price: 0,
+                                  })
+                                }}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex-shrink-0"
+                                title="طباعة ليبل">
+                                🏷️
+                              </button>
                               <button type="button" onClick={() => removeDevice(line.device_id)}
                                 className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
                                 <X size={13} />
@@ -849,6 +872,25 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                                 <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap w-20 text-left">
                                   = {fmt(line.quantity * line.unit_price)} ج
                                 </span>
+                                <button type="button"
+                                  onClick={() => {
+                                    if (product) setLabelData({
+                                      type: 'product',
+                                      product_id: product.id,
+                                      name: product.name,
+                                      category: product.category_name,
+                                      sku: product.sku ?? undefined,
+                                      barcode: product.barcode ?? undefined,
+                                      cost_price: line.unit_price,
+                                      selling_price: product.selling_price,
+                                      quantity: line.quantity,
+                                      unit: product.unit ?? 'قطعة',
+                                    })
+                                  }}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex-shrink-0"
+                                  title="طباعة ليبل">
+                                  🏷️
+                                </button>
                                 <button type="button" onClick={() => removeProductLine(line.product_id)}
                                   className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
                                   <X size={13} />
