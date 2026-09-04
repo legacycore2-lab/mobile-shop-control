@@ -166,8 +166,11 @@ export function PurchasesPage() {
                       {fmt(inv.paid_amount)} ج
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={cn('text-sm font-bold whitespace-nowrap', inv.remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-600')}>
-                        {fmt(inv.remaining)} ج
+                      <span className={cn('text-sm font-bold whitespace-nowrap',
+                        inv.remaining > 0 ? 'text-red-600 dark:text-red-400' :
+                        inv.remaining < 0 ? 'text-blue-600 dark:text-blue-400' :
+                        'text-gray-400 dark:text-gray-600')}>
+                        {inv.remaining < 0 ? `رصيد دائن ${fmt(Math.abs(inv.remaining))} ج` : `${fmt(inv.remaining)} ج`}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
