@@ -94,14 +94,17 @@ export interface DeviceMovementRow {
 export const reportsRepository = {
 
   // ── مبيعات الأجهزة ────────────────────────────────────────────────────────
-  getDeviceSalesSummary: async (): Promise<DeviceSalesSummary[]> => {
-    const { data, error } = await supabase
+  getDeviceSalesSummary: async (from?: string, to?: string): Promise<DeviceSalesSummary[]> => {
+    let query = supabase
       .from('mobile_devices')
       .select(`
-        cost_price, actual_selling_price, selling_price, status,
+        cost_price, actual_selling_price, selling_price, status, sold_at,
         mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
       `)
       .eq('status', 'sold')
+    if (from) query = query.gte('sold_at', from)
+    if (to)   query = query.lte('sold_at', to + 'T23:59:59')
+    const { data, error } = await query
     if (error) throw error
 
     const map = new Map<string, DeviceSalesSummary>()
@@ -164,10 +167,13 @@ export const reportsRepository = {
   },
 
   // ── مشتريات الموردين ──────────────────────────────────────────────────────
-  getSupplierPurchases: async (): Promise<SupplierPurchaseSummary[]> => {
-    const { data, error } = await supabase
+  getSupplierPurchases: async (from?: string, to?: string): Promise<SupplierPurchaseSummary[]> => {
+    let query = supabase
       .from('mobile_devices')
-      .select('cost_price, suppliers!supplier_id ( id, name )')
+      .select('cost_price, created_at, suppliers!supplier_id ( id, name )')
+    if (from) query = query.gte('created_at', from)
+    if (to)   query = query.lte('created_at', to + 'T23:59:59')
+    const { data, error } = await query
     if (error) throw error
 
     const map = new Map<string, SupplierPurchaseSummary>()
@@ -250,7 +256,7 @@ export const reportsRepository = {
   },
 
   // ── أفضل العملاء ──────────────────────────────────────────────────────────
-  getTopCustomers: async (): Promise<TopCustomer[]> => {
+  getTopCustomers: async (from?: string, to?: string): Promise<TopCustomer[]> => {
     const { data, error } = await supabase
       .from('mobile_devices')
       .select('actual_selling_price, selling_price, customers!sold_to_customer_id ( id, name )')
