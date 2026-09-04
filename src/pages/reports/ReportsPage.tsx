@@ -16,6 +16,7 @@ import {
   useProductMovementReport,
   useDeviceMovementReport,
 } from '@/hooks/useReports'
+import { useSupplierLedger } from '@/hooks/usePayments'
 import { Badge } from '@/components/ui/Badge'
 import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
 import { cn } from '@/lib/cn'
@@ -250,39 +251,127 @@ function printStock(stock: unknown[]) {
   openPrint(body, 'تقرير مخزون الأجهزة')
 }
 
-function printSuppliers(suppliers: unknown[]) {
+async function printSuppliers(suppliers: unknown[], suppliersWithIds: unknown[]) {
   const rows = suppliers as {supplier_name:string;total_devices:number;total_cost:number}[]
+  const suppIds = suppliersWithIds as {supplier_id:string;supplier_name:string;total_invoiced:number;total_paid:number;balance:number}[]
   const total = rows.reduce((s,r)=>s+r.total_cost,0)
-  const body = `
-    <div class="kpi-grid">
-      <div class="kpi"><div class="label">عدد الموردين</div><div class="value">${rows.length}</div></div>
-      <div class="kpi"><div class="label">إجمالي الأجهزة</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.total_devices,0))}</div></div>
-      <div class="kpi"><div class="label">إجمالي المشتريات</div><div class="value red">${fmt(total)} ج</div></div>
-      <div class="kpi"><div class="label">متوسط لكل مورد</div><div class="value amber">${fmt(rows.length?total/rows.length:0)} ج</div></div>
-    </div>
-    <div class="section">
-      <div class="section-title">🏭 تفاصيل مشتريات الموردين</div>
-      <table>
-        <thead><tr><th>#</th><th>المورد</th><th>عدد الأجهزة</th><th>إجمالي التكلفة</th><th>النسبة من الإجمالي</th><th>متوسط سعر الجهاز</th></tr></thead>
-        <tbody>
-          ${rows.map((r,i)=>`<tr>
-            <td>${i+1}</td><td><strong>${r.supplier_name}</strong></td>
-            <td style="text-align:center;font-weight:700">${r.total_devices}</td>
-            <td>${fmt(r.total_cost)} ج</td>
-            <td style="text-align:center"><span class="badge badge-blue">${total>0?((r.total_cost/total)*100).toFixed(1):0}%</span></td>
-            <td>${fmt(r.total_devices>0?r.total_cost/r.total_devices:0)} ج</td>
-          </tr>`).join('')}
-          <tr class="total-row">
-            <td colspan="2"><strong>الإجمالي</strong></td>
-            <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.total_devices,0)}</strong></td>
-            <td><strong>${fmt(total)} ج</strong></td>
-            <td></td><td></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  const today = new Date().toLocaleDateString('ar-EG', {year:'numeric',month:'long',day:'numeric'})
+
+  // Fetch invoices for each supplier
+  const { paymentsService } = await import('@/services/payments.service')
+  
+  const supplierInvoicesMap = new Map<string, Awaited<ReturnType<typeof paymentsService.getPurchaseInvoicesBySupplier>>>()
+  for (const s of suppIds) {
+    try {
+      const invoices = await paymentsService.getPurchaseInvoicesBySupplier(s.supplier_id)
+      supplierInvoicesMap.set(s.supplier_id, invoices)
+    } catch { /* skip */ }
+  }
+
+  const styles = `
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; font-size:12px; color:#1a1a1a; direction:rtl; background:#fff; }
+    .supplier-page { padding:20px 28px; max-width:1000px; margin:0 auto; page-break-after:always; }
+    .supplier-page:last-child { page-break-after:avoid; }
+    .page-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1d4ed8; padding-bottom:12px; margin-bottom:16px; }
+    .page-header h1 { font-size:18px; font-weight:800; color:#1d4ed8; }
+    .page-header p { color:#6b7280; font-size:11px; margin-top:3px; }
+    .page-header-info p { font-size:11px; color:#374151; text-align:left; margin-bottom:2px; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+    .kpi { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; }
+    .kpi .label { font-size:10px; color:#6b7280; margin-bottom:3px; }
+    .kpi .value { font-size:17px; font-weight:800; }
+    .kpi .value.green { color:#16a34a; } .kpi .value.red { color:#dc2626; } .kpi .value.blue { color:#2563eb; } .kpi .value.amber { color:#d97706; }
+    .section-title { font-size:13px; font-weight:700; color:#1d4ed8; border-bottom:1px solid #dbeafe; padding-bottom:5px; margin-bottom:10px; }
+    table { width:100%; border-collapse:collapse; font-size:11px; }
+    th { background:#eff6ff; color:#1d4ed8; font-weight:700; padding:7px 10px; text-align:right; border:1px solid #bfdbfe; white-space:nowrap; }
+    td { padding:6px 10px; border:1px solid #e5e7eb; vertical-align:middle; }
+    tr:nth-child(even) td { background:#f9fafb; }
+    .total-row td { background:#eff6ff!important; font-weight:700; border-top:2px solid #1d4ed8; }
+    .badge { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:600; }
+    .badge-red { background:#fee2e2; color:#dc2626; }
+    .badge-green { background:#dcfce7; color:#16a34a; }
+    .badge-blue { background:#dbeafe; color:#2563eb; }
+    .credit { color:#2563eb; font-weight:700; }
+    .footer { margin-top:16px; border-top:1px solid #e5e7eb; padding-top:8px; display:flex; justify-content:space-between; color:#9ca3af; font-size:10px; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
   `
-  openPrint(body, 'تقرير الموردين')
+
+  const suppliersHtml = suppIds.map(s => {
+    const invoices = supplierInvoicesMap.get(s.supplier_id) ?? []
+    const totalInv   = invoices.reduce((x,i)=>x+i.total_amount,0)
+    const totalPaid  = invoices.reduce((x,i)=>x+i.paid_amount,0)
+    const totalRem   = invoices.reduce((x,i)=>x+i.remaining,0)
+    const balance    = s.balance
+
+    return `
+      <div class="supplier-page">
+        <div class="page-header">
+          <div>
+            <h1>🏭 ${s.supplier_name}</h1>
+            <p>Mobile Shop Control — كشف حساب مورد</p>
+          </div>
+          <div class="page-header-info">
+            <p><strong>تاريخ التقرير:</strong> ${today}</p>
+            <p><strong>عدد الفواتير:</strong> ${invoices.length}</p>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">إجمالي الفواتير</div><div class="value red">${fmt(totalInv)} ج</div></div>
+          <div class="kpi"><div class="label">إجمالي المدفوع</div><div class="value green">${fmt(totalPaid)} ج</div></div>
+          <div class="kpi"><div class="label">${balance < 0 ? 'رصيد دائن' : 'المتبقي'}</div>
+            <div class="value ${balance < 0 ? 'blue' : balance > 0 ? 'red' : 'green'}">${fmt(Math.abs(balance))} ج</div></div>
+          <div class="kpi"><div class="label">الحالة</div>
+            <div class="value ${balance < 0 ? 'blue' : balance > 0 ? 'red' : 'green'}">${balance < 0 ? '★ رصيد دائن' : balance > 0 ? '⚠ مديونية' : '✓ مسدد'}</div></div>
+        </div>
+
+        <div class="section-title">📋 الفواتير (${invoices.length})</div>
+        ${invoices.length === 0 ? '<p style="color:#9ca3af;font-size:11px;padding:8px 0">لا توجد فواتير مؤكدة</p>' : `
+        <table>
+          <thead>
+            <tr><th>#</th><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>الخصم</th><th>المدفوع</th><th>المتبقي / الرصيد</th></tr>
+          </thead>
+          <tbody>
+            ${invoices.map((inv,i) => `<tr>
+              <td>${i+1}</td>
+              <td><strong>${inv.invoice_number}</strong></td>
+              <td>${new Date(inv.invoice_date).toLocaleDateString('ar-EG')}</td>
+              <td>${fmt(inv.total_amount)} ج</td>
+              <td>${inv.discount > 0 ? fmt(inv.discount)+' ج' : '—'}</td>
+              <td>${fmt(inv.paid_amount)} ج</td>
+              <td>${inv.remaining < 0
+                ? `<span class="badge badge-blue">رصيد دائن ${fmt(Math.abs(inv.remaining))} ج</span>`
+                : inv.remaining > 0
+                  ? `<span class="badge badge-red">${fmt(inv.remaining)} ج</span>`
+                  : `<span class="badge badge-green">مسدد ✓</span>`
+              }</td>
+            </tr>`).join('')}
+            <tr class="total-row">
+              <td colspan="3"><strong>الإجمالي</strong></td>
+              <td><strong>${fmt(totalInv)} ج</strong></td>
+              <td><strong>${fmt(invoices.reduce((x,i)=>x+i.discount,0))} ج</strong></td>
+              <td><strong>${fmt(totalPaid)} ج</strong></td>
+              <td><strong class="${balance<0?'credit':''}">${balance<0?'رصيد دائن '+fmt(Math.abs(balance)):fmt(Math.abs(totalRem))} ج</strong></td>
+            </tr>
+          </tbody>
+        </table>`}
+
+        <div class="footer">
+          <span>Mobile Shop Control</span>
+          <span>كشف حساب — ${s.supplier_name} — ${today}</span>
+        </div>
+      </div>
+    `
+  }).join('')
+
+  const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+    <meta charset="UTF-8"><title>تقرير الموردين</title>
+    <style>${styles}</style>
+  </head><body>${suppliersHtml}<script>window.onload=()=>window.print()</script></body></html>`
+
+  const win = window.open('', '_blank')
+  if (win) { win.document.write(html); win.document.close() }
 }
 
 function printCustomers(customers: unknown[]) {
@@ -535,6 +624,7 @@ export function ReportsPage() {
   const { data: activity = [], isLoading: actLoad } = useDailyActivityReport()
   const { data: lowStock = [], isLoading: lowLoad } = useLowStockReport()
   const { data: customers = [], isLoading: custLoad } = useTopCustomersReport()
+  const { data: supplierLedger = [] } = useSupplierLedger()
 
   const today        = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
@@ -558,7 +648,7 @@ export function ReportsPage() {
       case 'overview':   return printOverview(summary as unknown as Record<string,number>|undefined, sales, stock, suppliers)
       case 'sales':      return printSales(sales)
       case 'stock':      return printStock(stock)
-      case 'suppliers':  return printSuppliers(suppliers)
+      case 'suppliers':  return void printSuppliers(suppliers, supplierLedger ?? [])
       case 'customers':  return printCustomers(customers)
       case 'alerts':     return printAlerts(lowStock)
       case 'movement':   return printMovement(movType, prodMovement, devMovement, movFrom, movTo)
