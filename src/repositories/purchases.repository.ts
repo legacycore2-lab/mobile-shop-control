@@ -94,7 +94,7 @@ export const purchasesRepository = {
       created_by_name: String(cby?.['full_name']  ?? '—'),
       devices_count:   (dev  ?? []).length,
       products_count:  (prd  ?? []).length,
-      remaining:       Math.max(0, total - paid - discount),
+      remaining:       total - paid - discount,
     } as PurchaseInvoiceView
 
     // Devices
