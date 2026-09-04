@@ -181,7 +181,7 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     .cost .pval{color:#c2410c;}.sell .pval{color:#15803d;}
     .codes{display:flex;align-items:center;gap:6px;border-top:1px solid #e5e7eb;padding-top:5px;}
     .barcode-wrap{flex:1;text-align:center;}
-    .code-text{font-size:7px;font-family:monospace;color:#374151;margin-top:1px;}
+    .code-text{display:none;}
     svg.bc{max-width:100%;height:auto;}
     @media print{body{background:#fff;}.wrap{padding:0;gap:4px;}.label{border:1px solid #ccc;}}
   </style>
