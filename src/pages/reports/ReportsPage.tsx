@@ -3,7 +3,7 @@ import {
   TrendingUp, Package, Truck, Users,
   DollarSign, BarChart2, AlertTriangle,
   RefreshCw, ChevronUp, ChevronDown, Minus,
-  Download, Calendar, Smartphone, Tag,
+  Download, Calendar, Smartphone, Tag, Printer,
 } from 'lucide-react'
 import {
   useReportSummary,
@@ -22,7 +22,10 @@ import { cn } from '@/lib/cn'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(n: number) { return n.toLocaleString('ar-EG') }
+function fmt(n: number | string | null | undefined) {
+  const num = Number(n ?? 0)
+  return isNaN(num) ? '0' : num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
 function fmtK(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}م`
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}ك`
@@ -39,6 +42,405 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 const MONTH_NAMES = ['يناير','فبراير','مارس','إبريل','مايو','يونيو',
   'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
+
+// ── Print Engine ──────────────────────────────────────────────────────────────
+
+function printStyles() {
+  return `
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; font-size:12px; color:#1a1a1a; direction:rtl; background:#fff; }
+    .page { padding:20px 28px; max-width:1100px; margin:0 auto; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1d4ed8; padding-bottom:14px; margin-bottom:18px; }
+    .header-title h1 { font-size:20px; font-weight:800; color:#1d4ed8; }
+    .header-title p { color:#6b7280; font-size:11px; margin-top:3px; }
+    .header-info p { font-size:11px; color:#374151; margin-bottom:2px; text-align:left; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
+    .kpi { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; }
+    .kpi .label { font-size:10px; color:#6b7280; margin-bottom:3px; }
+    .kpi .value { font-size:18px; font-weight:800; color:#1a1a1a; }
+    .kpi .value.green { color:#16a34a; }
+    .kpi .value.red   { color:#dc2626; }
+    .kpi .value.blue  { color:#2563eb; }
+    .kpi .value.amber { color:#d97706; }
+    .section { margin-bottom:22px; }
+    .section-title { font-size:13px; font-weight:700; color:#1d4ed8; border-bottom:1px solid #dbeafe; padding-bottom:5px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+    table { width:100%; border-collapse:collapse; font-size:11px; }
+    th { background:#eff6ff; color:#1d4ed8; font-weight:700; padding:7px 10px; text-align:right; border:1px solid #bfdbfe; white-space:nowrap; }
+    td { padding:6px 10px; border:1px solid #e5e7eb; vertical-align:middle; }
+    tr:nth-child(even) td { background:#f9fafb; }
+    .total-row td { background:#eff6ff!important; font-weight:700; border-top:2px solid #1d4ed8; }
+    .badge { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:600; }
+    .badge-red    { background:#fee2e2; color:#dc2626; }
+    .badge-green  { background:#dcfce7; color:#16a34a; }
+    .badge-blue   { background:#dbeafe; color:#2563eb; }
+    .badge-amber  { background:#fef3c7; color:#d97706; }
+    .badge-purple { background:#f3e8ff; color:#7c3aed; }
+    .alert-row td { background:#fff7ed!important; }
+    .profit-pos { color:#16a34a; font-weight:700; }
+    .profit-neg { color:#dc2626; font-weight:700; }
+    .footer { margin-top:24px; border-top:1px solid #e5e7eb; padding-top:10px; display:flex; justify-content:space-between; color:#9ca3af; font-size:10px; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  `
+}
+
+function printHeader(title: string, subtitle: string, dateRange?: string) {
+  const today = new Date().toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' })
+  return `
+    <div class="header">
+      <div class="header-title">
+        <h1>${title}</h1>
+        <p>${subtitle}</p>
+      </div>
+      <div class="header-info">
+        <p><strong>Mobile Shop Control</strong></p>
+        <p>📅 ${today}</p>
+        ${dateRange ? `<p>📆 ${dateRange}</p>` : ''}
+      </div>
+    </div>
+  `
+}
+
+function openPrint(body: string, title: string, dateRange?: string) {
+  const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+    <meta charset="UTF-8"><title>${title}</title>
+    <style>${printStyles()}</style>
+  </head><body><div class="page">
+    ${printHeader(title, 'Mobile Shop Control — نظام إدارة المحل', dateRange)}
+    ${body}
+    <div class="footer">
+      <span>Mobile Shop Control — نظام إدارة المحل</span>
+      <span>${title} — ${new Date().toLocaleDateString('ar-EG')}</span>
+    </div>
+  </div><script>window.onload=()=>window.print()</script></body></html>`
+  const win = window.open('', '_blank')
+  if (win) { win.document.write(html); win.document.close() }
+}
+
+// ── Print functions per tab ───────────────────────────────────────────────────
+
+function printOverview(summary: Record<string, number> | undefined, sales: unknown[], stock: unknown[], suppliers: unknown[]) {
+  if (!summary) return
+  const totalStockCost    = (stock as {total_cost:number}[]).reduce((s,r)=>s+r.total_cost,0)
+  const totalStockSelling = (stock as {total_selling:number}[]).reduce((s,r)=>s+r.total_selling,0)
+  const body = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">إجمالي الإيرادات</div><div class="value green">${fmt(summary.totalRevenue)} ج</div></div>
+      <div class="kpi"><div class="label">إجمالي التكاليف</div><div class="value red">${fmt(summary.totalCostSold)} ج</div></div>
+      <div class="kpi"><div class="label">صافي الربح</div><div class="value ${summary.totalProfit>=0?'green':'red'}">${fmt(summary.totalProfit)} ج</div></div>
+      <div class="kpi"><div class="label">هامش الربح</div><div class="value blue">${summary.avgMargin?.toFixed(1) ?? 0}%</div></div>
+      <div class="kpi"><div class="label">أجهزة مباعة</div><div class="value">${fmt(summary.totalSoldDevices)}</div></div>
+      <div class="kpi"><div class="label">في المخزون</div><div class="value blue">${fmt(summary.stockDevices)}</div></div>
+      <div class="kpi"><div class="label">قيمة المخزون (تكلفة)</div><div class="value amber">${fmt(totalStockCost)} ج</div></div>
+      <div class="kpi"><div class="label">قيمة المخزون (بيع)</div><div class="value green">${fmt(totalStockSelling)} ج</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📱 مبيعات الأجهزة حسب الموديل</div>
+      <table>
+        <thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>وحدات</th><th>إجمالي التكلفة</th><th>إجمالي الإيرادات</th><th>الربح</th><th>الهامش %</th></tr></thead>
+        <tbody>
+          ${(sales as {brand_name:string;model_name:string;total_units:number;total_cost:number;total_revenue:number;profit:number;margin_pct:number}[])
+            .map((r,i) => `<tr>
+              <td>${i+1}</td><td>${r.brand_name}</td><td>${r.model_name}</td>
+              <td style="text-align:center">${r.total_units}</td>
+              <td>${fmt(r.total_cost)} ج</td>
+              <td>${fmt(r.total_revenue)} ج</td>
+              <td class="${r.profit>=0?'profit-pos':'profit-neg'}">${fmt(r.profit)} ج</td>
+              <td style="text-align:center">${r.margin_pct}%</td>
+            </tr>`).join('')}
+          <tr class="total-row">
+            <td colspan="3">الإجمالي</td>
+            <td style="text-align:center">${(sales as {total_units:number}[]).reduce((s,r)=>s+r.total_units,0)}</td>
+            <td>${fmt((sales as {total_cost:number}[]).reduce((s,r)=>s+r.total_cost,0))} ج</td>
+            <td>${fmt((sales as {total_revenue:number}[]).reduce((s,r)=>s+r.total_revenue,0))} ج</td>
+            <td class="profit-pos">${fmt((sales as {profit:number}[]).reduce((s,r)=>s+r.profit,0))} ج</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🏭 الموردون</div>
+      <table>
+        <thead><tr><th>#</th><th>المورد</th><th>عدد الأجهزة</th><th>إجمالي التكلفة</th><th>النسبة</th></tr></thead>
+        <tbody>
+          ${(suppliers as {supplier_name:string;total_devices:number;total_cost:number}[]).map((r,i)=>`
+            <tr><td>${i+1}</td><td>${r.supplier_name}</td>
+            <td style="text-align:center">${r.total_devices}</td>
+            <td>${fmt(r.total_cost)} ج</td>
+            <td style="text-align:center">${((r.total_cost/(suppliers as {total_cost:number}[]).reduce((s,x)=>s+x.total_cost,1))*100).toFixed(1)}%</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  openPrint(body, 'تقرير نظرة عامة — ملخص شامل')
+}
+
+function printSales(sales: unknown[]) {
+  const rows = sales as {brand_name:string;model_name:string;total_units:number;total_cost:number;total_revenue:number;profit:number;margin_pct:number}[]
+  const body = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">موديلات مباعة</div><div class="value">${rows.length}</div></div>
+      <div class="kpi"><div class="label">إجمالي الوحدات</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.total_units,0))}</div></div>
+      <div class="kpi"><div class="label">إجمالي الإيرادات</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.total_revenue,0))} ج</div></div>
+      <div class="kpi"><div class="label">صافي الربح</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.profit,0))} ج</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">📱 تفاصيل مبيعات الأجهزة</div>
+      <table>
+        <thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>وحدات مباعة</th><th>إجمالي التكلفة</th><th>إجمالي الإيرادات</th><th>صافي الربح</th><th>هامش الربح %</th></tr></thead>
+        <tbody>
+          ${rows.map((r,i)=>`<tr>
+            <td>${i+1}</td><td><strong>${r.brand_name}</strong></td><td>${r.model_name}</td>
+            <td style="text-align:center;font-weight:700">${r.total_units}</td>
+            <td>${fmt(r.total_cost)} ج</td>
+            <td>${fmt(r.total_revenue)} ج</td>
+            <td class="${r.profit>=0?'profit-pos':'profit-neg'}">${fmt(r.profit)} ج</td>
+            <td style="text-align:center"><span class="badge ${r.margin_pct>=20?'badge-green':r.margin_pct>=10?'badge-amber':'badge-red'}">${r.margin_pct}%</span></td>
+          </tr>`).join('')}
+          <tr class="total-row">
+            <td colspan="3"><strong>الإجمالي</strong></td>
+            <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.total_units,0)}</strong></td>
+            <td><strong>${fmt(rows.reduce((s,r)=>s+r.total_cost,0))} ج</strong></td>
+            <td><strong>${fmt(rows.reduce((s,r)=>s+r.total_revenue,0))} ج</strong></td>
+            <td class="profit-pos"><strong>${fmt(rows.reduce((s,r)=>s+r.profit,0))} ج</strong></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+  openPrint(body, 'تقرير مبيعات الأجهزة')
+}
+
+function printStock(stock: unknown[]) {
+  const rows = stock as {brand_name:string;model_name:string;count:number;total_cost:number;total_selling:number}[]
+  const body = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">موديلات في المخزون</div><div class="value">${rows.length}</div></div>
+      <div class="kpi"><div class="label">إجمالي الوحدات</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.count,0))}</div></div>
+      <div class="kpi"><div class="label">قيمة التكلفة</div><div class="value amber">${fmt(rows.reduce((s,r)=>s+r.total_cost,0))} ج</div></div>
+      <div class="kpi"><div class="label">قيمة البيع المتوقعة</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.total_selling,0))} ج</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">📦 تفاصيل مخزون الأجهزة</div>
+      <table>
+        <thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>الكمية</th><th>إجمالي التكلفة</th><th>إجمالي البيع المتوقع</th><th>الربح المتوقع</th></tr></thead>
+        <tbody>
+          ${rows.map((r,i)=>`<tr>
+            <td>${i+1}</td><td><strong>${r.brand_name}</strong></td><td>${r.model_name}</td>
+            <td style="text-align:center;font-weight:700">${r.count}</td>
+            <td>${fmt(r.total_cost)} ج</td>
+            <td>${fmt(r.total_selling)} ج</td>
+            <td class="profit-pos">${fmt(r.total_selling-r.total_cost)} ج</td>
+          </tr>`).join('')}
+          <tr class="total-row">
+            <td colspan="3"><strong>الإجمالي</strong></td>
+            <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.count,0)}</strong></td>
+            <td><strong>${fmt(rows.reduce((s,r)=>s+r.total_cost,0))} ج</strong></td>
+            <td><strong>${fmt(rows.reduce((s,r)=>s+r.total_selling,0))} ج</strong></td>
+            <td class="profit-pos"><strong>${fmt(rows.reduce((s,r)=>s+r.total_selling-r.total_cost,0))} ج</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+  openPrint(body, 'تقرير مخزون الأجهزة')
+}
+
+function printSuppliers(suppliers: unknown[]) {
+  const rows = suppliers as {supplier_name:string;total_devices:number;total_cost:number}[]
+  const total = rows.reduce((s,r)=>s+r.total_cost,0)
+  const body = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">عدد الموردين</div><div class="value">${rows.length}</div></div>
+      <div class="kpi"><div class="label">إجمالي الأجهزة</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.total_devices,0))}</div></div>
+      <div class="kpi"><div class="label">إجمالي المشتريات</div><div class="value red">${fmt(total)} ج</div></div>
+      <div class="kpi"><div class="label">متوسط لكل مورد</div><div class="value amber">${fmt(rows.length?total/rows.length:0)} ج</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">🏭 تفاصيل مشتريات الموردين</div>
+      <table>
+        <thead><tr><th>#</th><th>المورد</th><th>عدد الأجهزة</th><th>إجمالي التكلفة</th><th>النسبة من الإجمالي</th><th>متوسط سعر الجهاز</th></tr></thead>
+        <tbody>
+          ${rows.map((r,i)=>`<tr>
+            <td>${i+1}</td><td><strong>${r.supplier_name}</strong></td>
+            <td style="text-align:center;font-weight:700">${r.total_devices}</td>
+            <td>${fmt(r.total_cost)} ج</td>
+            <td style="text-align:center"><span class="badge badge-blue">${total>0?((r.total_cost/total)*100).toFixed(1):0}%</span></td>
+            <td>${fmt(r.total_devices>0?r.total_cost/r.total_devices:0)} ج</td>
+          </tr>`).join('')}
+          <tr class="total-row">
+            <td colspan="2"><strong>الإجمالي</strong></td>
+            <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.total_devices,0)}</strong></td>
+            <td><strong>${fmt(total)} ج</strong></td>
+            <td></td><td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+  openPrint(body, 'تقرير الموردين')
+}
+
+function printCustomers(customers: unknown[]) {
+  const rows = customers as {customer_name:string;device_count:number;total_spent:number}[]
+  const body = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">عدد العملاء</div><div class="value">${rows.length}</div></div>
+      <div class="kpi"><div class="label">إجمالي الأجهزة</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.device_count,0))}</div></div>
+      <div class="kpi"><div class="label">إجمالي المبيعات</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.total_spent,0))} ج</div></div>
+      <div class="kpi"><div class="label">متوسط لكل عميل</div><div class="value amber">${fmt(rows.length?rows.reduce((s,r)=>s+r.total_spent,0)/rows.length:0)} ج</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">👥 أفضل العملاء</div>
+      <table>
+        <thead><tr><th>#</th><th>العميل</th><th>أجهزة مشتراة</th><th>إجمالي الإنفاق</th><th>متوسط الجهاز</th><th>النسبة</th></tr></thead>
+        <tbody>
+          ${rows.map((r,i)=>`<tr>
+            <td>${i+1}</td><td><strong>${r.customer_name}</strong></td>
+            <td style="text-align:center;font-weight:700">${r.device_count}</td>
+            <td>${fmt(r.total_spent)} ج</td>
+            <td>${fmt(r.device_count>0?r.total_spent/r.device_count:0)} ج</td>
+            <td style="text-align:center"><span class="badge badge-green">${rows.reduce((s,x)=>s+x.total_spent,0)>0?((r.total_spent/rows.reduce((s,x)=>s+x.total_spent,0))*100).toFixed(1):0}%</span></td>
+          </tr>`).join('')}
+          <tr class="total-row">
+            <td colspan="2"><strong>الإجمالي</strong></td>
+            <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.device_count,0)}</strong></td>
+            <td><strong>${fmt(rows.reduce((s,r)=>s+r.total_spent,0))} ج</strong></td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+  openPrint(body, 'تقرير العملاء')
+}
+
+function printAlerts(alerts: unknown[]) {
+  const rows = alerts as {product_name:string;category_name:string;stock_qty:number;reorder_level:number;cost_price:number;selling_price:number;stock_value:number}[]
+  const body = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">منتجات تحت الحد</div><div class="value red">${rows.length}</div></div>
+      <div class="kpi"><div class="label">قيمة المخزون المنخفض</div><div class="value amber">${fmt(rows.reduce((s,r)=>s+r.stock_value,0))} ج</div></div>
+      <div class="kpi"><div class="label">نفذ من المخزون</div><div class="value red">${rows.filter(r=>r.stock_qty===0).length}</div></div>
+      <div class="kpi"><div class="label">تحت الحد الأدنى</div><div class="value amber">${rows.filter(r=>r.stock_qty>0).length}</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">⚠️ تنبيهات المخزون — منتجات تحتاج إعادة طلب</div>
+      <table>
+        <thead><tr><th>#</th><th>المنتج</th><th>الفئة</th><th>الرصيد الحالي</th><th>الحد الأدنى</th><th>العجز</th><th>سعر التكلفة</th><th>قيمة المخزون</th></tr></thead>
+        <tbody>
+          ${rows.map((r,i)=>`<tr class="alert-row">
+            <td>${i+1}</td>
+            <td><strong>${r.product_name}</strong></td>
+            <td><span class="badge badge-blue">${r.category_name}</span></td>
+            <td style="text-align:center"><span class="badge ${r.stock_qty===0?'badge-red':'badge-amber'}">${r.stock_qty}</span></td>
+            <td style="text-align:center">${r.reorder_level}</td>
+            <td style="text-align:center;color:#dc2626;font-weight:700">-${Math.max(0,r.reorder_level-r.stock_qty)}</td>
+            <td>${fmt(r.cost_price)} ج</td>
+            <td>${fmt(r.stock_value)} ج</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+  openPrint(body, 'تقرير تنبيهات المخزون')
+}
+
+function printMovement(
+  movType: 'products' | 'devices',
+  prodMovement: unknown[], devMovement: unknown[],
+  from: string, to: string
+) {
+  const dateRange = `من ${from} إلى ${to}`
+  if (movType === 'products') {
+    const rows = prodMovement as {name:string;category_name:string;sku:string|null;unit:string;opening_stock:number;purchased:number;sold:number;current_stock:number;cost_price:number;selling_price:number;stock_value:number;needs_reorder:boolean}[]
+    const body = `
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">عدد المنتجات</div><div class="value">${rows.length}</div></div>
+        <div class="kpi"><div class="label">إجمالي المشتريات</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.purchased,0))} وحدة</div></div>
+        <div class="kpi"><div class="label">إجمالي المبيعات</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.sold,0))} وحدة</div></div>
+        <div class="kpi"><div class="label">قيمة المخزون الحالي</div><div class="value amber">${fmt(rows.reduce((s,r)=>s+r.stock_value,0))} ج</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📊 حركة المنتجات — SOH</div>
+        <table>
+          <thead><tr>
+            <th>#</th><th>المنتج</th><th>الفئة</th><th>رصيد أول الفترة</th><th>مشتريات</th><th>مبيعات</th><th>رصيد آخر الفترة</th><th>سعر التكلفة</th><th>قيمة المخزون</th><th>الحالة</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map((r,i)=>`<tr>
+              <td>${i+1}</td>
+              <td><strong>${r.name}</strong>${r.sku?`<br><small style="color:#9ca3af">${r.sku}</small>`:''}</td>
+              <td><span class="badge badge-blue">${r.category_name}</span></td>
+              <td style="text-align:center">${r.opening_stock} ${r.unit}</td>
+              <td style="text-align:center;color:#2563eb;font-weight:700">+${r.purchased}</td>
+              <td style="text-align:center;color:#16a34a;font-weight:700">-${r.sold}</td>
+              <td style="text-align:center;font-weight:700">${r.current_stock} ${r.unit}</td>
+              <td>${fmt(r.cost_price)} ج</td>
+              <td>${fmt(r.stock_value)} ج</td>
+              <td><span class="badge ${r.needs_reorder?'badge-red':'badge-green'}">${r.needs_reorder?'يحتاج طلب':'كافٍ'}</span></td>
+            </tr>`).join('')}
+            <tr class="total-row">
+              <td colspan="3"><strong>الإجمالي</strong></td>
+              <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.opening_stock,0)}</strong></td>
+              <td style="text-align:center;color:#2563eb"><strong>+${rows.reduce((s,r)=>s+r.purchased,0)}</strong></td>
+              <td style="text-align:center;color:#16a34a"><strong>-${rows.reduce((s,r)=>s+r.sold,0)}</strong></td>
+              <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.current_stock,0)}</strong></td>
+              <td></td>
+              <td><strong>${fmt(rows.reduce((s,r)=>s+r.stock_value,0))} ج</strong></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `
+    openPrint(body, 'تقرير حركة المنتجات — SOH', dateRange)
+  } else {
+    const rows = devMovement as {brand_name:string;model_name:string;total:number;in_stock:number;sold_in_period:number;purchased_in_period:number;total_revenue:number;total_profit:number}[]
+    const body = `
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">موديلات</div><div class="value">${rows.length}</div></div>
+        <div class="kpi"><div class="label">اشتريت في الفترة</div><div class="value blue">${fmt(rows.reduce((s,r)=>s+r.purchased_in_period,0))}</div></div>
+        <div class="kpi"><div class="label">بيعت في الفترة</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.sold_in_period,0))}</div></div>
+        <div class="kpi"><div class="label">إجمالي الإيرادات</div><div class="value green">${fmt(rows.reduce((s,r)=>s+r.total_revenue,0))} ج</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📱 حركة الأجهزة — SOH</div>
+        <table>
+          <thead><tr>
+            <th>#</th><th>الماركة</th><th>الموديل</th><th>إجمالي</th><th>في المخزون</th><th>اشتريت</th><th>بيعت</th><th>إيرادات</th><th>ربح</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map((r,i)=>`<tr>
+              <td>${i+1}</td>
+              <td><strong>${r.brand_name}</strong></td><td>${r.model_name}</td>
+              <td style="text-align:center">${r.total}</td>
+              <td style="text-align:center"><span class="badge badge-blue">${r.in_stock}</span></td>
+              <td style="text-align:center;color:#2563eb;font-weight:700">+${r.purchased_in_period}</td>
+              <td style="text-align:center;color:#16a34a;font-weight:700">-${r.sold_in_period}</td>
+              <td>${fmt(r.total_revenue)} ج</td>
+              <td class="${r.total_profit>=0?'profit-pos':'profit-neg'}">${fmt(r.total_profit)} ج</td>
+            </tr>`).join('')}
+            <tr class="total-row">
+              <td colspan="3"><strong>الإجمالي</strong></td>
+              <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.total,0)}</strong></td>
+              <td style="text-align:center"><strong>${rows.reduce((s,r)=>s+r.in_stock,0)}</strong></td>
+              <td style="text-align:center;color:#2563eb"><strong>+${rows.reduce((s,r)=>s+r.purchased_in_period,0)}</strong></td>
+              <td style="text-align:center;color:#16a34a"><strong>-${rows.reduce((s,r)=>s+r.sold_in_period,0)}</strong></td>
+              <td><strong>${fmt(rows.reduce((s,r)=>s+r.total_revenue,0))} ج</strong></td>
+              <td class="profit-pos"><strong>${fmt(rows.reduce((s,r)=>s+r.total_profit,0))} ج</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `
+    openPrint(body, 'تقرير حركة الأجهزة — SOH', dateRange)
+  }
+}
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
@@ -67,7 +469,6 @@ function KpiCard({ label, value, sub, icon: Icon, color }: {
           <Icon size={18} />
         </div>
       </div>
-
     </div>
   )
 }
@@ -79,205 +480,47 @@ function BarChart({ data, valueKey, labelKey, color = 'blue', height = 140 }: {
   valueKey: string; labelKey: string
   color?: string; height?: number
 }) {
-  if (!data.length) return (
-    <div className="flex items-center justify-center py-8 text-gray-400 dark:text-gray-600 text-sm">
-      لا توجد بيانات
-    </div>
-  )
   const max = Math.max(...data.map(d => Number(d[valueKey] ?? 0)), 1)
   return (
-    <div className="overflow-x-auto">
-      <div className="flex items-end gap-1.5 min-w-0" style={{ height }}>
-        {data.slice(0, 12).map((d, i) => {
-          const val = Number(d[valueKey] ?? 0)
-          const pct = (val / max) * 100
-          return (
-            <div key={i} className="flex flex-col items-center flex-1 min-w-[32px] h-full justify-end group">
-              <div className="relative w-full flex justify-center">
-                <div
-                  className={cn(
-                    'w-full rounded-t-md transition-all duration-500',
-                    color === 'blue'   && 'bg-blue-500 dark:bg-blue-600',
-                    color === 'green'  && 'bg-green-500 dark:bg-green-600',
-                    color === 'amber'  && 'bg-amber-500 dark:bg-amber-600',
-                    color === 'purple' && 'bg-purple-500 dark:bg-purple-600',
-                  )}
-                  style={{ height: `${Math.max(pct, 2)}%` }}
-                />
-                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white dark:bg-gray-900 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 z-10">
-                  {fmtK(val)}
-                </span>
-              </div>
+    <div style={{ height }} className="flex items-end gap-1 overflow-x-auto px-1">
+      {data.map((d, i) => {
+        const val = Number(d[valueKey] ?? 0)
+        const pct = (val / max) * 100
+        return (
+          <div key={i} className="flex flex-col items-center gap-0.5 flex-1 min-w-[28px]">
+            <div className="text-[9px] text-gray-500 dark:text-gray-400 truncate w-full text-center">
+              {fmtK(val)}
             </div>
-          )
-        })}
-      </div>
-      <div className="flex gap-1.5 mt-1">
-        {data.slice(0, 12).map((d, i) => (
-          <div key={i} className="flex-1 min-w-[32px] text-center">
-            <span className="text-[9px] text-gray-400 dark:text-gray-600 leading-none block truncate">
-              {String(d[labelKey] ?? '').slice(0, 6)}
-            </span>
+            <div
+              className={`w-full rounded-t-sm transition-all ${
+                color === 'green' ? 'bg-green-500' :
+                color === 'red'   ? 'bg-red-500'   :
+                color === 'amber' ? 'bg-amber-500' : 'bg-blue-500'
+              }`}
+              style={{ height: `${Math.max(pct, 2)}%` }}
+            />
+            <div className="text-[9px] text-gray-400 dark:text-gray-600 truncate w-full text-center">
+              {String(d[labelKey] ?? '').slice(0, 8)}
+            </div>
           </div>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 }
 
-// ── Donut Chart (SVG) ─────────────────────────────────────────────────────────
-
-function DonutChart({ segments }: {
-  segments: { label: string; value: number; color: string }[]
-}) {
-  const total = segments.reduce((s, x) => s + x.value, 0)
-  if (!total) return (
-    <div className="flex items-center justify-center py-8 text-gray-400 dark:text-gray-600 text-sm">
-      لا توجد بيانات
-    </div>
-  )
-
-  const SIZE = 120; const R = 48; const CX = SIZE / 2; const CY = SIZE / 2
-  let cumAngle = -Math.PI / 2
-
-  const arcs = segments.map(seg => {
-    const angle = (seg.value / total) * 2 * Math.PI
-    const startAngle = cumAngle
-    cumAngle += angle
-    const endAngle = cumAngle
-    const x1 = CX + R * Math.cos(startAngle)
-    const y1 = CY + R * Math.sin(startAngle)
-    const x2 = CX + R * Math.cos(endAngle)
-    const y2 = CY + R * Math.sin(endAngle)
-    const largeArc = angle > Math.PI ? 1 : 0
-    return { ...seg, d: `M ${CX} ${CY} L ${x1} ${y1} A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2} Z` }
-  })
-
-  const colorMap: Record<string, string> = {
-    'bg-blue-500':   '#3b82f6',
-    'bg-green-500':  '#22c55e',
-    'bg-amber-500':  '#f59e0b',
-    'bg-red-500':    '#ef4444',
-    'bg-purple-500': '#a855f7',
-  }
-
-  return (
-    <div className="flex items-center gap-4 flex-wrap">
-      <svg width={SIZE} height={SIZE} className="flex-shrink-0">
-        {arcs.map((arc, i) => (
-          <path key={i} d={arc.d} fill={colorMap[arc.color] ?? '#94a3b8'} opacity={0.9} />
-        ))}
-        <circle cx={CX} cy={CY} r={28} fill="white" className="dark:fill-gray-900" />
-        <text x={CX} y={CY + 4} textAnchor="middle" fontSize={11} fontWeight="bold" fill="#374151" className="dark:fill-gray-200">
-          {total}
-        </text>
-      </svg>
-      <div className="flex flex-col gap-1.5 flex-1">
-        {segments.map((seg, i) => (
-          <div key={i} className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', seg.color)} />
-              <span className="text-xs text-gray-600 dark:text-gray-400">{seg.label}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-900 dark:text-white">{seg.value}</span>
-              <span className="text-xs text-gray-400 dark:text-gray-600">
-                {((seg.value / total) * 100).toFixed(0)}%
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Activity Chart (30 days) ──────────────────────────────────────────────────
-
-function ActivityChart({ data }: { data: { date: string; devices_added: number; devices_sold: number }[] }) {
-  if (!data.length) return null
-  const maxVal = Math.max(...data.flatMap(d => [d.devices_added, d.devices_sold]), 1)
-
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[600px]">
-        <div className="flex items-end gap-0.5" style={{ height: 80 }}>
-          {data.map((d, i) => (
-            <div key={i} className="flex flex-col items-center gap-0.5 flex-1 h-full justify-end group relative">
-              <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-[10px] text-gray-700 dark:text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm pointer-events-none">
-                <p className="font-semibold">{d.date}</p>
-                <p className="text-blue-600 dark:text-blue-400">مضاف: {d.devices_added}</p>
-                <p className="text-green-600 dark:text-green-400">مباع: {d.devices_sold}</p>
-              </div>
-              <div className="w-full flex gap-px items-end h-full">
-                <div
-                  className="flex-1 bg-blue-400 dark:bg-blue-500 rounded-t-sm transition-all"
-                  style={{ height: `${Math.max((d.devices_added / maxVal) * 100, d.devices_added > 0 ? 4 : 0)}%` }}
-                />
-                <div
-                  className="flex-1 bg-green-400 dark:bg-green-500 rounded-t-sm transition-all"
-                  style={{ height: `${Math.max((d.devices_sold / maxVal) * 100, d.devices_sold > 0 ? 4 : 0)}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* X axis: show every 5 days */}
-        <div className="flex gap-0.5 mt-1">
-          {data.map((d, i) => (
-            <div key={i} className="flex-1 text-center">
-              {i % 5 === 0 && (
-                <span className="text-[9px] text-gray-400 dark:text-gray-600">
-                  {d.date.slice(8)}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-        {/* Legend */}
-        <div className="flex items-center gap-4 mt-2">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-blue-400 dark:bg-blue-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">أجهزة مضافة</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-green-400 dark:bg-green-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">أجهزة مباعة</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
-function Skeleton({ rows = 4, cols = 5 }: { rows?: number; cols?: number }) {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex gap-3">
-          {Array.from({ length: cols }).map((_, j) => (
-            <div key={j} className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Tab = 'overview' | 'sales' | 'stock' | 'suppliers' | 'customers' | 'alerts' | 'movement'
 
 const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
-  { value: 'overview',   label: 'نظرة عامة',    icon: BarChart2     },
-  { value: 'sales',      label: 'مبيعات الأجهزة', icon: TrendingUp   },
-  { value: 'stock',      label: 'المخزون',        icon: Package      },
-  { value: 'suppliers',  label: 'الموردون',       icon: Truck        },
-  { value: 'customers',  label: 'العملاء',        icon: Users        },
-  { value: 'alerts',     label: 'التنبيهات',      icon: AlertTriangle },
-  { value: 'movement',   label: 'SOH + حركة المخزون', icon: RefreshCw   },
+  { value: 'overview',   label: 'نظرة عامة',         icon: BarChart2      },
+  { value: 'sales',      label: 'مبيعات الأجهزة',    icon: TrendingUp     },
+  { value: 'stock',      label: 'المخزون',             icon: Package        },
+  { value: 'suppliers',  label: 'الموردون',            icon: Truck          },
+  { value: 'customers',  label: 'العملاء',             icon: Users          },
+  { value: 'alerts',     label: 'التنبيهات',           icon: AlertTriangle  },
+  { value: 'movement',   label: 'SOH + حركة المخزون', icon: RefreshCw      },
 ]
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -285,16 +528,15 @@ const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
 export function ReportsPage() {
   const [tab, setTab] = useState<Tab>('overview')
 
-  const { data: summary,    isLoading: sumLoad  } = useReportSummary()
-  const { data: sales = [],  isLoading: saleLoad } = useDeviceSalesReport()
-  const { data: stock = [],  isLoading: stckLoad } = useStockValueReport()
+  const { data: summary,      isLoading: sumLoad  } = useReportSummary()
+  const { data: sales = [],   isLoading: saleLoad } = useDeviceSalesReport()
+  const { data: stock = [],   isLoading: stckLoad } = useStockValueReport()
   const { data: suppliers = [], isLoading: supLoad } = useSupplierPurchasesReport()
   const { data: activity = [], isLoading: actLoad } = useDailyActivityReport()
   const { data: lowStock = [], isLoading: lowLoad } = useLowStockReport()
   const { data: customers = [], isLoading: custLoad } = useTopCustomersReport()
 
-  // SOH + Movement
-  const today = new Date().toISOString().split('T')[0]
+  const today        = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
   const [movFrom, setMovFrom] = useState(firstOfMonth)
   const [movTo,   setMovTo]   = useState(today)
@@ -304,37 +546,31 @@ export function ReportsPage() {
 
   function exportMovementCsv() {
     if (movType === 'products') {
-      exportToExcel(
-        `تقرير-حركة-المنتجات-${movFrom}-${movTo}`,
-        SOH_PRODUCT_HEADERS,
-        prodMovement,
-        'حركة المنتجات',
-        `الفترة من ${movFrom} إلى ${movTo}`,
-      )
+      exportToExcel(`تقرير-حركة-المنتجات-${movFrom}-${movTo}`, SOH_PRODUCT_HEADERS, prodMovement, 'حركة المنتجات', `الفترة من ${movFrom} إلى ${movTo}`)
     } else {
-      exportToExcel(
-        `تقرير-حركة-الأجهزة-${movFrom}-${movTo}`,
-        SOH_DEVICE_HEADERS,
-        devMovement,
-        'حركة الأجهزة',
-        `الفترة من ${movFrom} إلى ${movTo}`,
-      )
+      exportToExcel(`تقرير-حركة-الأجهزة-${movFrom}-${movTo}`, SOH_DEVICE_HEADERS, devMovement, 'حركة الأجهزة', `الفترة من ${movFrom} إلى ${movTo}`)
     }
   }
 
-  // Status donut data derived from summary
-  const statusData = useMemo(() => {
-    if (!summary) return []
-    return [
-      { label: 'في المخزون',  value: summary.stockDevices,      color: 'bg-blue-500'   },
-      { label: 'مباع',        value: summary.totalSoldDevices,   color: 'bg-green-500'  },
-    ].filter(s => s.value > 0)
-  }, [summary])
+  // Print button per tab
+  function handlePrint() {
+    switch (tab) {
+      case 'overview':   return printOverview(summary as unknown as Record<string,number>|undefined, sales, stock, suppliers)
+      case 'sales':      return printSales(sales)
+      case 'stock':      return printStock(stock)
+      case 'suppliers':  return printSuppliers(suppliers)
+      case 'customers':  return printCustomers(customers)
+      case 'alerts':     return printAlerts(lowStock)
+      case 'movement':   return printMovement(movType, prodMovement, devMovement, movFrom, movTo)
+    }
+  }
 
-  const profitColor = (summary?.totalProfit ?? 0) >= 0 ? 'green' : 'red' as const
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const isLoading = sumLoad || saleLoad || stckLoad || supLoad || actLoad || lowLoad || custLoad
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
+    <div className="max-w-7xl mx-auto space-y-5" dir="rtl">
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -342,435 +578,204 @@ export function ReportsPage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">التقارير</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">تحليل المبيعات والمخزون والأداء</p>
         </div>
-        {(sumLoad || saleLoad || stckLoad) && (
-          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-            <RefreshCw size={12} className="animate-spin" />
-            جاري تحميل البيانات...
-          </div>
-        )}
+        <button onClick={handlePrint}
+          className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
+          <Printer size={14} /> طباعة التقرير
+        </button>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 flex gap-1 overflow-x-auto">
+      <div className="flex gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
         {TABS.map(({ value, label, icon: Icon }) => (
           <button key={value} onClick={() => setTab(value)}
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0',
+              'flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg transition-all whitespace-nowrap',
               tab === value
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
+                ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             )}>
-            <Icon size={15} />
-            {label}
+            <Icon size={13} /> {label}
           </button>
         ))}
       </div>
 
-      {/* ── Overview Tab ── */}
+      {/* ── Overview ─────────────────────────────────────────────────────── */}
       {tab === 'overview' && (
         <div className="space-y-5">
-          {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            <KpiCard label="إجمالي الإيرادات" value={`${fmt(summary?.totalRevenue ?? 0)} ج`}
-              sub={`${fmt(summary?.totalSoldDevices ?? 0)} جهاز مباع`}
-              icon={DollarSign} color="green" />
-            <KpiCard label="إجمالي الأرباح" value={`${fmt(summary?.totalProfit ?? 0)} ج`}
-              sub={`هامش ${summary?.avgMargin ?? 0}%`}
-              icon={TrendingUp} color={profitColor} />
-            <KpiCard label="قيمة المخزون الحالي" value={`${fmt(summary?.stockCostValue ?? 0)} ج`}
-              sub={`${fmt(summary?.stockDevices ?? 0)} جهاز · بيع: ${fmt(summary?.stockSellingValue ?? 0)} ج`}
-              icon={Package} color="blue" />
-            <KpiCard label="تكلفة الأجهزة المباعة" value={`${fmt(summary?.totalCostSold ?? 0)} ج`}
-              icon={Truck} color="amber" />
-            <KpiCard label="تنبيهات المخزون" value={summary?.lowStockCount ?? 0}
-              sub={(summary?.lowStockCount ?? 0) > 0 ? 'منتجات تحتاج إعادة طلب' : 'المخزون طبيعي'}
-              icon={AlertTriangle} color={(summary?.lowStockCount ?? 0) > 0 ? 'red' : 'teal'} />
-            <KpiCard label="أفضل العملاء" value={customers.length}
-              sub={customers[0] ? `الأعلى: ${customers[0].customer_name}` : 'لا توجد بيانات'}
-              icon={Users} color="purple" />
-          </div>
-
-          {/* Activity + Status */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">النشاط اليومي</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">آخر 30 يوم</p>
-                </div>
+          {sumLoad ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {Array.from({length:8}).map((_,i)=><div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"/>)}
+            </div>
+          ) : summary && (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <KpiCard label="إجمالي الإيرادات"   value={`${fmt(summary.totalRevenue)} ج`}   icon={DollarSign}  color="green"  />
+                <KpiCard label="إجمالي التكاليف"    value={`${fmt(summary.totalCostSold)} ج`}      icon={Package}     color="red"    />
+                <KpiCard label="صافي الربح"         value={`${fmt(summary.totalProfit)} ج`}    icon={TrendingUp}  color={summary.totalProfit>=0?'green':'red'} />
+                <KpiCard label="هامش الربح"         value={`${summary.avgMargin?.toFixed(1)}%`} icon={BarChart2}  color="blue"   />
+                <KpiCard label="أجهزة مباعة"        value={fmt(summary.totalSoldDevices)}            icon={Smartphone}  color="teal"   />
+                <KpiCard label="في المخزون"         value={fmt(summary.stockDevices)}         icon={Package}     color="blue"   />
+                <KpiCard label="قيمة المخزون (تكلفة)" value={`${fmt(stock.reduce((s,r:(typeof stock)[0])=>s+r.total_cost,0))} ج`} icon={DollarSign} color="amber" />
+                <KpiCard label="ربح متوقع من المخزون" value={`${fmt(stock.reduce((s,r:(typeof stock)[0])=>s+(r.total_selling-r.total_cost),0))} ج`} icon={TrendingUp} color="green" />
               </div>
-              {actLoad ? <Skeleton rows={3} cols={8} /> : <ActivityChart data={activity} />}
-            </div>
 
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">توزيع الأجهزة</h2>
-              {sumLoad ? <Skeleton rows={3} cols={2} /> : <DonutChart segments={statusData} />}
-            </div>
-          </div>
-
-          {/* Top sales + Top suppliers */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">أعلى الموديلات مبيعاً</h2>
-              {saleLoad ? <Skeleton /> : (
-                <BarChart data={sales as unknown as ({ [key: string]: unknown })[]} valueKey="total_units" labelKey="model_name" color="blue" height={120} />
-              )}
-            </div>
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">أعلى الموردين بالمشتريات</h2>
-              {supLoad ? <Skeleton /> : (
-                <BarChart data={suppliers as unknown as ({ [key: string]: unknown })[]} valueKey="total_cost" labelKey="supplier_name" color="purple" height={120} />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Sales Tab ── */}
-      {tab === 'sales' && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">مبيعات الأجهزة حسب الموديل</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">إجمالي الأجهزة المباعة فقط</p>
-            </div>
-            {saleLoad ? (
-              <div className="p-5"><Skeleton /></div>
-            ) : sales.length === 0 ? (
-              <div className="py-16 text-center text-gray-400 dark:text-gray-600">
-                <TrendingUp size={32} className="mx-auto mb-2 opacity-30" />
-                <p className="text-sm">لا توجد مبيعات بعد</p>
+              {/* Activity chart */}
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">نشاط الأجهزة — آخر 30 يوم</h3>
+                {actLoad ? <div className="h-36 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"/> : (
+                  <BarChart data={activity as unknown as ({[key:string]:unknown})[]} valueKey="devices_sold" labelKey="date" color="green" height={140}/>
+                )}
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                      {['#', 'الماركة', 'الموديل', 'الوحدات', 'إجمالي التكلفة', 'إجمالي الإيراد', 'الربح', 'هامش %'].map((h, i) => (
-                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap text-right', i >= 3 && 'text-center')}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sales.map((row, i) => (
-                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td className="px-4 py-3 text-xs text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{row.brand_name}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.model_name}</td>
-                        <td className="px-4 py-3 text-center font-bold text-blue-600 dark:text-blue-400">{row.total_units}</td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmt(row.total_cost)} ج</td>
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">{fmt(row.total_revenue)} ج</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn('text-sm font-bold whitespace-nowrap', row.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
-                            {row.profit >= 0 ? '+' : ''}{fmt(row.profit)} ج
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {row.margin_pct > 0
-                              ? <ChevronUp size={12} className="text-green-500" />
-                              : row.margin_pct < 0
-                                ? <ChevronDown size={12} className="text-red-500" />
-                                : <Minus size={12} className="text-gray-400" />
-                            }
-                            <span className={cn('text-sm font-semibold',
-                              row.margin_pct > 0 ? 'text-green-600 dark:text-green-400' :
-                              row.margin_pct < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500')}>
-                              {row.margin_pct}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
-                      <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">الإجمالي</td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-blue-600 dark:text-blue-400">
-                        {sales.reduce((s, r) => s + r.total_units, 0)}
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                        {fmt(sales.reduce((s, r) => s + r.total_cost, 0))} ج
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                        {fmt(sales.reduce((s, r) => s + r.total_revenue, 0))} ج
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                        +{fmt(sales.reduce((s, r) => s + r.profit, 0))} ج
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-700 dark:text-gray-300">
-                        {summary?.avgMargin ?? 0}%
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Stock Tab ── */}
-      {tab === 'stock' && (
-        <div className="space-y-4">
-          {/* Chart */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">قيمة المخزون حسب الماركة (تكلفة)</h2>
-            {stckLoad ? <Skeleton rows={3} cols={6} /> : (
-              <BarChart data={stock as unknown as ({ [key: string]: unknown })[]} valueKey="total_cost" labelKey="brand_name" color="blue" height={130} />
-            )}
-          </div>
-          {/* Table */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">تفاصيل المخزون الحالي (أجهزة in_stock)</h2>
-            </div>
-            {stckLoad ? (
-              <div className="p-5"><Skeleton /></div>
-            ) : stock.length === 0 ? (
-              <div className="py-16 text-center text-gray-400 dark:text-gray-600">
-                <Package size={32} className="mx-auto mb-2 opacity-30" />
-                <p className="text-sm">المخزون فارغ</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                      {['الماركة', 'عدد الأجهزة', 'إجمالي التكلفة', 'إجمالي سعر البيع', 'الربح المتوقع'].map((h, i) => (
-                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right', i >= 1 && 'text-center')}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stock.map((row, i) => {
-                      const profit = row.total_selling - row.total_cost
-                      return (
-                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.brand_name}</td>
-                          <td className="px-4 py-3 text-center font-bold text-blue-600 dark:text-blue-400">{row.count}</td>
-                          <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmt(row.total_cost)} ج</td>
-                          <td className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">{fmt(row.total_selling)} ج</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={cn('text-sm font-bold whitespace-nowrap', profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
-                              {profit >= 0 ? '+' : ''}{fmt(profit)} ج
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">الإجمالي</td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-blue-600 dark:text-blue-400">
-                        {stock.reduce((s, r) => s + r.count, 0)}
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                        {fmt(stock.reduce((s, r) => s + r.total_cost, 0))} ج
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                        {fmt(stock.reduce((s, r) => s + r.total_selling, 0))} ج
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                        +{fmt(stock.reduce((s, r) => s + r.total_selling - r.total_cost, 0))} ج
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Suppliers Tab ── */}
-      {tab === 'suppliers' && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">إجمالي المشتريات حسب المورد</h2>
-            {supLoad ? <Skeleton rows={3} cols={6} /> : (
-              <BarChart data={suppliers as unknown as ({ [key: string]: unknown })[]} valueKey="total_cost" labelKey="supplier_name" color="purple" height={130} />
-            )}
-          </div>
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">تفاصيل المشتريات من الموردين</h2>
-            </div>
-            {supLoad ? (
-              <div className="p-5"><Skeleton /></div>
-            ) : suppliers.length === 0 ? (
-              <div className="py-16 text-center text-gray-400 dark:text-gray-600 text-sm">لا توجد بيانات</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                      {['#', 'المورد', 'عدد الأجهزة', 'إجمالي التكلفة', 'النسبة'].map((h, i) => (
-                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right', i >= 2 && 'text-center')}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const total = suppliers.reduce((s, r) => s + r.total_cost, 0)
-                      return suppliers.map((row, i) => (
-                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <td className="px-4 py-3 text-xs text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
-                          <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.supplier_name}</td>
-                          <td className="px-4 py-3 text-center text-sm font-bold text-blue-600 dark:text-blue-400">{row.total_devices}</td>
-                          <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{fmt(row.total_cost)} ج</td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center gap-2 justify-center">
-                              <div className="flex-1 max-w-20 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
-                                <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${total > 0 ? (row.total_cost / total) * 100 : 0}%` }} />
-                              </div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-left">
-                                {total > 0 ? ((row.total_cost / total) * 100).toFixed(0) : 0}%
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Customers Tab ── */}
-      {tab === 'customers' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">أفضل العملاء</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">حسب إجمالي المشتريات من الأجهزة المباعة</p>
-          </div>
-          {custLoad ? (
-            <div className="p-5"><Skeleton /></div>
-          ) : customers.length === 0 ? (
-            <div className="py-16 text-center text-gray-400 dark:text-gray-600">
-              <Users size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">لا توجد مبيعات مرتبطة بعملاء بعد</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                    {['#', 'العميل', 'عدد الأجهزة', 'إجمالي الإنفاق', 'النسبة'].map((h, i) => (
-                      <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right', i >= 2 && 'text-center')}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const total = customers.reduce((s, r) => s + r.total_spent, 0)
-                    return customers.map((row, i) => (
-                      <tr key={row.customer_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <span className={cn('inline-flex w-6 h-6 rounded-full items-center justify-center text-xs font-bold',
-                            i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                            i === 1 ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' :
-                            i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                            'bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-500')}>
-                            {i + 1}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.customer_name}</td>
-                        <td className="px-4 py-3 text-center text-sm font-bold text-blue-600 dark:text-blue-400">{row.device_count}</td>
-                        <td className="px-4 py-3 text-center text-sm font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                          {fmt(row.total_spent)} ج
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center gap-2 justify-center">
-                            <div className="flex-1 max-w-20 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
-                              <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${total > 0 ? (row.total_spent / total) * 100 : 0}%` }} />
-                            </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-left">
-                              {total > 0 ? ((row.total_spent / total) * 100).toFixed(0) : 0}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  })()}
-                </tbody>
-              </table>
-            </div>
+            </>
           )}
         </div>
       )}
 
-      {/* ── Alerts Tab ── */}
-      {tab === 'alerts' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">تنبيهات المخزون</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">منتجات وصلت أو تجاوزت حد إعادة الطلب</p>
-            </div>
-            {lowStock.length > 0 && (
-              <Badge variant="danger" dot>{lowStock.length} منتج</Badge>
-            )}
+      {/* ── Sales ───────────────────────────────────────────────────────── */}
+      {tab === 'sales' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard label="موديلات مباعة"     value={sales.length}                                                       icon={Smartphone} color="blue"   />
+            <KpiCard label="إجمالي الوحدات"   value={sales.reduce((s,r)=>s+r.total_units,0)}                             icon={Package}    color="teal"   />
+            <KpiCard label="إجمالي الإيرادات" value={`${fmt(sales.reduce((s,r)=>s+r.total_revenue,0))} ج`}              icon={DollarSign} color="green"  />
+            <KpiCard label="صافي الربح"       value={`${fmt(sales.reduce((s,r)=>s+r.profit,0))} ج`}                     icon={TrendingUp} color="green"  />
           </div>
-          {lowLoad ? (
-            <div className="p-5"><Skeleton /></div>
-          ) : lowStock.length === 0 ? (
-            <div className="py-16 text-center text-gray-400 dark:text-gray-600">
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-3">
-                <Package size={24} className="text-green-600 dark:text-green-400" />
-              </div>
-              <p className="text-sm font-medium text-green-600 dark:text-green-400">المخزون في حالة جيدة</p>
-              <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">لا توجد منتجات تحتاج إعادة طلب</p>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">مبيعات الأجهزة حسب الموديل</h3>
+              <span className="text-xs text-gray-400">{sales.length} موديل</span>
             </div>
-          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                    {['المنتج', 'التصنيف', 'المتبقي', 'حد الطلب', 'قيمة المخزون', 'هامش الربح', 'الحالة'].map((h, i) => (
-                      <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right', i >= 2 && 'text-center')}>
-                        {h}
-                      </th>
+                    {['#','الماركة','الموديل','وحدات','إجمالي التكلفة','إجمالي الإيرادات','صافي الربح','هامش %'].map(h=>(
+                      <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
-                  {lowStock.map(row => {
-                    const margin = row.cost_price > 0
-                      ? (((row.selling_price - row.cost_price) / row.cost_price) * 100).toFixed(1)
-                      : '—'
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {saleLoad ? <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                  : sales.map((r,i)=>(
+                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                      <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.brand_name}</td>
+                      <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{r.model_name}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.total_units}</td>
+                      <td className="px-3 py-2.5 text-red-600 dark:text-red-400">{fmt(r.total_cost)} ج</td>
+                      <td className="px-3 py-2.5 text-green-600 dark:text-green-400 font-semibold">{fmt(r.total_revenue)} ج</td>
+                      <td className={cn('px-3 py-2.5 font-bold', r.profit>=0?'text-green-600 dark:text-green-400':'text-red-600 dark:text-red-400')}>
+                        {fmt(r.profit)} ج
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <Badge variant={r.margin_pct>=20?'success':r.margin_pct>=10?'warning':'danger'}>{r.margin_pct}%</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {sales.length>0&&<tfoot>
+                  <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
+                    <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={3}>الإجمالي</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{sales.reduce((s,r)=>s+r.total_units,0)}</td>
+                    <td className="px-3 py-2.5 font-bold text-red-600">{fmt(sales.reduce((s,r)=>s+r.total_cost,0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(sales.reduce((s,r)=>s+r.total_revenue,0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(sales.reduce((s,r)=>s+r.profit,0))} ج</td>
+                    <td/>
+                  </tr>
+                </tfoot>}
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stock ───────────────────────────────────────────────────────── */}
+      {tab === 'stock' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard label="موديلات في المخزون"      value={stock.length}                                                       icon={Package}    color="blue"  />
+            <KpiCard label="إجمالي الوحدات"          value={stock.reduce((s,r)=>s+r.count,0)}                                  icon={Smartphone} color="teal"  />
+            <KpiCard label="قيمة التكلفة"            value={`${fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج`}                icon={DollarSign} color="amber" />
+            <KpiCard label="قيمة البيع المتوقعة"     value={`${fmt(stock.reduce((s,r)=>s+r.total_selling,0))} ج`}             icon={TrendingUp} color="green" />
+          </div>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">تفاصيل المخزون</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                    {['#','الماركة','الموديل','الكمية','إجمالي التكلفة','إجمالي البيع المتوقع','الربح المتوقع'].map(h=>(
+                      <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {stckLoad ? <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                  : stock.map((r,i)=>(
+                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                      <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.brand_name}</td>
+                      <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{r.model_name}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.count}</td>
+                      <td className="px-3 py-2.5 text-amber-600 dark:text-amber-400">{fmt(r.total_cost)} ج</td>
+                      <td className="px-3 py-2.5 text-green-600 dark:text-green-400 font-semibold">{fmt(r.total_selling)} ج</td>
+                      <td className="px-3 py-2.5 font-bold text-green-600 dark:text-green-400">{fmt(r.total_selling-r.total_cost)} ج</td>
+                    </tr>
+                  ))}
+                </tbody>
+                {stock.length>0&&<tfoot>
+                  <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
+                    <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={3}>الإجمالي</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{stock.reduce((s,r)=>s+r.count,0)}</td>
+                    <td className="px-3 py-2.5 font-bold text-amber-600">{fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(stock.reduce((s,r)=>s+r.total_selling,0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(stock.reduce((s,r)=>s+r.total_selling-r.total_cost,0))} ج</td>
+                  </tr>
+                </tfoot>}
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Suppliers ───────────────────────────────────────────────────── */}
+      {tab === 'suppliers' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <KpiCard label="عدد الموردين"       value={suppliers.length}                                          icon={Truck}      color="blue"  />
+            <KpiCard label="إجمالي الأجهزة"     value={suppliers.reduce((s,r)=>s+r.total_devices,0)}            icon={Smartphone} color="teal"  />
+            <KpiCard label="إجمالي المشتريات"   value={`${fmt(suppliers.reduce((s,r)=>s+r.total_cost,0))} ج`}  icon={DollarSign} color="red"   />
+          </div>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">إجمالي المشتريات حسب المورد</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                    {['#','المورد','عدد الأجهزة','إجمالي التكلفة','النسبة','متوسط سعر الجهاز'].map(h=>(
+                      <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {supLoad ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                  : suppliers.map((r,i)=>{
+                    const total = suppliers.reduce((s,x)=>s+x.total_cost,0)
                     return (
-                      <tr key={row.product_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.product_name}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{row.category_name}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn('text-sm font-bold', row.stock_qty === 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400')}>
-                            {row.stock_qty}
-                          </span>
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                        <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
+                        <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.supplier_name}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.total_devices}</td>
+                        <td className="px-3 py-2.5 font-semibold text-red-600 dark:text-red-400">{fmt(r.total_cost)} ج</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <Badge variant="info">{total>0?((r.total_cost/total)*100).toFixed(1):0}%</Badge>
                         </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{row.reorder_level}</td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {fmt(row.stock_value)} ج
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-blue-600 dark:text-blue-400">
-                          {margin}%
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant={row.stock_qty === 0 ? 'danger' : 'warning'} dot>
-                            {row.stock_qty === 0 ? 'نفد المخزون' : 'منخفض'}
-                          </Badge>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
+                          {fmt(r.total_devices>0?r.total_cost/r.total_devices:0)} ج
                         </td>
                       </tr>
                     )
@@ -778,230 +783,252 @@ export function ReportsPage() {
                 </tbody>
               </table>
             </div>
-          )}
+          </div>
+          {/* Bar chart */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">مقارنة الموردين</h3>
+            <BarChart data={suppliers as unknown as ({[key:string]:unknown})[]} valueKey="total_cost" labelKey="supplier_name" color="red" height={140}/>
+          </div>
         </div>
       )}
 
-      {/* ── SOH + Movement Tab ── */}
+      {/* ── Customers ───────────────────────────────────────────────────── */}
+      {tab === 'customers' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard label="عدد العملاء"         value={customers.length}                                              icon={Users}      color="blue"  />
+            <KpiCard label="إجمالي الأجهزة"      value={customers.reduce((s,r)=>s+r.device_count,0)}                 icon={Smartphone} color="teal"  />
+            <KpiCard label="إجمالي المبيعات"     value={`${fmt(customers.reduce((s,r)=>s+r.total_spent,0))} ج`}     icon={DollarSign} color="green" />
+            <KpiCard label="متوسط إنفاق العميل"  value={`${fmt(customers.length?customers.reduce((s,r)=>s+r.total_spent,0)/customers.length:0)} ج`} icon={TrendingUp} color="amber" />
+          </div>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">أفضل العملاء</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                    {['#','العميل','أجهزة','إجمالي الإنفاق','متوسط الجهاز','النسبة'].map(h=>(
+                      <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {custLoad ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                  : customers.map((r,i)=>{
+                    const total = customers.reduce((s,x)=>s+x.total_spent,0)
+                    return (
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                        <td className="px-3 py-2.5">
+                          {i===0?<span className="text-amber-500 font-bold">🥇</span>
+                          :i===1?<span className="text-gray-400 font-bold">🥈</span>
+                          :i===2?<span className="text-amber-700 font-bold">🥉</span>
+                          :<span className="text-xs text-gray-400">{i+1}</span>}
+                        </td>
+                        <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.customer_name}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.device_count}</td>
+                        <td className="px-3 py-2.5 font-bold text-green-600 dark:text-green-400">{fmt(r.total_spent)} ج</td>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{fmt(r.device_count>0?r.total_spent/r.device_count:0)} ج</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <Badge variant="success">{total>0?((r.total_spent/total)*100).toFixed(1):0}%</Badge>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Alerts ──────────────────────────────────────────────────────── */}
+      {tab === 'alerts' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard label="منتجات تحت الحد"    value={lowStock.length}                                                  icon={AlertTriangle} color="red"   />
+            <KpiCard label="نفذ من المخزون"     value={lowStock.filter(r=>r.stock_qty===0).length}                      icon={Package}       color="red"   />
+            <KpiCard label="تحت الحد الأدنى"   value={lowStock.filter(r=>r.stock_qty>0).length}                        icon={AlertTriangle} color="amber" />
+            <KpiCard label="قيمة المخزون المنخفض" value={`${fmt(lowStock.reduce((s,r)=>s+r.stock_value,0))} ج`}       icon={DollarSign}    color="amber" />
+          </div>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">منتجات تحتاج إعادة طلب</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                    {['#','المنتج','الفئة','الرصيد الحالي','الحد الأدنى','العجز','سعر التكلفة','قيمة المخزون'].map(h=>(
+                      <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {lowLoad ? <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                  : lowStock.map((r,i)=>(
+                    <tr key={i} className="bg-amber-50/30 dark:bg-amber-900/5 hover:bg-amber-50/60 dark:hover:bg-amber-900/10">
+                      <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.product_name}</td>
+                      <td className="px-3 py-2.5"><Badge variant="info">{r.category_name}</Badge></td>
+                      <td className="px-3 py-2.5 text-center">
+                        <Badge variant={r.stock_qty===0?'danger':'warning'}>{r.stock_qty}</Badge>
+                      </td>
+                      <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400">{r.reorder_level}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-red-600 dark:text-red-400">
+                        -{Math.max(0,r.reorder_level-r.stock_qty)}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{fmt(r.cost_price)} ج</td>
+                      <td className="px-3 py-2.5 text-amber-600 dark:text-amber-400">{fmt(r.stock_value)} ج</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Movement / SOH ──────────────────────────────────────────────── */}
       {tab === 'movement' && (
         <div className="space-y-5">
-
           {/* Controls */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-wrap items-end gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1"><Calendar size={12} /> من</label>
-              <input type="date" value={movFrom} onChange={e => setMovFrom(e.target.value)}
-                className="h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1"><Calendar size={12} /> إلى</label>
-              <input type="date" value={movTo} onChange={e => setMovTo(e.target.value)}
-                className="h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500" />
-            </div>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              <button onClick={() => setMovType('products')}
-                className={cn('flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-md transition-all',
-                  movType === 'products' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <Tag size={12} /> منتجات
-              </button>
-              <button onClick={() => setMovType('devices')}
-                className={cn('flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-md transition-all',
-                  movType === 'devices' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <Smartphone size={12} /> أجهزة
-              </button>
+              {([['products','منتجات',Tag],['devices','أجهزة',Smartphone]] as const).map(([v,l,Icon])=>(
+                <button key={v} onClick={()=>setMovType(v)}
+                  className={cn('flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-md transition-all',
+                    movType===v?'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm':'text-gray-500 dark:text-gray-400')}>
+                  <Icon size={12}/>{l}
+                </button>
+              ))}
             </div>
-            <button onClick={() => { void refetchProd(); void refetchDev() }}
-              className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 text-sm">
-              <RefreshCw size={13} /> تحديث
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar size={14} className="text-gray-400"/>
+              <input type="date" value={movFrom} onChange={e=>setMovFrom(e.target.value)}
+                className="h-8 px-2 border border-gray-200 dark:border-gray-700 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"/>
+              <span className="text-gray-400 text-xs">إلى</span>
+              <input type="date" value={movTo} onChange={e=>setMovTo(e.target.value)}
+                className="h-8 px-2 border border-gray-200 dark:border-gray-700 rounded-lg text-xs bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"/>
+            </div>
+            <button onClick={()=>{void refetchProd();void refetchDev()}}
+              className="h-8 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+              <RefreshCw size={12}/> تحديث
             </button>
             <button onClick={exportMovementCsv}
-              className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 text-sm mr-auto">
-              <Download size={13} /> تصدير CSV
+              className="h-8 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+              <Download size={12}/> Excel
             </button>
           </div>
 
-          {/* Products Movement Table */}
-          {movType === 'products' && (
+          {/* Products SOH */}
+          {movType==='products' && (
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <p className="text-sm font-bold text-gray-900 dark:text-white">حركة المنتجات</p>
-                <p className="text-xs text-gray-400 dark:text-gray-600">{prodMovement.length} منتج</p>
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">حركة المنتجات — SOH</h3>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span>القيمة الإجمالية: <strong className="text-amber-600">{fmt(prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج</strong></span>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                      {['المنتج','التصنيف','رصيد أول الفترة','+ مشتريات','- مبيعات','رصيد الآن','قيمة المخزون','القرار'].map((h, i) => (
-                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap text-right', i >= 2 && 'text-center')}>{h}</th>
+                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                      {['#','المنتج','الفئة','وحدة','رصيد أول الفترة','مشتريات','مبيعات','رصيد حالي','قيمة المخزون','الحالة'].map(h=>(
+                        <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
-                    {prodMovLoad ? (
-                      Array.from({length: 6}).map((_, i) => (
-                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                          {Array.from({length: 8}).map((_, j) => (
-                            <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" /></td>
-                          ))}
-                        </tr>
-                      ))
-                    ) : prodMovement.length === 0 ? (
-                      <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-600 text-sm">لا توجد بيانات</td></tr>
-                    ) : prodMovement.map(r => (
-                      <tr key={r.id} className={cn('border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors', r.needs_reorder && 'bg-red-50/30 dark:bg-red-900/5')}>
-                        <td className="px-4 py-3">
-                          <p className="font-semibold text-gray-900 dark:text-white text-sm">{r.name}</p>
-                          {r.sku && <p className="text-xs text-gray-400 font-mono mt-0.5">{r.sku}</p>}
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {prodMovLoad ? <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                    : prodMovement.length===0 ? <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-gray-400">لا توجد بيانات</td></tr>
+                    : prodMovement.map((r,i)=>(
+                      <tr key={i} className={cn('hover:bg-gray-50 dark:hover:bg-gray-800/30',r.needs_reorder&&'bg-red-50/20 dark:bg-red-900/5')}>
+                        <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
+                        <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">
+                          {r.name}{r.sku&&<span className="text-xs text-gray-400 dark:text-gray-600 mr-1">#{r.sku}</span>}
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.category_name}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{r.opening_stock} {r.unit}</span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.purchased > 0
-                            ? <span className="text-sm font-bold text-blue-600 dark:text-blue-400">+{r.purchased}</span>
-                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.sold > 0
-                            ? <span className="text-sm font-bold text-green-600 dark:text-green-400">-{r.sold}</span>
-                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn('text-sm font-bold', r.needs_reorder ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white')}>
-                            {r.current_stock} {r.unit}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {r.stock_value.toLocaleString('ar-EG')} ج
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.needs_reorder ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs font-bold text-red-700 dark:text-red-400">
-                              اطلب الآن
-                            </span>
-                          ) : r.sold === 0 ? (
-                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">راكد</span>
-                          ) : (
-                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ جيد</span>
-                          )}
+                        <td className="px-3 py-2.5"><Badge variant="info">{r.category_name}</Badge></td>
+                        <td className="px-3 py-2.5 text-xs text-gray-500">{r.unit}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400">{r.opening_stock}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">+{r.purchased}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-green-600 dark:text-green-400">-{r.sold}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{r.current_stock}</td>
+                        <td className="px-3 py-2.5 text-amber-600 dark:text-amber-400">{fmt(r.stock_value)} ج</td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant={r.needs_reorder?'danger':'success'}>{r.needs_reorder?'يحتاج طلب':'كافٍ'}</Badge>
                         </td>
                       </tr>
                     ))}
                   </tbody>
+                  {prodMovement.length>0&&<tfoot>
+                    <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
+                      <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={4}>الإجمالي</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s,r)=>s+r.opening_stock,0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">+{prodMovement.reduce((s,r)=>s+r.purchased,0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-green-600">-{prodMovement.reduce((s,r)=>s+r.sold,0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s,r)=>s+r.current_stock,0)}</td>
+                      <td className="px-3 py-2.5 font-bold text-amber-600">{fmt(prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج</td>
+                      <td/>
+                    </tr>
+                  </tfoot>}
                 </table>
               </div>
-              {/* Summary bar */}
-              {prodMovement.length > 0 && (
-                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap gap-6">
-                  {[
-                    ['إجمالي المبيعات', prodMovement.reduce((s,r)=>s+r.sold,0) + ' قطعة', 'text-green-600 dark:text-green-400'],
-                    ['إجمالي المشتريات', prodMovement.reduce((s,r)=>s+r.purchased,0) + ' قطعة', 'text-blue-600 dark:text-blue-400'],
-                    ['قيمة المخزون الكلية', prodMovement.reduce((s,r)=>s+r.stock_value,0).toLocaleString('ar-EG') + ' ج', 'text-gray-900 dark:text-white'],
-                    ['يحتاج طلب', prodMovement.filter(r=>r.needs_reorder).length + ' منتج', 'text-red-600 dark:text-red-400'],
-                  ].map(([l,v,c]) => (
-                    <div key={l}>
-                      <p className="text-xs text-gray-400 dark:text-gray-600">{l}</p>
-                      <p className={cn('text-sm font-bold', c)}>{v}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
-          {/* Devices Movement Table */}
-          {movType === 'devices' && (
+          {/* Devices SOH */}
+          {movType==='devices' && (
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <p className="text-sm font-bold text-gray-900 dark:text-white">حركة الأجهزة</p>
-                <p className="text-xs text-gray-400 dark:text-gray-600">{devMovement.length} موديل</p>
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">حركة الأجهزة — SOH</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                      {['الجهاز','إجمالي المخزون','في المخزون الآن','اشتري في الفترة','بيع في الفترة','إيرادات','أرباح','القرار'].map((h, i) => (
-                        <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap text-right', i >= 1 && 'text-center')}>{h}</th>
+                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                      {['#','الماركة','الموديل','إجمالي','في المخزون','اشتريت','بيعت','الإيرادات','الربح'].map(h=>(
+                        <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
-                    {devMovLoad ? (
-                      Array.from({length: 5}).map((_, i) => (
-                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                          {Array.from({length: 8}).map((_, j) => (
-                            <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" /></td>
-                          ))}
-                        </tr>
-                      ))
-                    ) : devMovement.length === 0 ? (
-                      <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-600 text-sm">لا توجد بيانات</td></tr>
-                    ) : devMovement.map((r, i) => (
-                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="font-semibold text-gray-900 dark:text-white text-sm">{r.brand_name}</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{r.model_name}</p>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">{r.total}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn('text-sm font-bold', r.in_stock === 0 ? 'text-gray-400' : 'text-blue-600 dark:text-blue-400')}>{r.in_stock}</span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.purchased_in_period > 0
-                            ? <span className="text-sm font-bold text-blue-600 dark:text-blue-400">+{r.purchased_in_period}</span>
-                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.sold_in_period > 0
-                            ? <span className="text-sm font-bold text-green-600 dark:text-green-400">{r.sold_in_period}</span>
-                            : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                          {r.total_revenue > 0 ? r.total_revenue.toLocaleString('ar-EG') + ' ج' : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
-                          {r.total_profit !== 0 ? (
-                            <span className={cn('text-sm font-bold', r.total_profit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
-                              {r.total_profit.toLocaleString('ar-EG')} ج
-                            </span>
-                          ) : <span className="text-xs text-gray-300 dark:text-gray-700">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {r.in_stock === 0 && r.sold_in_period > 0 ? (
-                            <span className="text-xs text-red-600 dark:text-red-400 font-bold">اطلب الآن</span>
-                          ) : r.sold_in_period === 0 ? (
-                            <span className="text-xs text-amber-600 dark:text-amber-400">راكد</span>
-                          ) : (
-                            <span className="text-xs text-green-600 dark:text-green-400">✓ يتحرك</span>
-                          )}
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {devMovLoad ? <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                    : devMovement.length===0 ? <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">لا توجد بيانات</td></tr>
+                    : devMovement.map((r,i)=>(
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                        <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
+                        <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.brand_name}</td>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{r.model_name}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400">{r.total}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.in_stock}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">+{r.purchased_in_period}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-green-600 dark:text-green-400">-{r.sold_in_period}</td>
+                        <td className="px-3 py-2.5 text-green-600 dark:text-green-400 font-semibold">{fmt(r.total_revenue)} ج</td>
+                        <td className={cn('px-3 py-2.5 font-bold',r.total_profit>=0?'text-green-600 dark:text-green-400':'text-red-600 dark:text-red-400')}>
+                          {fmt(r.total_profit)} ج
                         </td>
                       </tr>
                     ))}
                   </tbody>
+                  {devMovement.length>0&&<tfoot>
+                    <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
+                      <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={3}>الإجمالي</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{devMovement.reduce((s,r)=>s+r.total,0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">{devMovement.reduce((s,r)=>s+r.in_stock,0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">+{devMovement.reduce((s,r)=>s+r.purchased_in_period,0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-green-600">-{devMovement.reduce((s,r)=>s+r.sold_in_period,0)}</td>
+                      <td className="px-3 py-2.5 font-bold text-green-600">{fmt(devMovement.reduce((s,r)=>s+r.total_revenue,0))} ج</td>
+                      <td className="px-3 py-2.5 font-bold text-green-600">{fmt(devMovement.reduce((s,r)=>s+r.total_profit,0))} ج</td>
+                    </tr>
+                  </tfoot>}
                 </table>
               </div>
-              {devMovement.length > 0 && (
-                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap gap-6">
-                  {[
-                    ['إجمالي المبيعات', devMovement.reduce((s,r)=>s+r.sold_in_period,0) + ' جهاز', 'text-green-600 dark:text-green-400'],
-                    ['إجمالي الإيرادات', devMovement.reduce((s,r)=>s+r.total_revenue,0).toLocaleString('ar-EG') + ' ج', 'text-blue-600 dark:text-blue-400'],
-                    ['إجمالي الأرباح', devMovement.reduce((s,r)=>s+r.total_profit,0).toLocaleString('ar-EG') + ' ج', 'text-gray-900 dark:text-white'],
-                    ['موديلات راكدة', devMovement.filter(r=>r.sold_in_period===0).length + ' موديل', 'text-amber-600 dark:text-amber-400'],
-                  ].map(([l,v,c]) => (
-                    <div key={l}>
-                      <p className="text-xs text-gray-400 dark:text-gray-600">{l}</p>
-                      <p className={cn('text-sm font-bold', c)}>{v}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>
       )}
-
-
     </div>
   )
 }
