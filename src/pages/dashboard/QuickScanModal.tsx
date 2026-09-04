@@ -45,7 +45,18 @@ const STATUS: Record<string, { label: string; color: string }> = {
 // ── Lookup ────────────────────────────────────────────────────────────────────
 
 async function lookupCode(code: string): Promise<ScanResult> {
-  const clean = code.trim()
+  let clean = code.trim()
+
+  // Parse QR data format: "DEVICE:name|IMEI1:xxx|..." or "PRODUCT:name|SKU:xxx|..."
+  if (clean.includes('|') || clean.includes('IMEI1:') || clean.includes('SKU:')) {
+    const parts = clean.split('|')
+    for (const part of parts) {
+      if (part.startsWith('IMEI1:'))   { clean = part.replace('IMEI1:', '').trim(); break }
+      if (part.startsWith('IMEI2:'))   { clean = part.replace('IMEI2:', '').trim(); break }
+      if (part.startsWith('SKU:'))     { clean = part.replace('SKU:', '').trim(); break }
+      if (part.startsWith('BARCODE:')) { clean = part.replace('BARCODE:', '').trim(); break }
+    }
+  }
 
   // 1. Try IMEI lookup
   const { data: devices } = await supabase
