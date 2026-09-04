@@ -625,6 +625,7 @@ export function ReportsPage() {
   const { data: lowStock = [], isLoading: lowLoad } = useLowStockReport()
   const { data: customers = [], isLoading: custLoad } = useTopCustomersReport()
   const { data: supplierLedger = [] } = useSupplierLedger()
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('all')
 
   const today        = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
@@ -648,7 +649,16 @@ export function ReportsPage() {
       case 'overview':   return printOverview(summary as unknown as Record<string,number>|undefined, sales, stock, suppliers)
       case 'sales':      return printSales(sales)
       case 'stock':      return printStock(stock)
-      case 'suppliers':  return void printSuppliers(suppliers, supplierLedger ?? [])
+      case 'suppliers': {
+        const ledgerToUse = selectedSupplierId === 'all'
+          ? supplierLedger
+          : supplierLedger.filter(s => s.supplier_id === selectedSupplierId)
+        const suppliersToUse = selectedSupplierId === 'all'
+          ? suppliers
+          : suppliers.filter((s: {supplier_name: string}) =>
+              ledgerToUse.some(l => l.supplier_name === s.supplier_name))
+        return void printSuppliers(suppliersToUse, ledgerToUse)
+      }
       case 'customers':  return printCustomers(customers)
       case 'alerts':     return printAlerts(lowStock)
       case 'movement':   return printMovement(movType, prodMovement, devMovement, movFrom, movTo)
@@ -833,6 +843,34 @@ export function ReportsPage() {
       {/* ── Suppliers ───────────────────────────────────────────────────── */}
       {tab === 'suppliers' && (
         <div className="space-y-5">
+          {/* Supplier selector */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <Truck size={14} className="text-gray-400 flex-shrink-0" />
+              <select
+                value={selectedSupplierId}
+                onChange={e => setSelectedSupplierId(e.target.value)}
+                className="flex-1 h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
+                <option value="all">كل الموردين</option>
+                {supplierLedger.map(s => (
+                  <option key={s.supplier_id} value={s.supplier_id}>{s.supplier_name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const ledger = selectedSupplierId === 'all' ? supplierLedger : supplierLedger.filter(s => s.supplier_id === selectedSupplierId)
+                  const supps  = selectedSupplierId === 'all' ? suppliers : suppliers.filter((s: {supplier_name:string}) => ledger.some(l => l.supplier_name === s.supplier_name))
+                  void printSuppliers(supps, ledger)
+                }}
+                className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2 whitespace-nowrap">
+                <Printer size={13} />
+                {selectedSupplierId === 'all' ? 'طباعة الكل' : `طباعة ${supplierLedger.find(s=>s.supplier_id===selectedSupplierId)?.supplier_name ?? ''}`}
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             <KpiCard label="عدد الموردين"       value={suppliers.length}                                          icon={Truck}      color="blue"  />
             <KpiCard label="إجمالي الأجهزة"     value={suppliers.reduce((s,r)=>s+r.total_devices,0)}            icon={Smartphone} color="teal"  />
