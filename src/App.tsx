@@ -1,6 +1,8 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { startRealtime, stopRealtime } from '@/lib/realtime'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
 import { AppShell } from '@/components/layout/AppShell'
@@ -22,6 +24,17 @@ const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
 })
 
+
+// ── Realtime — listens to all DB changes and refreshes queries instantly ──────
+function RealtimeStarter() {
+  const qc = useQueryClient()
+  useEffect(() => {
+    startRealtime(qc)
+    return () => stopRealtime()
+  }, [qc])
+  return null
+}
+
 function Guard() {
   const { session, profile, loading } = useAuth()
 
@@ -34,7 +47,9 @@ function Guard() {
   if (!session && !profile) return <LoginPage />
 
   return (
-    <Routes>
+    <>
+      <RealtimeStarter />
+      <Routes>
       <Route element={<AppShell />}>
         <Route path="/"           element={<DashboardPage />} />
         <Route path="/devices"    element={<DevicesPage />} />
@@ -51,6 +66,7 @@ function Guard() {
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   )
 }
 
@@ -67,3 +83,4 @@ export default function App() {
     </ThemeProvider>
   )
 }
+
