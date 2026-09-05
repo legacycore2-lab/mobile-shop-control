@@ -1,7 +1,7 @@
 // src/pages/devices/DevicesPage.tsx
 import { useState, useMemo } from 'react'
 import {
-  Search, Plus, Download, Smartphone,
+  Search, Download, Smartphone,
   Package, CheckCircle, Wrench, AlertTriangle,
   Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
   TrendingUp, DollarSign, ScanLine, Printer,
@@ -14,8 +14,8 @@ import { ImeiLookup }   from './ImeiLookup'
 import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
 import type { BarcodeLabel } from '@/components/shared/BarcodeLabelModal'
-import { DeviceModal }  from './DeviceModal'
 import { DeviceDrawer } from './DeviceDrawer'
+import { DeviceModal }  from './DeviceModal'
 import { STATUS_MAP, CONDITION_MAP, PAGE_SIZE, type FilterStatus } from './constants'
 import type { MobileDeviceView } from '@/types/database'
 
@@ -27,9 +27,8 @@ export function DevicesPage() {
   const [search,   setSearch]   = useState('')
   const [filter,   setFilter]   = useState<FilterStatus>('all')
   const [page,     setPage]     = useState(1)
-  const [modal,    setModal]    = useState<'add' | 'edit' | null>(null)
-  const [initImei, setInitImei] = useState('')
   const [selected, setSelected] = useState<MobileDeviceView | null>(null)
+  const [modal,    setModal]    = useState<'edit' | null>(null)
   const [drawer,   setDrawer]   = useState<MobileDeviceView | null>(null)
   const [scanner,  setScanner]  = useState(false)
   const [printLabel, setPrintLabel] = useState<BarcodeLabel | null>(null)
@@ -67,8 +66,8 @@ export function DevicesPage() {
     { label: 'تالف / مُعاد', value: (stats?.defective ?? 0) + (stats?.returned ?? 0), icon: AlertTriangle, colorClass: 'text-red-600 dark:text-red-400', bgClass: 'bg-red-50 dark:bg-red-900/20' },
     {
       label: 'قيمة المخزون (شراء)',
-      value: `${(stats?.totalCostValue ?? 0).toLocaleString('ar-EG')} ج`,
-      sub: `بيع: ${(stats?.totalSellingValue ?? 0).toLocaleString('ar-EG')} ج`,
+      value: `${(stats?.totalCostValue ?? 0).toLocaleString('en-US')} ج`,
+      sub: `بيع: ${(stats?.totalSellingValue ?? 0).toLocaleString('en-US')} ج`,
       icon: DollarSign,
       colorClass: 'text-purple-600 dark:text-purple-400',
       bgClass: 'bg-purple-50 dark:bg-purple-900/20',
@@ -101,10 +100,6 @@ export function DevicesPage() {
           <button onClick={() => setScanner(true)}
             className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
             <ScanLine size={14} /> مسح IMEI
-          </button>
-          <button onClick={() => setModal('add')}
-            className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
-            <Plus size={14} /> جهاز جديد
           </button>
         </div>
       </div>
@@ -174,7 +169,7 @@ export function DevicesPage() {
                 <tr>
                   <td colSpan={9} className="px-4 py-16 text-center text-gray-400 dark:text-gray-600">
                     <Smartphone size={32} className="mx-auto mb-2 opacity-30" />
-                    <p>لا توجد أجهزة</p>
+                    <p>لا توجد أجهزة — تُضاف الأجهزة من خلال فواتير المشتريات</p>
                   </td>
                 </tr>
               ) : paginated.map((d, i) => (
@@ -206,13 +201,13 @@ export function DevicesPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                      {d.cost_price.toLocaleString('ar-EG')} ج
+                      {d.cost_price.toLocaleString('en-US')} ج
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     {d.selling_price ? (
                       <span className="text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                        {d.selling_price.toLocaleString('ar-EG')} ج
+                        {d.selling_price.toLocaleString('en-US')} ج
                       </span>
                     ) : <span className="text-xs text-gray-400 dark:text-gray-600">—</span>}
                   </td>
@@ -278,11 +273,11 @@ export function DevicesPage() {
       </div>
 
       {/* Modals */}
-      {modal && (
+      {modal === 'edit' && selected && (
         <DeviceModal
-          device={modal === 'edit' ? selected : null}
-          initImei={modal === 'add' ? initImei : ''}
-          onClose={() => { closeModal(); setInitImei('') }}
+          device={selected}
+          initImei=""
+          onClose={closeModal}
         />
       )}
       {drawer && (
@@ -301,15 +296,7 @@ export function DevicesPage() {
           placeholder="IMEI (15 رقم)..."
           onScan={code => {
             setScanner(false)
-            const found = devices.find(d => d.imei1 === code || d.imei2 === code)
-            if (found) {
-              // Device exists — show in table
-              setSearch(code)
-            } else {
-              // New IMEI — open add modal with IMEI pre-filled
-              setInitImei(code)
-              setModal('add')
-            }
+            setSearch(code)
           }}
           onClose={() => setScanner(false)}
         />
@@ -317,4 +304,3 @@ export function DevicesPage() {
     </div>
   )
 }
-
