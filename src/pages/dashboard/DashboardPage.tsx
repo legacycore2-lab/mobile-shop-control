@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import {
   Smartphone, TrendingUp, AlertTriangle, Package,
-  ArrowLeft, CheckCircle, Wrench, DollarSign, ScanLine,
+  ArrowLeft, CheckCircle, Wrench, DollarSign, ScanLine, CreditCard,
   Users, Truck, BarChart2, RefreshCw,
 } from 'lucide-react'
 import { useDevices, useDeviceStats } from '@/hooks/useDevices'
 import { useProductStats, useLowStockProducts } from '@/hooks/useProducts'
 import { useSupplierStats } from '@/hooks/useSuppliers'
+import { useSupplierLedger, useCustomerLedger } from '@/hooks/usePayments'
+import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
 import { useCustomerStats } from '@/hooks/useCustomers'
 import { Badge } from '@/components/ui/Badge'
 import { useNavigate } from 'react-router-dom'
@@ -65,6 +67,28 @@ function KpiCard({ label, value, sub, icon: Icon, color, onClick }: {
   )
 }
 
+// ── Due Payments Widget ──────────────────────────────────────────────────────
+
+function DueRow({ name, balance, onPay, color }: {
+  name: string; balance: number
+  onPay: () => void; color: 'red' | 'amber'
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{name}</p>
+        <p className={cn('text-xs font-bold', color === 'red' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400')}>
+          {fmt(balance)} ج
+        </p>
+      </div>
+      <button onClick={onPay}
+        className="h-7 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold flex items-center gap-1 transition-colors flex-shrink-0 whitespace-nowrap">
+        <DollarSign size={11} /> سداد
+      </button>
+    </div>
+  )
+}
+
 // ── Section Header ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title, sub, to, navigate }: {
@@ -112,6 +136,13 @@ function DeviceRow({ d }: { d: MobileDeviceView }) {
 export function DashboardPage() {
   const navigate = useNavigate()
   const [showScan, setShowScan] = useState(false)
+  const [payModal, setPayModal] = useState<{
+    invoiceId: string; invoiceNumber: string
+    partyId: string; partyName: string
+    partyType: 'supplier' | 'customer'
+    paymentType: 'purchase' | 'sale'
+    remaining: number
+  } | null>(null)
 
   const { data: devices        = [], isLoading: devLoading } = useDevices()
   const { data: deviceStats,         isLoading: devStatLoad } = useDeviceStats()
@@ -119,6 +150,20 @@ export function DashboardPage() {
   const { data: supplierStats,       isLoading: supStatLoad  } = useSupplierStats()
   const { data: customerStats,       isLoading: custStatLoad } = useCustomerStats()
   const { data: lowStockItems   = [], isLoading: lowLoad }    = useLowStockProducts()
+  const { data: supplierLedger  = [] } = useSupplierLedger()
+  const { data: customerLedger  = [] } = useCustomerLedger()
+
+  // Top debts (balance > 0 = owed to supplier / by customer)
+  const topSupplierDebts = supplierLedger
+    .filter(s => s.balance > 0)
+    .sort((a, b) => b.balance - a.balance)
+    .slice(0, 5)
+  const topCustomerDebts = customerLedger
+    .filter(c => c.balance > 0)
+    .sort((a, b) => b.balance - a.balance)
+    .slice(0, 5)
+  const totalSupplierDebt = topSupplierDebts.reduce((s, r) => s + Number(r.balance), 0)
+  const totalCustomerDebt = topCustomerDebts.reduce((s, r) => s + Number(r.balance), 0)
 
   const recentDevices = useMemo(() =>
     [...devices].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5),
