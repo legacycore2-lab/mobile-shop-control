@@ -10,7 +10,7 @@ import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
 import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel } from '@/hooks/useDevices'
-import { useProductCategories, useCreateProduct } from '@/hooks/useProducts'
+import { useProductCategories, useCreateProduct, useCreateCategory } from '@/hooks/useProducts'
 import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
@@ -326,9 +326,22 @@ function AddProductInlineForm({
 }) {
   const { data: categories = [] } = useProductCategories()
   const createProduct             = useCreateProduct()
+  const createCategory            = useCreateCategory()
   const [form, setForm]           = useState<NewProductForm>(BLANK_PRODUCT)
   const [error, setError]         = useState('')
   const [saving, setSaving]       = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+  const [showNewCat, setShowNewCat] = useState(false)
+
+  async function handleAddCategory() {
+    if (!newCatName.trim()) return
+    try {
+      const cat = await createCategory.mutateAsync({ name: newCatName.trim(), type: 'accessory' })
+      set('category_id', cat.id)
+      setNewCatName('')
+      setShowNewCat(false)
+    } catch (err) { setError(err instanceof Error ? err.message : 'خطأ في إضافة التصنيف') }
+  }
 
   function set(field: keyof NewProductForm, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -388,11 +401,33 @@ function AddProductInlineForm({
             placeholder="كفر سيليكون..." className={inp} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">التصنيف *</label>
-          <select value={form.category_id} onChange={e => set('category_id', e.target.value)} className={inp + ' cursor-pointer'}>
-            <option value="">اختر التصنيف</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">التصنيف *</label>
+            <button type="button" onClick={() => setShowNewCat(v => !v)}
+              className="text-xs text-green-600 dark:text-green-400 hover:underline flex items-center gap-0.5">
+              <Plus size={11} /> تصنيف جديد
+            </button>
+          </div>
+          {showNewCat ? (
+            <div className="flex gap-1.5">
+              <input value={newCatName} onChange={e => setNewCatName(e.target.value)}
+                placeholder="اسم التصنيف..." className={inp}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleAddCategory() } }} />
+              <button type="button" onClick={() => void handleAddCategory()} disabled={createCategory.isPending}
+                className="h-9 px-2.5 text-xs font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 whitespace-nowrap flex-shrink-0">
+                {createCategory.isPending ? '...' : 'إضافة'}
+              </button>
+              <button type="button" onClick={() => setShowNewCat(false)}
+                className="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0">
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <select value={form.category_id} onChange={e => set('category_id', e.target.value)} className={inp + ' cursor-pointer'}>
+              <option value="">اختر التصنيف</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
         </div>
       </div>
 
