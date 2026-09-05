@@ -1,5 +1,6 @@
 // @ts-nocheck
 // src/pages/reports/tabs/SuppliersTab.tsx
+import { printSuppliers } from '../print/printEngine'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/constants/statusMaps'
 import { Badge } from '@/components/ui/Badge'
