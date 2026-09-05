@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Search, Plus, Package, Truck, DollarSign, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag, Banknote, Pencil } from 'lucide-react'
 import { usePurchases, usePurchaseStats, useConfirmPurchase, useCancelPurchase, useDeletePurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
-import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
+import { SimplePayModal } from '@/pages/payments/SimplePayModal'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { PurchaseInvoiceDrawer } from './InvoiceDrawer'
@@ -246,8 +246,8 @@ export function PurchasesPage() {
       {showCreate  && <CreatePurchaseModal onClose={() => setShowCreate(false)} />}
       {editId      && <EditPurchaseModal invoiceId={editId} onClose={() => setEditId(null)} />}
       {detailId    && <PurchaseInvoiceDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
-      {payInvoice  && (
-        <AddPaymentModal
+      {payInvoice && (
+        <SimplePayModal
           invoiceId={payInvoice.id}
           invoiceNumber={payInvoice.invoice_number}
           partyId={payInvoice.supplier_id}
