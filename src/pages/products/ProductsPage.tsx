@@ -1,24 +1,23 @@
 // src/pages/products/ProductsPage.tsx
 import { useState, useMemo } from 'react'
 import {
-  Search, Plus, Download, Package, Tag,
+  Search, Download, Package, Tag,
   AlertTriangle, TrendingUp, Archive,
   Eye, Pencil, Trash2, ChevronLeft, ChevronRight, DollarSign,
-  CheckCircle, BarChart2,
+  CheckCircle,
   ScanLine,
 } from "lucide-react"
 import {
-  useProducts, useProductStats, useProductCategories,
+  useProducts, useProductStats,
   useDeleteProduct,
 } from '@/hooks/useProducts'
-import { useSuppliers } from '@/hooks/useSuppliers'
 import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
 import { exportToCsv, PRODUCT_EXPORT_HEADERS } from '@/lib/exportUtils'
-import { StockModal }   from './StockModal'
 import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { ProductModal } from './ProductModal'
+import { ProductDrawer } from './ProductDrawer'
 import { TYPE_MAP, PAGE_SIZE, fmt, type FilterType } from './constants'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 
@@ -30,10 +29,10 @@ export function ProductsPage() {
   const [search,    setSearch]    = useState('')
   const [filter,    setFilter]    = useState<FilterType>('all')
   const [page,      setPage]      = useState(1)
-  const [modal,     setModal]     = useState<'add' | 'edit' | null>(null)
+  const [modal,     setModal]     = useState<'edit' | null>(null)
   const [selected,  setSelected]  = useState<ProductWithCategory | null>(null)
   const [scanner,   setScanner]   = useState(false)
-  const [stockProd, setStockProd] = useState<ProductWithCategory | null>(null)
+  const [drawer,    setDrawer]    = useState<ProductWithCategory | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -70,8 +69,8 @@ export function ProductsPage() {
     { label: 'مخزون منخفض',     value: stats?.lowStock     ?? 0, icon: AlertTriangle, colorClass: 'text-red-600 dark:text-red-400',      bgClass: 'bg-red-50 dark:bg-red-900/20'      },
     {
       label: 'قيمة المخزون (شراء)',
-      value: `${(stats?.totalCostValue ?? 0).toLocaleString('ar-EG')} ج`,
-      sub: `بيع: ${(stats?.totalSellingValue ?? 0).toLocaleString('ar-EG')} ج`,
+      value: `${fmt(stats?.totalCostValue ?? 0)} ج`,
+      sub: `بيع: ${fmt(stats?.totalSellingValue ?? 0)} ج`,
       icon: DollarSign,
       colorClass: 'text-green-600 dark:text-green-400',
       bgClass: 'bg-green-50 dark:bg-green-900/20',
@@ -94,7 +93,7 @@ export function ProductsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">المنتجات</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">إكسسوارات وقطع الغيار</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">إكسسوارات وقطع الغيار — يُضاف المخزون عبر المشتريات</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => exportToCsv('products', PRODUCT_EXPORT_HEADERS, filtered)} className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
@@ -103,10 +102,6 @@ export function ProductsPage() {
           <button onClick={() => setScanner(true)}
             className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
             <ScanLine size={14} /> مسح
-          </button>
-          <button onClick={() => setModal('add')}
-            className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2">
-            <Plus size={14} /> منتج جديد
           </button>
         </div>
       </div>
@@ -170,7 +165,7 @@ export function ProductsPage() {
                 <tr>
                   <td colSpan={10} className="px-4 py-16 text-center text-gray-400 dark:text-gray-600">
                     <Package size={32} className="mx-auto mb-2 opacity-30" />
-                    <p>لا توجد منتجات</p>
+                    <p>لا توجد منتجات — يُضاف المخزون عبر فواتير المشتريات</p>
                   </td>
                 </tr>
               ) : paginated.map((p, i) => {
@@ -196,22 +191,21 @@ export function ProductsPage() {
                       {p.sku ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                      {p.cost_price.toLocaleString('ar-EG')} ج
+                      {fmt(p.cost_price)} ج
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                      {p.selling_price.toLocaleString('ar-EG')} ج
+                      {fmt(p.selling_price)} ج
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => setStockProd(p)}
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer hover:shadow-sm',
-                          isLow
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30'
-                            : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800',
-                        )}>
+                      <span className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border',
+                        isLow
+                          ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                          : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+                      )}>
                         {isLow && <AlertTriangle size={11} />}
                         {p.stock_qty} {p.unit}
-                      </button>
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border',
@@ -224,11 +218,11 @@ export function ProductsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 justify-center">
-                        <button title="تعديل المخزون" onClick={() => setStockProd(p)}
-                          className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 hover:border-green-200 dark:hover:border-green-800 transition-colors">
-                          <BarChart2 size={13} />
+                        <button title="عرض التفاصيل" onClick={() => setDrawer(p)}
+                          className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <Eye size={13} />
                         </button>
-                        <button title="تعديل" onClick={() => openEdit(p)}
+                        <button title="تعديل بيانات المنتج" onClick={() => openEdit(p)}
                           className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
                           <Pencil size={13} />
                         </button>
@@ -269,8 +263,8 @@ export function ProductsPage() {
       </div>
 
       {/* Modals */}
-      {modal && <ProductModal product={modal === 'edit' ? selected : null} onClose={closeModal} />}
-      {stockProd && <StockModal product={stockProd} onClose={() => setStockProd(null)} />}
+      {modal === 'edit' && selected && <ProductModal product={selected} onClose={closeModal} />}
+      {drawer && <ProductDrawer product={drawer} onClose={() => setDrawer(null)} />}
       {scanner && (
         <BarcodeScanner
           title="مسح باركود المنتج"
@@ -282,4 +276,3 @@ export function ProductsPage() {
     </div>
   )
 }
-
