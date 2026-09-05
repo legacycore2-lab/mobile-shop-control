@@ -155,12 +155,12 @@ export function DashboardPage() {
 
   // Top debts (balance > 0 = owed to supplier / by customer)
   const topSupplierDebts = supplierLedger
-    .filter(s => s.balance > 0)
-    .sort((a, b) => b.balance - a.balance)
+    .filter(s => Number(s.balance) > 0)
+    .sort((a, b) => Number(b.balance) - Number(a.balance))
     .slice(0, 5)
   const topCustomerDebts = customerLedger
-    .filter(c => c.balance > 0)
-    .sort((a, b) => b.balance - a.balance)
+    .filter(c => Number(c.balance) > 0)
+    .sort((a, b) => Number(b.balance) - Number(a.balance))
     .slice(0, 5)
   const totalSupplierDebt = topSupplierDebts.reduce((s, r) => s + Number(r.balance), 0)
   const totalCustomerDebt = topCustomerDebts.reduce((s, r) => s + Number(r.balance), 0)
