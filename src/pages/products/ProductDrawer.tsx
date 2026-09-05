@@ -77,10 +77,10 @@ export function ProductDrawer({ product: p, onClose }: { product: ProductWithCat
             ))}
           </div>
 
-          {p.description && (
+          {(p as unknown as {notes?: string}).notes && (
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">ملاحظات</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{p.description}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{(p as unknown as {notes?: string}).notes}</p>
             </div>
           )}
         </div>
