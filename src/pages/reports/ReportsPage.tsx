@@ -83,7 +83,7 @@ export function ReportsPage() {
     summary: summary as Record<string,number>|undefined,
     sales, stock, suppliers, activity, lowStock, customers,
     supplierLedger, prodMovement, devMovement,
-    saleLoad, stckLoad, supLoad, actLoad, lowLoad, custLoad, prodMovLoad, devMovLoad,
+    sumLoad, saleLoad, stckLoad, supLoad, actLoad, lowLoad, custLoad, prodMovLoad, devMovLoad,
     movFrom, movTo, movType, setMovFrom, setMovTo, setMovType,
     selectedSupplierId, setSelectedSupplierId,
     refetchProd, refetchDev,
