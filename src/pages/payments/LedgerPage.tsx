@@ -1,10 +1,9 @@
 // src/pages/payments/LedgerPage.tsx
 import { useState, useMemo, useEffect } from 'react'
-import { Search, TrendingDown, TrendingUp, Users, Truck, DollarSign, CreditCard, ExternalLink, Banknote } from 'lucide-react'
+import { Search, TrendingDown, TrendingUp, Users, Truck, DollarSign, CreditCard, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useSupplierLedger, useCustomerLedger } from '@/hooks/usePayments'
 import { AddPaymentModal } from './AddPaymentModal'
-import { paymentsService } from '@/services/payments.service'
 import { useAuth } from '@/lib/auth'
 import { useQueryClient } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/Badge'
@@ -17,31 +16,10 @@ const METHOD_LABELS: Record<string, string> = {
 }
 
 
-import { QuickPaySupplierModal } from './components/QuickPaySupplierModal'
 
 function SupplierLedgerTable({ search }: { search: string }) {
   const { data: ledger = [], isLoading } = useSupplierLedger()
   const navigate = useNavigate()
-  const [payModal, setPayModal] = useState<{
-    supplierId: string; supplierName: string; balance: number
-  } | null>(null)
-  const [loadingPay, setLoadingPay] = useState<string | null>(null)
-
-  async function handleQuickPay(supplierId: string, supplierName: string, balance: number) {
-    setLoadingPay(supplierId)
-    try {
-      // Get first open invoice for this supplier
-      const invoices = await paymentsService.getPurchaseInvoicesBySupplier(supplierId)
-      const firstDue = invoices.find(i => i.remaining > 0)
-      if (firstDue) {
-        setPayModal({ supplierId, supplierName, balance })
-      } else {
-        setPayModal({ supplierId, supplierName, balance })
-      }
-    } finally {
-      setLoadingPay(null)
-    }
-  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -93,25 +71,8 @@ function SupplierLedgerTable({ search }: { search: string }) {
                   {s.balance > 0 ? ' (مديونية)' : s.balance < 0 ? ' (رصيد دائن)' : ' (مسدد)'}
                 </span>
               </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-1">
-                  {s.balance > 0 && (
-                    <button
-                      title="سداد سريع"
-                      onClick={e => { e.stopPropagation(); void handleQuickPay(s.supplier_id, s.supplier_name, Number(s.balance)) }}
-                      disabled={loadingPay === s.supplier_id}
-                      className="h-7 px-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-green-100 transition-colors flex items-center gap-1 whitespace-nowrap disabled:opacity-50">
-                      {loadingPay === s.supplier_id
-                        ? <span className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin" />
-                        : <Banknote size={11} />}
-                      سداد
-                    </button>
-                  )}
-                  <button onClick={() => navigate(`/ledger/supplier/${s.supplier_id}`)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-500 transition-colors">
-                    <ExternalLink size={13} />
-                  </button>
-                </div>
+              <td className="px-4 py-3 text-gray-400">
+                <ExternalLink size={14} />
               </td>
             </tr>
           ))}
@@ -123,14 +84,6 @@ function SupplierLedgerTable({ search }: { search: string }) {
   return (
     <>
       {table}
-      {payModal && (
-        <QuickPaySupplierModal
-          supplierId={payModal.supplierId}
-          supplierName={payModal.supplierName}
-          totalBalance={payModal.balance}
-          onClose={() => setPayModal(null)}
-        />
-      )}
     </>
   )
 }
@@ -191,21 +144,8 @@ function CustomerLedgerTable({ search }: { search: string }) {
                   {c.balance > 0 ? ' (مديونية)' : c.balance < 0 ? ' (رصيد دائن)' : ' (مسدد)'}
                 </span>
               </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-1">
-                  {c.balance > 0 && (
-                    <button
-                      title="تحصيل سريع"
-                      onClick={e => { e.stopPropagation(); navigate(`/ledger/customer/${c.customer_id}`) }}
-                      className="h-7 px-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-100 transition-colors flex items-center gap-1 whitespace-nowrap">
-                      <Banknote size={11} /> تحصيل
-                    </button>
-                  )}
-                  <button onClick={() => navigate(`/ledger/customer/${c.customer_id}`)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-500 transition-colors">
-                    <ExternalLink size={13} />
-                  </button>
-                </div>
+              <td className="px-4 py-3 text-gray-400">
+                <ExternalLink size={14} />
               </td>
             </tr>
           ))}
