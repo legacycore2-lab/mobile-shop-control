@@ -6,7 +6,7 @@ import { useTheme } from '@/lib/theme'
 import {
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
-  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen,
+  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -21,6 +21,7 @@ const NAV = [
   { to: '/reports',   icon: BarChart3,       label: 'التقارير'                },
   { to: '/ledger',    icon: BookOpen,         label: 'الحسابات'                },
   { to: '/audit',     icon: Shield,          label: 'سجل العمليات'            },
+  { to: '/import',    icon: FileUp,          label: 'استيراد البيانات'        },
   { to: '/settings',  icon: Settings,        label: 'الإعدادات'               },
 ]
 
