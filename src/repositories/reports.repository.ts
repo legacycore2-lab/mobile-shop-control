@@ -170,9 +170,9 @@ export const reportsRepository = {
   getSupplierPurchases: async (from?: string, to?: string): Promise<SupplierPurchaseSummary[]> => {
     let query = supabase
       .from('mobile_devices')
-      .select('cost_price, created_at, suppliers!supplier_id ( id, name )')
-    if (from) query = query.gte('created_at', from)
-    if (to)   query = query.lte('created_at', to + 'T23:59:59')
+      .select('cost_price, purchase_date, suppliers!supplier_id ( id, name )')
+    if (from) query = query.gte('purchase_date', from)
+    if (to)   query = query.lte('purchase_date', to)
     const { data, error } = await query
     if (error) throw error
 
@@ -396,18 +396,26 @@ export const reportsRepository = {
       if (status === 'in_stock') e.in_stock++
       // اشتري في الفترة
       if (createdOn >= from && createdOn <= to) e.purchased_in_period++
-      // بيع في الفترة
+      // بيع في الفترة — avg_cost تتراكم مؤقتاً وتُقسم في النهاية
       if (soldOn && soldOn >= from && soldOn <= to && status === 'sold') {
         e.sold_in_period++
         e.total_revenue += rev
         e.total_profit  += rev - cost
+        e.avg_cost      += cost   // تراكم مجموع التكاليف
       }
     }
 
     return Array.from(map.values())
       .map(e => ({
         ...e,
-        avg_cost: e.total > 0 ? Math.round(e.total_revenue / Math.max(e.sold_in_period, 1)) : 0,
+        // avg_cost = متوسط تكلفة الأجهزة المباعة في الفترة
+        avg_cost: e.sold_in_period > 0
+          ? parseFloat((e.avg_cost / e.sold_in_period).toFixed(2))
+          : 0,
+        // avg_sell = متوسط سعر بيع الأجهزة المباعة في الفترة
+        avg_sell: e.sold_in_period > 0
+          ? parseFloat((e.total_revenue / e.sold_in_period).toFixed(2))
+          : 0,
       }))
       .sort((a, b) => b.sold_in_period - a.sold_in_period)
   },
