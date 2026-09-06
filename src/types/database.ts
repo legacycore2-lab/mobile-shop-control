@@ -173,3 +173,30 @@ export type Database = {
     }
   }
 }
+
+// ── Expenses ──────────────────────────────────────────────────────────────────
+
+export interface ExpenseCategory {
+  id:         string
+  name:       string
+  created_at: string
+}
+
+export interface Expense {
+  id:               string
+  category_id:      string | null
+  amount:           number
+  description:      string | null
+  expense_date:     string
+  payment_method:   string
+  reference_number: string | null
+  notes:            string | null
+  created_by:       string | null
+  created_at:       string
+  updated_at:       string
+}
+
+export interface ExpenseView extends Expense {
+  category_name:    string
+  created_by_name:  string
+}
