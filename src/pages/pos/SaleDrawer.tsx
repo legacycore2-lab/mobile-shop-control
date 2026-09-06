@@ -1,11 +1,12 @@
 // src/pages/pos/SaleDrawer.tsx
 import { useState } from 'react'
-import { X, Smartphone, Tag, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { X, Smartphone, Tag, CheckCircle, XCircle, AlertCircle, Printer } from 'lucide-react'
 import { useSaleInvoice, useConfirmSale, useCancelSale } from '@/hooks/usePos'
 import { useAuth } from '@/lib/auth'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { STATUS_MAP, fmt } from './constants'
+import { printSaleInvoice } from './SaleInvoicePrint'
 
 export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
   const { profile }                 = useAuth()
@@ -37,6 +38,38 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
     catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
   }
 
+  function handlePrint() {
+    if (!inv || !detail) return
+    printSaleInvoice({
+      invoice_number:  inv.invoice_number,
+      invoice_date:    inv.invoice_date,
+      status:          inv.status,
+      customer_name:   inv.customer_name  ?? null,
+      customer_phone:  inv.customer_phone ?? null,
+      created_by_name: inv.created_by_name,
+      total_amount:    inv.total_amount,
+      paid_amount:     inv.paid_amount,
+      discount:        inv.discount,
+      remaining:       inv.remaining,
+      notes:           inv.notes ?? null,
+      devices: detail.devices.map(d => ({
+        brand_name:           d.brand_name,
+        model_name:           d.model_name,
+        imei1:                d.imei1,
+        actual_selling_price: d.actual_selling_price,
+        cost_price:           d.cost_price,
+      })),
+      products: detail.products.map(p => ({
+        product_name: p.product_name,
+        unit:         p.unit,
+        quantity:     p.quantity,
+        unit_price:   p.unit_price,
+        subtotal:     p.subtotal,
+        cost_price:   p.cost_price,
+      })),
+    })
+  }
+
   // profit
   const totalCost = detail
     ? detail.devices.reduce((s, d) => s + d.cost_price, 0)
@@ -57,6 +90,16 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
           </div>
           <div className="flex items-center gap-2">
             {inv && <Badge variant={STATUS_MAP[inv.status]?.variant ?? 'neutral'}>{STATUS_MAP[inv.status]?.label}</Badge>}
+            {/* Print Button */}
+            {inv && inv.status === 'confirmed' && (
+              <button
+                onClick={handlePrint}
+                title="طباعة الفاتورة"
+                className="h-8 px-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+              >
+                <Printer size={13} /> طباعة
+              </button>
+            )}
             <button onClick={onClose}
               className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               <X size={16} />
@@ -101,6 +144,16 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
                   </div>
                 )}
               </div>
+
+              {/* Print CTA — only for confirmed */}
+              {inv.status === 'confirmed' && (
+                <button
+                  onClick={handlePrint}
+                  className="w-full h-10 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                >
+                  <Printer size={15} /> طباعة فاتورة البيع
+                </button>
+              )}
 
               {/* Confirmed warning */}
               {inv.status === 'confirmed' && (
