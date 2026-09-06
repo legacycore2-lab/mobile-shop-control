@@ -471,12 +471,18 @@ export function EditPurchaseModal({
         } as never)
         .eq('id', invoiceId)
 
-      // 10. Invalidate queries
+      // 10. Invalidate queries — full sync across all affected screens
       await qc.invalidateQueries({ queryKey: ['purchases'] })
       await qc.invalidateQueries({ queryKey: ['purchases', invoiceId] })
       await qc.invalidateQueries({ queryKey: ['devices'] })
       await qc.invalidateQueries({ queryKey: ['products'] })
+      // Ledger list + single supplier entry
       await qc.invalidateQueries({ queryKey: ['ledger', 'suppliers'] })
+      await qc.invalidateQueries({ queryKey: ['ledger', 'suppliers', supplierId] })
+      // PartyStatementPage invoice lines
+      await qc.invalidateQueries({ queryKey: ['statement-invoices-lines', 'supplier', supplierId] })
+      // Payment stats
+      await qc.invalidateQueries({ queryKey: ['payments', 'stats'] })
 
       onClose()
     } catch (err) {
