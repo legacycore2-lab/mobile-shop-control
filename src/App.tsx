@@ -20,6 +20,7 @@ import { AuditLogsPage } from '@/pages/audit/AuditLogsPage'
 import { LedgerPage }         from '@/pages/payments/LedgerPage'
 import { PartyStatementPage } from '@/pages/payments/PartyStatementPage'
 import { ImportPage }         from '@/pages/import/ImportPage'
+import { ExpensesPage }       from '@/pages/expenses/ExpensesPage'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -63,6 +64,7 @@ function Guard() {
         <Route path="/audit"      element={<AuditLogsPage />} />
         <Route path="/ledger"                    element={<LedgerPage />} />
         <Route path="/ledger/:type/:id"          element={<PartyStatementPage />} />
+        <Route path="/expenses"   element={<ExpensesPage />} />
         <Route path="/import"     element={<ImportPage />} />
         <Route path="/settings"   element={<SettingsPage />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
