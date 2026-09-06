@@ -52,9 +52,12 @@ export function SimplePayModal({
         notes:          '',
         created_by:     profile?.id ?? '',
       })
+      // invalidate everything that shows paid_amount / remaining
       await qc.invalidateQueries({ queryKey: ['purchases'] })
+      await qc.invalidateQueries({ queryKey: ['sales'] })
       await qc.invalidateQueries({ queryKey: ['payments'] })
-      await qc.invalidateQueries({ queryKey: ['ledger', 'suppliers'] })
+      await qc.invalidateQueries({ queryKey: ['ledger'] })
+      await qc.invalidateQueries({ queryKey: ['dashboard'] })
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ')
