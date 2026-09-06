@@ -1,11 +1,28 @@
+// src/hooks/usePos.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { posService, type SaleFormData } from '@/services/pos.service'
 
 const KEYS = {
-  all:      ['sales']            as const,
-  stats:    ['sales', 'stats']   as const,
-  one:      (id: string) => ['sales', id] as const,
-  inStock:  ['devices', 'in_stock'] as const,
+  all:     ['sales']            as const,
+  stats:   ['sales', 'stats']   as const,
+  one:     (id: string) => ['sales', id] as const,
+  inStock: ['devices', 'in_stock'] as const,
+}
+
+function invalidateSaleRelated(qc: ReturnType<typeof useQueryClient>, id?: string) {
+  void qc.invalidateQueries({ queryKey: KEYS.all })
+  void qc.invalidateQueries({ queryKey: KEYS.stats })
+  if (id) void qc.invalidateQueries({ queryKey: KEYS.one(id) })
+  void qc.invalidateQueries({ queryKey: KEYS.inStock })
+  void qc.invalidateQueries({ queryKey: ['devices'] })
+  void qc.invalidateQueries({ queryKey: ['products'] })
+  // Ledger — customer side
+  void qc.invalidateQueries({ queryKey: ['ledger', 'customers'] })
+  void qc.invalidateQueries({ queryKey: ['ledger'] })
+  // PartyStatementPage lines
+  void qc.invalidateQueries({ queryKey: ['statement-invoices-lines'] })
+  // Payment stats
+  void qc.invalidateQueries({ queryKey: ['payments', 'stats'] })
 }
 
 export function useSaleInvoices() {
@@ -48,14 +65,7 @@ export function useConfirmSale() {
   return useMutation({
     mutationFn: ({ id, customerId, soldById }: { id: string; customerId: string | null; soldById: string }) =>
       posService.confirm(id, customerId, soldById),
-    onSuccess: (_d, { id }) => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.one(id) })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-      void qc.invalidateQueries({ queryKey: ['devices'] })
-      void qc.invalidateQueries({ queryKey: ['products'] })
-      void qc.invalidateQueries({ queryKey: KEYS.inStock })
-    },
+    onSuccess: (_d, { id }) => invalidateSaleRelated(qc, id),
   })
 }
 
@@ -63,11 +73,7 @@ export function useCancelSale() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => posService.cancel(id),
-    onSuccess: (_d, id) => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.one(id) })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-    },
+    onSuccess: (_d, id) => invalidateSaleRelated(qc, id),
   })
 }
 
@@ -75,9 +81,6 @@ export function useDeleteSale() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => posService.remove(id),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-    },
+    onSuccess: () => invalidateSaleRelated(qc),
   })
 }
