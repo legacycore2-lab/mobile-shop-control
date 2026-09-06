@@ -1,11 +1,28 @@
+// src/hooks/usePurchases.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { purchasesService, type PurchaseFormData } from '@/services/purchases.service'
 
 const KEYS = {
-  all:    ['purchases']           as const,
-  stats:  ['purchases', 'stats']  as const,
-  one:    (id: string) => ['purchases', id] as const,
+  all:      ['purchases']           as const,
+  stats:    ['purchases', 'stats']  as const,
+  one:      (id: string) => ['purchases', id] as const,
   unlinked: (supplierId: string) => ['purchases', 'unlinked', supplierId] as const,
+}
+
+// Invalidate everything touched by a purchase change
+function invalidatePurchaseRelated(qc: ReturnType<typeof useQueryClient>, id?: string) {
+  void qc.invalidateQueries({ queryKey: KEYS.all })
+  void qc.invalidateQueries({ queryKey: KEYS.stats })
+  if (id) void qc.invalidateQueries({ queryKey: KEYS.one(id) })
+  void qc.invalidateQueries({ queryKey: ['devices'] })
+  void qc.invalidateQueries({ queryKey: ['products'] })
+  // Ledger — broad invalidation since we may not know supplierId here
+  void qc.invalidateQueries({ queryKey: ['ledger', 'suppliers'] })
+  void qc.invalidateQueries({ queryKey: ['ledger'] })
+  // PartyStatementPage lines
+  void qc.invalidateQueries({ queryKey: ['statement-invoices-lines'] })
+  // Payment stats
+  void qc.invalidateQueries({ queryKey: ['payments', 'stats'] })
 }
 
 export function usePurchases() {
@@ -47,12 +64,7 @@ export function useConfirmPurchase() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => purchasesService.confirm(id),
-    onSuccess: (_d, id) => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.one(id) })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-      void qc.invalidateQueries({ queryKey: ['devices'] })
-    },
+    onSuccess: (_d, id) => invalidatePurchaseRelated(qc, id),
   })
 }
 
@@ -60,11 +72,7 @@ export function useCancelPurchase() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => purchasesService.cancel(id),
-    onSuccess: (_d, id) => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.one(id) })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-    },
+    onSuccess: (_d, id) => invalidatePurchaseRelated(qc, id),
   })
 }
 
@@ -73,11 +81,7 @@ export function useUpdatePayment() {
   return useMutation({
     mutationFn: ({ id, paid, discount }: { id: string; paid: number; discount: number }) =>
       purchasesService.updatePayment(id, paid, discount),
-    onSuccess: (_d, { id }) => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.one(id) })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-    },
+    onSuccess: (_d, { id }) => invalidatePurchaseRelated(qc, id),
   })
 }
 
@@ -85,9 +89,6 @@ export function useDeletePurchase() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => purchasesService.remove(id),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: KEYS.all })
-      void qc.invalidateQueries({ queryKey: KEYS.stats })
-    },
+    onSuccess: () => invalidatePurchaseRelated(qc),
   })
 }
