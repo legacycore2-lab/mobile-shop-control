@@ -53,6 +53,9 @@ export function useDeletePayment() {
       void qc.invalidateQueries({ queryKey: KEYS.all })
       void qc.invalidateQueries({ queryKey: KEYS.supplierLedger })
       void qc.invalidateQueries({ queryKey: KEYS.customerLedger })
+      void qc.invalidateQueries({ queryKey: ['purchases'] })
+      void qc.invalidateQueries({ queryKey: ['sales'] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
