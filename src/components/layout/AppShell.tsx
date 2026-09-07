@@ -6,9 +6,10 @@ import { useTheme } from '@/lib/theme'
 import {
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
-  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp, Receipt,
+  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp, Receipt, Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
 
 const NAV = [
   { to: '/',          icon: LayoutDashboard, label: 'الرئيسية',    end: true   },
@@ -20,7 +21,7 @@ const NAV = [
   { to: '/customers', icon: Users,           label: 'العملاء'                 },
   { to: '/expenses',  icon: Receipt,         label: 'المصروفات'               },
   { to: '/reports',   icon: BarChart3,       label: 'التقارير'                },
-  { to: '/ledger',    icon: BookOpen,         label: 'الحسابات'                },
+  { to: '/ledger',    icon: BookOpen,        label: 'الحسابات'                },
   { to: '/audit',     icon: Shield,          label: 'سجل العمليات'            },
   { to: '/import',    icon: FileUp,          label: 'استيراد البيانات'        },
   { to: '/settings',  icon: Settings,        label: 'الإعدادات'               },
@@ -31,6 +32,10 @@ export function AppShell() {
   const { isDark, toggle } = useTheme()
   const [open, setOpen] = useState(false)
   const location = useLocation()
+
+  // ── تفعيل مراقبة المخزون وإرسال Browser Notifications ──
+  useStockNotifications()
+  const alertCount = useAlertCount()
 
   const currentPage = NAV.find(n =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
@@ -90,7 +95,13 @@ export function AppShell() {
             >
               <Icon size={18} className="flex-shrink-0" />
               <span className="flex-1">{label}</span>
-              <ChevronRight size={14} className="opacity-40" />
+              {/* Badge للمنتجات المخزون المنخفض */}
+              {to === '/products' && alertCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {alertCount > 99 ? '99+' : alertCount}
+                </span>
+              )}
+              {to !== '/products' && <ChevronRight size={14} className="opacity-40" />}
             </NavLink>
           ))}
         </nav>
@@ -139,6 +150,21 @@ export function AppShell() {
               {currentPage?.label ?? 'Mobile Shop'}
             </h1>
           </div>
+
+          {/* Bell icon مع badge */}
+          {alertCount > 0 && (
+            <NavLink
+              to="/products"
+              className="relative w-9 h-9 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              title={`${alertCount} منتج بمخزون منخفض`}
+            >
+              <Bell size={18} />
+              <span className="absolute -top-0.5 -left-0.5 min-w-[16px] h-[16px] px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {alertCount > 99 ? '99+' : alertCount}
+              </span>
+            </NavLink>
+          )}
+
           <button
             onClick={toggle}
             className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

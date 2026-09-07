@@ -12,6 +12,10 @@ import { useCustomerStats } from '@/hooks/useCustomers'
 import { useDeviceStats } from '@/hooks/useDevices'
 import { useProductStats } from '@/hooks/useProducts'
 import { supabase } from '@/lib/supabase'
+import {
+  notificationsEnabled, setNotificationsEnabled,
+  requestPermission, getPermission, notificationsSupported,
+} from '@/lib/notifications'
 import { cn } from '@/lib/cn'
 import { Badge } from '@/components/ui/Badge'
 
@@ -68,6 +72,31 @@ export function SettingsPage() {
   const [newPass2, setNewPass2] = useState('')
   const [passMsg,  setPassMsg]  = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [passLoad, setPassLoad] = useState(false)
+
+  // Notifications state
+  const [notifEnabled,    setNotifEnabled]    = useState(notificationsEnabled())
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(getPermission())
+  const [notifLoading,    setNotifLoading]    = useState(false)
+
+  async function handleToggleNotifications() {
+    if (!notificationsSupported()) return
+    setNotifLoading(true)
+    try {
+      if (!notifEnabled) {
+        const perm = await requestPermission()
+        setNotifPermission(perm)
+        if (perm === 'granted') {
+          setNotificationsEnabled(true)
+          setNotifEnabled(true)
+        }
+      } else {
+        setNotificationsEnabled(false)
+        setNotifEnabled(false)
+      }
+    } finally {
+      setNotifLoading(false)
+    }
+  }
 
   // Factory Reset
   const [showReset,     setShowReset]     = useState(false)
@@ -406,17 +435,67 @@ export function SettingsPage() {
                 <StatRow label="العملة"        value="جنيه مصري (ج.م)" />
               </div>
             </Section>
-            <Section title="الإشعارات" sub="قريباً">
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
+            <Section title="الإشعارات" sub="تنبيهات المخزون المنخفض">
+              {!notificationsSupported() ? (
+                <div className="flex items-center gap-3 py-2">
                   <Bell size={16} className="text-gray-400 dark:text-gray-600" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">تنبيهات المخزون</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">عند وصول المخزون للحد الأدنى</p>
-                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">المتصفح لا يدعم الإشعارات</p>
                 </div>
-                <Badge variant="neutral">قريباً</Badge>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Toggle row */}
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'w-9 h-9 rounded-xl flex items-center justify-center',
+                        notifEnabled ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-800',
+                      )}>
+                        <Bell size={16} className={notifEnabled ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-600'} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">تنبيهات المخزون</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">إشعار عند وصول أي منتج للحد الأدنى</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => void handleToggleNotifications()}
+                      disabled={notifLoading || notifPermission === 'denied'}
+                      className={cn(
+                        'relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 disabled:opacity-50',
+                        notifEnabled ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600',
+                      )}
+                    >
+                      <span className={cn(
+                        'absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200',
+                        notifEnabled ? 'translate-x-[-24px] right-0.5' : 'right-0.5',
+                      )} />
+                    </button>
+                  </div>
+
+                  {/* Permission denied warning */}
+                  {notifPermission === 'denied' && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
+                      <p className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1">تم رفض الإذن</p>
+                      <p className="text-xs text-red-600 dark:text-red-500">
+                        اسمح للموقع بالإشعارات من إعدادات المتصفح ثم حدّث الصفحة
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Enabled status */}
+                  {notifEnabled && notifPermission === 'granted' && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 flex items-start gap-2">
+                      <CheckCircle size={14} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">التنبيهات مفعّلة</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                          ستصلك إشعارات عند انخفاض مخزون أي منتج — حتى لو النافذة مصغّرة
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </Section>
           </div>
         )}
