@@ -17,6 +17,11 @@ import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
 import { AddDeviceInlineForm } from './components/DeviceInlineForm'
 import { AddProductInlineForm } from './components/ProductInlineForm'
+import { useAuth } from '@/lib/auth'
+import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
+
+type AddedDevice = InvoiceDeviceLine & { label: string }
+
 export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const { profile }              = useAuth()
   const { data: suppliers = [] } = useSuppliers()
