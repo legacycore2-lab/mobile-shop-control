@@ -1,7 +1,6 @@
 // src/pages/purchases/LabelPrintModal.tsx
 import { useEffect, useRef, useState } from 'react'
-import { X, Printer, QrCode, Tag, Smartphone, Package, CheckSquare, Square, ChevronDown, ChevronUp } from 'lucide-react'
-import QRCode from 'qrcode'
+import { X, Printer, Tag, Smartphone, Package, CheckSquare, Square, ChevronDown, ChevronUp } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
 import { fmt } from '@/constants/statusMaps'
 import type { InvoiceDetailDevice, InvoiceDetailProduct } from '@/repositories/purchases.repository'
@@ -52,21 +51,6 @@ function getLabelTitle(data: LabelData): string {
   return data.name
 }
 
-// ── QR Canvas ─────────────────────────────────────────────────────────────────
-
-function QrCanvas({ code, size = 128 }: { code: string; size?: number }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  useEffect(() => {
-    if (!ref.current) return
-    QRCode.toCanvas(ref.current, code, {
-      width: size,
-      margin: 2,
-      color: { dark: '#000000', light: '#ffffff' },
-    })
-  }, [code, size])
-  return <canvas ref={ref} />
-}
-
 // ── Barcode SVG ───────────────────────────────────────────────────────────────
 
 function BarcodeDisplay({ code, width = 200 }: { code: string; width?: number }) {
@@ -100,7 +84,6 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     const code = getLabelCode(data)
     const title = getLabelTitle(data)
 
-    const qrDataUrl = await QRCode.toDataURL(code, { width: 150, margin: 2 })
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     try {
       JsBarcode(svgEl, code, { format: 'CODE128', width: 1.5, height: 45, displayValue: true, fontSize: 10, margin: 4 })
@@ -143,10 +126,6 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
           </div>
         </div>
         <div class="codes">
-          <div class="qr-section">
-            <img src="${qrDataUrl}" alt="QR" width="90" height="90" />
-            <div class="code-text">${code}</div>
-          </div>
           <div class="barcode-section">${barcodeStr}</div>
         </div>
       </div>
@@ -178,11 +157,9 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     .price-value { font-size:12px; font-weight:800; }
     .cost .price-value { color:#c2410c; }
     .sell .price-value { color:#15803d; }
-    .codes { display:flex; align-items:center; gap:6px; border-top:1px solid #eee; padding-top:6px; }
-    .qr-section { display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
-    .code-text { font-size:7px; color:#374151; font-family:monospace; }
-    .barcode-section { flex:1; display:flex; align-items:center; justify-content:center; }
-    .barcode-section svg { max-width:100%; height:auto; }
+    .codes { border-top:1px solid #eee; padding-top:6px; }
+    .barcode-section { display:flex; align-items:center; justify-content:center; }
+    .barcode-section svg { width:100%; height:auto; }
     @media print {
       body { background:#fff; }
       .labels-wrap { padding:0; gap:4px; }
@@ -246,16 +223,10 @@ export function LabelPrintModal({ data, onClose }: { data: LabelData; onClose: (
 
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1">
-              <QrCode size={11} /> معاينة الكود
+              معاينة الباركود
             </p>
-            <div className="flex items-center gap-4 justify-center">
-              <div className="flex flex-col items-center gap-1">
-                <QrCanvas code={code} size={90} />
-                <span className="text-xs text-gray-400 font-mono">{code.slice(0, 15)}{code.length > 15 ? '...' : ''}</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center">
-                <BarcodeDisplay code={code} width={170} />
-              </div>
+            <div className="flex items-center justify-center">
+              <BarcodeDisplay code={code} width={260} />
             </div>
           </div>
 
