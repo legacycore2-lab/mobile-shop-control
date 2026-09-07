@@ -1,24 +1,33 @@
 // src/pages/purchases/InvoiceDrawer.tsx
 import { useState } from 'react'
-import { Smartphone, Tag, AlertCircle, CheckCircle, CreditCard, X } from 'lucide-react'
+import { Smartphone, Tag, AlertCircle, CheckCircle, CreditCard, X, Printer } from 'lucide-react'
 import { usePurchase, useConfirmPurchase, useCancelPurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { STATUS_MAP, fmt } from './constants'
 import { SimplePayModal } from '@/pages/payments/SimplePayModal'
+import { BulkLabelPrintModal } from './LabelPrintModal'
+import type { InvoiceDetail } from '@/repositories/purchases.repository'
 
 export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
   const { data: detail, isLoading } = usePurchase(invoiceId)
   const confirmMutation = useConfirmPurchase()
   const cancelMutation  = useCancelPurchase()
 
-  const [showPay, setShowPay] = useState(false)
-  const [error,   setError]   = useState('')
+  const [showPay,       setShowPay]       = useState(false)
+  const [showBulkLabel, setShowBulkLabel] = useState(false)
+  const [error,         setError]         = useState('')
 
+  // بعد التأكيد نفتح modal الطباعة مباشرة
   async function handleConfirm() {
     setError('')
-    try { await confirmMutation.mutateAsync(invoiceId) }
-    catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
+    try {
+      await confirmMutation.mutateAsync(invoiceId)
+      // البيانات اتحدثت بعد الـ mutation — نفتح الـ bulk modal
+      setShowBulkLabel(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'خطأ')
+    }
   }
 
   async function handleCancel() {
@@ -87,7 +96,6 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                   </div>
                 ))}
 
-                {/* Pay now button inline — visible only when there's remaining */}
                 {inv.remaining > 0 && inv.status === 'confirmed' && (
                   <button
                     onClick={() => setShowPay(true)}
@@ -171,8 +179,10 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
               <>
                 <button onClick={handleConfirm} disabled={confirmMutation.isPending}
                   className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                  {confirmMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                  <CheckCircle size={14} /> تأكيد
+                  {confirmMutation.isPending
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <CheckCircle size={14} />}
+                  تأكيد وطباعة الليبلات
                 </button>
                 <button onClick={handleCancel} disabled={cancelMutation.isPending}
                   className="h-9 px-3 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
@@ -180,11 +190,20 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                 </button>
               </>
             )}
-            {inv.status === 'confirmed' && inv.remaining > 0 && (
-              <button onClick={() => setShowPay(true)}
-                className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2">
-                <CreditCard size={14} /> تسجيل دفعة
-              </button>
+            {inv.status === 'confirmed' && (
+              <div className="flex gap-2 w-full">
+                {inv.remaining > 0 && (
+                  <button onClick={() => setShowPay(true)}
+                    className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2">
+                    <CreditCard size={14} /> تسجيل دفعة
+                  </button>
+                )}
+                {/* زر طباعة الليبلات متاح دايماً للفواتير المؤكدة */}
+                <button onClick={() => setShowBulkLabel(true)}
+                  className="h-9 px-3 text-sm font-medium rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2">
+                  <Printer size={14} /> ليبلات
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -203,9 +222,17 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
           onClose={() => setShowPay(false)}
         />
       )}
+
+      {/* Bulk Label Print Modal */}
+      {showBulkLabel && detail && inv && (
+        <BulkLabelPrintModal
+          devices={detail.devices}
+          products={detail.products}
+          invoiceNumber={inv.invoice_number}
+          supplierName={inv.supplier_name ?? ''}
+          onClose={() => setShowBulkLabel(false)}
+        />
+      )}
     </div>
   )
 }
-
-// ── Create Invoice Modal ──────────────────────────────────────────────────────
-

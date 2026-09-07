@@ -18,10 +18,31 @@ export interface InvoiceProductLine {
   unit_price: number
 }
 
+export interface InvoiceDetailDevice extends PurchaseInvoiceDevice {
+  brand_name:       string
+  model_name:       string
+  imei1:            string
+  imei2:            string | null
+  storage:          string | null
+  color:            string | null
+  condition:        string
+  selling_price:    number
+  warranty_months:  number
+}
+
+export interface InvoiceDetailProduct extends PurchaseInvoiceProduct {
+  product_name:  string
+  unit:          string
+  sku:           string | null
+  barcode:       string | null
+  selling_price: number
+  category_name: string
+}
+
 export interface InvoiceDetail {
   invoice:  PurchaseInvoiceView
-  devices:  (PurchaseInvoiceDevice & { brand_name: string; model_name: string; imei1: string })[]
-  products: (PurchaseInvoiceProduct & { product_name: string; unit: string })[]
+  devices:  InvoiceDetailDevice[]
+  products: InvoiceDetailProduct[]
 }
 
 export const purchasesRepository = {
@@ -97,13 +118,14 @@ export const purchasesRepository = {
       remaining:       total - paid - discount,
     } as PurchaseInvoiceView
 
-    // Devices
+    // Devices — جيب كل الحقول المطلوبة للليبل
     const { data: devRows, error: devErr } = await supabase
       .from('purchase_invoice_devices')
       .select(`
         *,
         mobile_devices!device_id (
-          imei1,
+          imei1, imei2, storage, color, condition,
+          selling_price, warranty_months,
           mobile_models!model_id (
             name,
             mobile_brands!brand_id ( name )
@@ -113,46 +135,60 @@ export const purchasesRepository = {
       .eq('invoice_id', id)
     if (devErr) throw devErr
 
-    const devices = ((devRows ?? []) as unknown[]).map(row => {
+    const devices: InvoiceDetailDevice[] = ((devRows ?? []) as unknown[]).map(row => {
       const d     = row as Record<string, unknown>
-      const dev   = d['mobile_devices']   as Record<string, unknown> | null
+      const dev   = d['mobile_devices']    as Record<string, unknown> | null
       const model = dev?.['mobile_models'] as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
       return {
-        id:         String(d['id']),
-        invoice_id: String(d['invoice_id']),
-        device_id:  String(d['device_id']),
-        cost_price: Number(d['cost_price']),
-        created_at: String(d['created_at']),
-        brand_name: String(brand?.['name'] ?? '—'),
-        model_name: String(model?.['name'] ?? '—'),
-        imei1:      String(dev?.['imei1']  ?? '—'),
+        id:              String(d['id']),
+        invoice_id:      String(d['invoice_id']),
+        device_id:       String(d['device_id']),
+        cost_price:      Number(d['cost_price']),
+        created_at:      String(d['created_at']),
+        brand_name:      String(brand?.['name']      ?? '—'),
+        model_name:      String(model?.['name']      ?? '—'),
+        imei1:           String(dev?.['imei1']        ?? '—'),
+        imei2:           dev?.['imei2'] ? String(dev['imei2']) : null,
+        storage:         dev?.['storage'] ? String(dev['storage']) : null,
+        color:           dev?.['color']   ? String(dev['color'])   : null,
+        condition:       String(dev?.['condition']    ?? 'new'),
+        selling_price:   Number(dev?.['selling_price'] ?? 0),
+        warranty_months: Number(dev?.['warranty_months'] ?? 0),
       }
     })
 
-    // Products
+    // Products — جيب كل الحقول المطلوبة للليبل
     const { data: prdRows, error: prdErr } = await supabase
       .from('purchase_invoice_products')
       .select(`
         *,
-        products!product_id ( name, unit )
+        products!product_id (
+          name, unit, sku, barcode, selling_price,
+          product_categories!category_id ( name )
+        )
       `)
       .eq('invoice_id', id)
     if (prdErr) throw prdErr
 
-    const products = ((prdRows ?? []) as unknown[]).map(row => {
+    const products: InvoiceDetailProduct[] = ((prdRows ?? []) as unknown[]).map(row => {
       const p   = row as Record<string, unknown>
       const prd = p['products'] as Record<string, unknown> | null
+      const cat = prd?.['product_categories'] as Record<string, unknown> | null
       return {
-        id:           String(p['id']),
-        invoice_id:   String(p['invoice_id']),
-        product_id:   String(p['product_id']),
-        quantity:     Number(p['quantity']),
-        unit_price:   Number(p['unit_price']),
-        subtotal:     Number(p['subtotal']),
-        created_at:   String(p['created_at']),
-        product_name: String(prd?.['name'] ?? '—'),
-        unit:         String(prd?.['unit'] ?? 'قطعة'),
+        id:            String(p['id']),
+        invoice_id:    String(p['invoice_id']),
+        product_id:    String(p['product_id']),
+        quantity:      Number(p['quantity']),
+        unit_price:    Number(p['unit_price']),
+        subtotal:      Number(p['subtotal']),
+        created_at:    String(p['created_at']),
+        product_name:  String(prd?.['name']     ?? '—'),
+        unit:          String(prd?.['unit']      ?? 'قطعة'),
+        sku:           prd?.['sku']     ? String(prd['sku'])     : null,
+        barcode:       prd?.['barcode'] ? String(prd['barcode']) : null,
+        selling_price: Number(prd?.['selling_price'] ?? 0),
+        category_name: String(cat?.['name'] ?? '—'),
       }
     })
 
@@ -239,7 +275,6 @@ export const purchasesRepository = {
 
     if (prodLines && prodLines.length > 0) {
       for (const line of prodLines as { product_id: string; quantity: number }[]) {
-        // Fetch current stock
         const { data: prod, error: fetchErr } = await supabase
           .from('products')
           .select('stock_qty')
