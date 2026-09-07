@@ -218,40 +218,49 @@ export function AddDeviceInlineForm({
         )}
       </div>
 
-      {/* IMEI 1 + IMEI 2 — يدعم سكان مرة واحدة ويقسم الرقمين */}
+      {/* IMEI — حقل سكان واحد يقرأ IMEI1 و IMEI2 بأي فاصل */}
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-          IMEI 1 * <span className="text-gray-400 dark:text-gray-500 font-normal">(سكان مرة واحدة يملأ الاتنين)</span>
+          IMEI * <span className="text-gray-400 dark:text-gray-500 font-normal">(سكان مرة واحدة يملأ الاتنين تلقائي)</span>
         </label>
         <input
-          value={form.imei1}
+          autoFocus
+          value={form.imei2 ? `${form.imei1} / ${form.imei2}` : form.imei1}
           onChange={e => {
             const raw = e.target.value
-            // محاولة تقسيم الرقمين بأي فاصل شائع
-            const parts = raw.split(/[\s,;/|\-]+/).map(s => s.trim()).filter(Boolean)
+            // يقبل أي فاصل: space · / | - , ; tab وحتى بدون فاصل لو 30 رقم متتالي
+            const parts = raw.split(/[\s/|,;\t]+/).map(s => s.trim()).filter(s => s.length > 0)
             if (parts.length >= 2) {
               set('imei1', parts[0])
               set('imei2', parts[1])
+            } else if (raw.replace(/[^0-9]/g, '').length >= 30) {
+              // IMEI1+IMEI2 ملصقين ببعض بدون فاصل — 15 + 15
+              const digits = raw.replace(/[^0-9]/g, '')
+              set('imei1', digits.slice(0, 15))
+              set('imei2', digits.slice(15, 30))
             } else {
-              set('imei1', raw)
+              set('imei1', raw.trim())
+              set('imei2', '')
             }
           }}
-          placeholder="355XXXXXXXXXXXX أو IMEI1/IMEI2"
+          placeholder="سكان الباركود — أو اكتب يدوي IMEI1 / IMEI2"
           className={inp}
-          maxLength={50}
+          maxLength={60}
         />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">IMEI 1</label>
-          <input value={form.imei1} onChange={e => set('imei1', e.target.value)}
-            placeholder="355XXXXXXXXXXXX" className={inp} maxLength={20} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">IMEI 2</label>
-          <input value={form.imei2} onChange={e => set('imei2', e.target.value)}
-            placeholder="اختياري" className={inp} maxLength={20} />
-        </div>
+        {(form.imei1 || form.imei2) && (
+          <div className="flex gap-4 mt-1 px-1">
+            {form.imei1 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-semibold text-blue-600 dark:text-blue-400">IMEI 1: </span>{form.imei1}
+              </span>
+            )}
+            {form.imei2 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-semibold text-green-600 dark:text-green-400">IMEI 2: </span>{form.imei2}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Storage + Color + Condition */}
