@@ -339,7 +339,13 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
       await createMutation.mutateAsync(salePayload)
       onClose()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع'
+      const msg = err instanceof Error
+        ? err.message
+        : (err as Record<string,unknown>)?.['message']
+          ? String((err as Record<string,unknown>)['message'])
+          : (err as Record<string,unknown>)?.['details']
+            ? String((err as Record<string,unknown>)['details'])
+            : JSON.stringify(err)
       setError(msg)
     }
   }
@@ -360,7 +366,13 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
       })
       onClose()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع'
+      const msg = err instanceof Error
+        ? err.message
+        : (err as Record<string,unknown>)?.['message']
+          ? String((err as Record<string,unknown>)['message'])
+          : (err as Record<string,unknown>)?.['details']
+            ? String((err as Record<string,unknown>)['details'])
+            : JSON.stringify(err)
       setError(msg)
     }
   }
