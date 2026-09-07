@@ -10,8 +10,10 @@ import {
   useReportSummary, useDeviceSalesReport, useStockValueReport,
   useSupplierPurchasesReport, useDailyActivityReport, useLowStockReport,
   useTopCustomersReport, useProductMovementReport, useDeviceMovementReport,
+  useCashierPerformance,
 } from '@/hooks/useReports'
 import { useSupplierLedger } from '@/hooks/usePayments'
+import { useExpenses } from '@/hooks/useExpenses'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/constants/statusMaps'
 import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
@@ -32,6 +34,10 @@ import { SuppliersTabContent } from './tabs/SuppliersTab'
 import { CustomersTabContent } from './tabs/CustomersTab'
 import { AlertsTabContent }    from './tabs/AlertsTab'
 import { MovementTabContent }  from './tabs/MovementTab'
+import { ProfitTabContent }       from './tabs/ProfitTab'
+import { BrandsTabContent }       from './tabs/BrandsTab'
+import { ExpensesReportTabContent } from './tabs/ExpensesReportTab'
+import { CashierTabContent }      from './tabs/CashierTab'
 import type { Tab } from './types'
 
 // ── Tab config ────────────────────────────────────────────────────────────────
@@ -44,6 +50,10 @@ const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
   { value: 'customers',  label: 'العملاء',             icon: Users          },
   { value: 'alerts',     label: 'التنبيهات',           icon: AlertTriangle  },
   { value: 'movement',   label: 'SOH + حركة المخزون', icon: RefreshCw      },
+  { value: 'profit',     label: 'الربحية التفصيلية',   icon: TrendingUp     },
+  { value: 'brands',     label: 'تحليل البراندات',     icon: BarChart2      },
+  { value: 'expenses',   label: 'المصروفات',            icon: DollarSign     },
+  { value: 'cashier',    label: 'أداء الكاشير',         icon: Users          },
 ]
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -69,6 +79,10 @@ export function ReportsPage() {
   const { data: lowStock = [], isLoading: lowLoad } = useLowStockReport()
   const { data: customers = [], isLoading: custLoad } = useTopCustomersReport(filterFrom || undefined, filterTo || undefined)
   const { data: supplierLedger = [] } = useSupplierLedger()
+  const { data: expenses = [],     isLoading: expLoad     } = useExpenses()
+  const { data: cashierData = [],  isLoading: cashierLoad } = useCashierPerformance(
+    filterFrom || undefined, filterTo || undefined
+  )
 
   const today        = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
@@ -88,6 +102,8 @@ export function ReportsPage() {
     selectedSupplierId, setSelectedSupplierId,
     refetchProd, refetchDev,
     filterFrom, filterTo,
+    expenses, expLoad,
+    cashierData, cashierLoad,
     exportMovementCsv: () => {
       if (movType === 'products') exportToExcel(`تقرير-حركة-المنتجات-${movFrom}-${movTo}`, SOH_PRODUCT_HEADERS, prodMovement, 'حركة المنتجات', `الفترة من ${movFrom} إلى ${movTo}`)
       else exportToExcel(`تقرير-حركة-الأجهزة-${movFrom}-${movTo}`, SOH_DEVICE_HEADERS, devMovement, 'حركة الأجهزة', `الفترة من ${movFrom} إلى ${movTo}`)
@@ -196,6 +212,10 @@ export function ReportsPage() {
       {tab === 'customers' && <CustomersTabContent {...tabProps} />}
       {tab === 'alerts'    && <AlertsTabContent    {...tabProps} />}
       {tab === 'movement'  && <MovementTabContent  {...tabProps} />}
+      {tab === 'profit'    && <ProfitTabContent       {...tabProps} />}
+      {tab === 'brands'    && <BrandsTabContent        {...tabProps} />}
+      {tab === 'expenses'  && <ExpensesReportTabContent {...tabProps} />}
+      {tab === 'cashier'   && <CashierTabContent        {...tabProps} />}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 // src/pages/reports/types.ts
-export type Tab = 'overview' | 'sales' | 'stock' | 'suppliers' | 'customers' | 'alerts' | 'movement'
+export type Tab = 'overview' | 'sales' | 'stock' | 'suppliers' | 'customers' | 'alerts' | 'movement' | 'profit' | 'brands' | 'expenses' | 'cashier'
 
 export interface SalesRow { brand_name:string; model_name:string; total_units:number; total_cost:number; total_revenue:number; profit:number; margin_pct:number }
 export interface StockRow { brand_name:string; model_name:string; count:number; total_cost:number; total_selling:number }

@@ -1,6 +1,6 @@
 // src/hooks/useReports.ts
 import { useQuery } from '@tanstack/react-query'
-import { reportsService } from '@/services/reports.service'
+import { reportsService, cashierReportService } from '@/services/reports.service'
 
 const KEYS = {
   summary:        ['reports', 'summary']             as const,
@@ -56,6 +56,14 @@ export function useDeviceMovementReport(from: string, to: string) {
     queryKey: KEYS.devMovement(from, to),
     queryFn:  () => reportsService.getDeviceMovement(from, to),
     enabled:  !!from && !!to,
+    ...OPTS,
+  })
+}
+
+export function useCashierPerformance(from?: string, to?: string) {
+  return useQuery({
+    queryKey: ['reports', 'cashier_performance', from, to] as const,
+    queryFn:  () => cashierReportService.getCashierPerformance(from, to),
     ...OPTS,
   })
 }

@@ -1,5 +1,5 @@
 // src/services/reports.service.ts
-import { reportsRepository } from '@/repositories/reports.repository'
+import { reportsRepository, cashierReportRepository } from '@/repositories/reports.repository'
 import type {
   DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
   DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
@@ -65,4 +65,11 @@ export const reportsService = {
       lowStockCount:     lowStock.length,
     }
   },
+}
+
+export type { CashierPerformanceRow } from '@/repositories/reports.repository'
+
+export const cashierReportService = {
+  getCashierPerformance: (from?: string, to?: string) =>
+    cashierReportRepository.getCashierPerformance(from, to),
 }

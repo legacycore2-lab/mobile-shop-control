@@ -420,3 +420,61 @@ export const reportsRepository = {
       .sort((a, b) => b.sold_in_period - a.sold_in_period)
   },
 }
+
+// ── أداء الكاشير ──────────────────────────────────────────────────────────────
+
+export interface CashierPerformanceRow {
+  cashier_id:    string
+  cashier_name:  string
+  invoice_count: number
+  total_revenue: number
+  total_devices: number
+  total_products: number
+  avg_invoice:   number
+}
+
+export const cashierReportRepository = {
+
+  getCashierPerformance: async (from?: string, to?: string): Promise<CashierPerformanceRow[]> => {
+    let query = supabase
+      .from('sale_invoices')
+      .select(`
+        id, total_amount, invoice_date, status,
+        profiles!created_by ( id, full_name ),
+        sale_invoice_devices ( id ),
+        sale_invoice_products ( id, quantity )
+      `)
+      .eq('status', 'confirmed')
+    if (from) query = query.gte('invoice_date', from)
+    if (to)   query = query.lte('invoice_date', to)
+    const { data, error } = await query
+    if (error) throw error
+
+    const map = new Map<string, CashierPerformanceRow>()
+    for (const row of (data ?? []) as unknown[]) {
+      const r       = row as Record<string, unknown>
+      const profile = r['profiles'] as Record<string, unknown> | null
+      if (!profile) continue
+      const cid   = String(profile['id'])
+      const cname = String(profile['full_name'] ?? '—')
+      const rev   = Number(r['total_amount'] ?? 0)
+      const devs  = Array.isArray(r['sale_invoice_devices'])  ? r['sale_invoice_devices'].length  : 0
+      const prods = Array.isArray(r['sale_invoice_products'])
+        ? (r['sale_invoice_products'] as Record<string, unknown>[]).reduce((s, p) => s + Number(p['quantity'] ?? 1), 0)
+        : 0
+
+      if (!map.has(cid)) {
+        map.set(cid, { cashier_id: cid, cashier_name: cname, invoice_count: 0, total_revenue: 0, total_devices: 0, total_products: 0, avg_invoice: 0 })
+      }
+      const e = map.get(cid)!
+      e.invoice_count++
+      e.total_revenue  += rev
+      e.total_devices  += devs
+      e.total_products += prods
+    }
+
+    return Array.from(map.values())
+      .map(e => ({ ...e, avg_invoice: e.invoice_count > 0 ? e.total_revenue / e.invoice_count : 0 }))
+      .sort((a, b) => b.total_revenue - a.total_revenue)
+  },
+}
