@@ -60,16 +60,40 @@ export function printHeader(title: string, subtitle: string, dateRange?: string)
 
 export function openPrint(body: string, title: string, dateRange?: string) {
   const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
-    <meta charset="UTF-8"><title>${title}</title>
-    <style>${printStyles()}</style>
-  </head><body><div class="page">
-    ${printHeader(title, 'Mobile Shop Control — نظام إدارة المحل', dateRange)}
-    ${body}
-    <div class="footer">
-      <span>Mobile Shop Control — نظام إدارة المحل</span>
-      <span>${title} — ${new Date().toLocaleDateString('ar-EG')}</span>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      * { font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, Arial, sans-serif !important; }
+      ${printStyles()}
+      body { font-family: 'Noto Naskh Arabic', Tahoma, Arial, sans-serif !important; }
+      .close-btn {
+        position: fixed; top: 12px; left: 12px; z-index: 9999;
+        width: 36px; height: 36px; border-radius: 50%;
+        background: #dc2626; color: #fff; border: none;
+        font-size: 18px; cursor: pointer; display: flex;
+        align-items: center; justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      }
+      @media print { .close-btn { display: none !important; } }
+    </style>
+  </head><body>
+    <button class="close-btn" onclick="window.close()">✕</button>
+    <div class="page">
+      ${printHeader(title, 'Mobile Shop Control — نظام إدارة المحل', dateRange)}
+      ${body}
+      <div class="footer">
+        <span>Mobile Shop Control — نظام إدارة المحل</span>
+        <span>${title} — ${new Date().toLocaleDateString('en-US')}</span>
+      </div>
     </div>
-  </div><script>window.onload=()=>window.print()</script></body></html>`
+    <script>
+      // Auto print after fonts load
+      document.fonts.ready.then(() => window.print())
+    </script>
+  </body></html>`
   const win = window.open('', '_blank')
   if (win) { win.document.write(html); win.document.close() }
 }
@@ -322,10 +346,18 @@ export async function printSuppliers(suppliers: unknown[], suppliersWithIds: unk
     `
   }).join('')
 
+  const arabicFontLink = '<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">'
+  const closeBtnStyle = `.close-btn{position:fixed;top:12px;left:12px;z-index:9999;width:36px;height:36px;border-radius:50%;background:#dc2626;color:#fff;border:none;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}@media print{.close-btn{display:none!important}}`
   const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
-    <meta charset="UTF-8"><title>تقرير الموردين</title>
-    <style>${styles}</style>
-  </head><body>${suppliersHtml}<script>window.onload=()=>window.print()</script></body></html>`
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تقرير الموردين</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    ${arabicFontLink}
+    <style>*{font-family:'Noto Naskh Arabic',Tahoma,Arial,sans-serif!important}${closeBtnStyle}${styles}</style>
+  </head><body>
+    <button class="close-btn" onclick="window.close()">✕</button>
+    ${suppliersHtml}
+    <script>document.fonts.ready.then(()=>window.print())</script>
+  </body></html>`
 
   const win = window.open('', '_blank')
   if (win) { win.document.write(html); win.document.close() }
