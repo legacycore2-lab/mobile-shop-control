@@ -9,11 +9,12 @@ import {
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import { LabelPrintModal, type LabelData } from './LabelPrintModal'
 import { useCreatePurchase } from '@/hooks/usePurchases'
-import { useSuppliers } from '@/hooks/useSuppliers'
+import { useSuppliers, useCreateSupplier } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
 import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel } from '@/hooks/useDevices'
 import { useProductCategories, useCreateProduct, useCreateCategory } from '@/hooks/useProducts'
 import type { DeviceFormData } from '@/services/devices.service'
+import type { SupplierFormData } from '@/services/suppliers.service'
 import type { ProductFormData } from '@/services/products.service'
 import { AddDeviceInlineForm } from './components/DeviceInlineForm'
 import { AddProductInlineForm } from './components/ProductInlineForm'
@@ -31,6 +32,12 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const createMutation           = useCreatePurchase()
 
   const [supplierId,    setSupplierId]    = useState('')
+  const [showAddSupplier, setShowAddSupplier] = useState(false)
+  const [newSupName,      setNewSupName]      = useState('')
+  const [newSupPhone,     setNewSupPhone]     = useState('')
+  const [supSaving,       setSupSaving]       = useState(false)
+  const [supError,        setSupError]        = useState('')
+  const createSupplier = useCreateSupplier()
   const [invoiceDate,   setInvoiceDate]   = useState(new Date().toISOString().split('T')[0])
   const [paidAmount,    setPaidAmount]    = useState('')
   const [discount,      setDiscount]      = useState('0')
@@ -54,6 +61,27 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   }
 
   // ── Device lines ──────────────────────────────────────────────────────────
+
+  async function handleCreateSupplier() {
+    if (!newSupName.trim()) return setSupError('اسم المورد مطلوب')
+    setSupSaving(true); setSupError('')
+    try {
+      const sup = await createSupplier.mutateAsync({
+        name:            newSupName.trim(),
+        phone:           newSupPhone.trim(),
+        address:         '',
+        opening_balance: 0,
+        notes:           '',
+        is_active:       true,
+        created_by:      profile?.id ?? '',
+      } satisfies SupplierFormData)
+      setSupplierId(sup.id)
+      setShowAddSupplier(false)
+      setNewSupName(''); setNewSupPhone('')
+    } catch (e) {
+      setSupError(e instanceof Error ? e.message : 'حدث خطأ')
+    } finally { setSupSaving(false) }
+  }
 
   function handleDeviceAdded(line: AddedDevice) {
     setDeviceLines(prev => [...prev, line])
@@ -197,13 +225,65 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <label className={labelCls}>المورد <span className="text-red-500">*</span></label>
-                  <select value={supplierId} onChange={e => setSupplierId(e.target.value)}
-                    required className={inputCls + ' cursor-pointer'}>
-                    <option value="">اختر المورد</option>
-                    {suppliers.filter(s => s.is_active).map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select value={supplierId} onChange={e => setSupplierId(e.target.value)}
+                      required className={inputCls + ' cursor-pointer flex-1'}>
+                      <option value="">اختر المورد</option>
+                      {suppliers.filter(s => s.is_active).map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <button type="button"
+                      onClick={() => { setShowAddSupplier(v => !v); setSupError('') }}
+                      title="إضافة مورد جديد"
+                      className="w-10 h-10 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex-shrink-0">
+                      <Plus size={16} />
+                    </button>
+                  </div>
+
+                  {/* Inline add supplier form */}
+                  {showAddSupplier && (
+                    <div className="mt-2 border border-blue-200 dark:border-blue-800 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 p-4 space-y-3">
+                      <p className="text-xs font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                        <Plus size={11} /> مورد جديد
+                      </p>
+                      <div className="grid grid-cols-1 gap-2">
+                        <input
+                          value={newSupName}
+                          onChange={e => setNewSupName(e.target.value)}
+                          placeholder="اسم المورد *"
+                          className={inputCls}
+                          autoFocus
+                        />
+                        <input
+                          value={newSupPhone}
+                          onChange={e => setNewSupPhone(e.target.value)}
+                          placeholder="رقم الهاتف (اختياري)"
+                          dir="ltr"
+                          className={inputCls + ' text-right'}
+                        />
+                      </div>
+                      {supError && (
+                        <p className="text-xs text-red-500 font-medium">{supError}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <button type="button"
+                          onClick={() => { setShowAddSupplier(false); setNewSupName(''); setNewSupPhone(''); setSupError('') }}
+                          className="flex-1 h-8 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                          إلغاء
+                        </button>
+                        <button type="button"
+                          onClick={() => void handleCreateSupplier()}
+                          disabled={supSaving || !newSupName.trim()}
+                          className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
+                          {supSaving
+                            ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            : <Plus size={12} />}
+                          إضافة
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>تاريخ الفاتورة <span className="text-red-500">*</span></label>
