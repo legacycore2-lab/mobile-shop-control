@@ -93,8 +93,19 @@ export interface DeviceMovementRow {
 
 export const reportsRepository = {
 
+  // ── إجمالي إيرادات الفواتير المؤكدة (بعد الخصم) ─────────────────────────
+  getConfirmedInvoicesRevenue: async (): Promise<number> => {
+    const { data, error } = await supabase
+      .from('sale_invoices')
+      .select('total_amount')
+      .eq('status', 'confirmed')
+    if (error) throw error
+    return ((data ?? []) as { total_amount: number }[])
+      .reduce((s, r) => s + Number(r.total_amount ?? 0), 0)
+  },
+
   // ── مبيعات الأجهزة ────────────────────────────────────────────────────────
-  // بنقرأ من sale_invoice_devices عشان ناخد السعر الفعلي بعد الخصم
+  // بنقرأ من sale_invoice_devices عشان ناخد السعر الفعلي بدون توزيع خصم
   getDeviceSalesSummary: async (from?: string, to?: string): Promise<DeviceSalesSummary[]> => {
     let query = supabase
       .from('sale_invoice_devices')

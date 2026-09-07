@@ -40,12 +40,14 @@ export const reportsService = {
     reportsRepository.getDeviceMovement(from, to),
 
   getSummary: async (): Promise<ReportSummary> => {
-    const [sales, stock, lowStock] = await Promise.all([
+    const [sales, stock, lowStock, invoiceRevenue] = await Promise.all([
       reportsRepository.getDeviceSalesSummary(undefined, undefined),
       reportsRepository.getStockValue(),
       reportsRepository.getLowStockDetailed(),
+      reportsRepository.getConfirmedInvoicesRevenue(),
     ])
-    const totalRevenue   = sales.reduce((s, r) => s + r.total_revenue, 0)
+    // الإيراد الإجمالي من total_amount بعد الخصم
+    const totalRevenue   = invoiceRevenue
     const totalCostSold  = sales.reduce((s, r) => s + r.total_cost,    0)
     const totalProfit    = totalRevenue - totalCostSold
     const totalUnits     = sales.reduce((s, r) => s + r.total_units,   0)
