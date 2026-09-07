@@ -273,6 +273,11 @@ export function DashboardPage() {
     .filter(s => Number(s.balance) > 0)
     .sort((a, b) => Number(b.balance) - Number(a.balance))
     .slice(0, 5)
+
+  // رصيد دائن = مجموع ما دفعناه زيادة للموردين
+  const supplierCreditBalance = supplierLedger
+    .filter(s => Number(s.balance) < 0)
+    .reduce((sum, s) => sum + Math.abs(Number(s.balance)), 0)
   const topCustomerDebts = customerLedger
     .filter(c => Number(c.balance) > 0)
     .sort((a, b) => Number(b.balance) - Number(a.balance))
@@ -331,11 +336,14 @@ export function DashboardPage() {
             trend={{ value: `${salePaidPct.toFixed(0)}% محصّل`, up: salePaidPct >= 75 }}
           />
           <KpiCard
-            label="إجمالي المدفوع (مشتريات)"
-            value={`${fmt(purPaid)} ج`}
-            sub={`متبقي: ${fmt(purDue)} ج`}
-            icon={CreditCard} color="indigo"
-            trend={{ value: `${purPaidPct.toFixed(0)}% مدفوع`, up: purPaidPct >= 75 }}
+            label="رصيد دائن عند الموردين"
+            value={`${fmt(supplierCreditBalance)} ج`}
+            sub={supplierCreditBalance > 0 ? `متبقي للخصم: ${fmt(purDue)} ج` : `مستحق للموردين: ${fmt(purDue)} ج`}
+            icon={CreditCard} color={supplierCreditBalance > 0 ? 'teal' : 'indigo'}
+            trend={supplierCreditBalance > 0
+              ? { value: 'رصيد دائن', up: true }
+              : { value: `${purPaidPct.toFixed(0)}% مدفوع`, up: purPaidPct >= 75 }
+            }
           />
         </div>
       </div>
@@ -413,41 +421,37 @@ export function DashboardPage() {
         {/* Purchases Payment Chart */}
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
           <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-            <ShoppingBag size={14} className="text-purple-500" /> سداد المشتريات
+            <ShoppingBag size={14} className="text-purple-500" /> وضع المشتريات
           </p>
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0">
-              <MiniDonut paidPct={purPaidPct} duePct={purDuePct} />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs text-gray-500 dark:text-gray-400">إجمالي الفواتير</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-white">{fmt(purchases)} ج</span>
             </div>
-            <div className="flex-1 space-y-3">
-              <div>
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">مدفوع</span>
-                </div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{fmt(purPaid)} ج</p>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs text-gray-500 dark:text-gray-400">مستحق للموردين</span>
+              <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{fmt(purDue)} ج</span>
+            </div>
+            {supplierCreditBalance > 0 && (
+              <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-xs text-gray-500 dark:text-gray-400">رصيد دائن (دفعت زيادة)</span>
+                <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{fmt(supplierCreditBalance)} ج</span>
               </div>
-              <div>
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">متبقي</span>
-                </div>
-                <p className="text-sm font-bold text-amber-600 dark:text-amber-400">{fmt(purDue)} ج</p>
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">ملغية</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                  {(purchaseStats?.cancelled ?? 0)} فاتورة
-                </p>
-              </div>
+            )}
+            <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs text-gray-500 dark:text-gray-400">فواتير مؤكدة</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{purchaseStats?.confirmed ?? 0} فاتورة</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">ملغية</span>
+              <span className="text-sm font-semibold text-gray-500 dark:text-gray-500">{purchaseStats?.cancelled ?? 0} فاتورة</span>
             </div>
           </div>
-          <div className="mt-4 space-y-2">
-            <ProgressBar label="نسبة السداد" value={purPaid} max={purchases} color="bg-purple-500" />
-          </div>
+          {purDue > 0 && (
+            <div className="mt-3 space-y-1">
+              <ProgressBar label="نسبة السداد الصافية" value={purchases - purDue} max={purchases} color="bg-purple-500" />
+            </div>
+          )}
         </div>
       </div>
 
