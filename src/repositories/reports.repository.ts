@@ -105,7 +105,7 @@ export const reportsRepository = {
   },
 
   // ── مبيعات الأجهزة ────────────────────────────────────────────────────────
-  // بنقرأ من sale_invoice_devices عشان ناخد السعر الفعلي بدون توزيع خصم
+  // بنقرأ من sale_invoice_devices — الإيراد الفعلي = total_amount الفاتورة مقسم على الأجهزة نسبياً
   getDeviceSalesSummary: async (from?: string, to?: string): Promise<DeviceSalesSummary[]> => {
     let query = supabase
       .from('sale_invoice_devices')
@@ -116,41 +116,58 @@ export const reportsRepository = {
           sold_at,
           mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
         ),
-        sale_invoices!invoice_id ( status, invoice_date, total_amount, discount, id )
+        sale_invoices!invoice_id ( status, invoice_date, total_amount, discount )
       `)
     const { data, error } = await query
     if (error) throw error
 
-    const map = new Map<string, DeviceSalesSummary>()
+    // أول خطوة: نجمع كل بنود كل فاتورة عشان نعمل توزيع نسبي للـ total_amount
+    type InvLine = { actualSell: number; cost: number; bname: string; mname: string }
+    const invMap = new Map<string, { total_amount: number; lines: InvLine[] }>()
+
     for (const row of (data ?? []) as unknown[]) {
-      const r    = row as Record<string, unknown>
-      const inv  = r['sale_invoices'] as Record<string, unknown> | null
-      const dev  = r['mobile_devices'] as Record<string, unknown> | null
-      // بس الفواتير المؤكدة
+      const r   = row as Record<string, unknown>
+      const inv = r['sale_invoices'] as Record<string, unknown> | null
+      const dev = r['mobile_devices'] as Record<string, unknown> | null
       if (!inv || inv['status'] !== 'confirmed') continue
-      // فلتر التاريخ
       const invDate = String(inv['invoice_date'] ?? '')
       if (from && invDate < from) continue
       if (to   && invDate > to)   continue
 
       const model = dev?.['mobile_models'] as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
+      // key الفاتورة = invoice_date + total_amount (تقريب — Supabase مش بيرجع invoice_id هنا)
+      const invKey  = `${invDate}::${Number(inv['total_amount'] ?? 0)}`
+      const totalAmt = Number(inv['total_amount'] ?? 0)
+      const actualSell = Number(r['actual_selling_price'] ?? 0)
+      const sell = actualSell > 0 ? actualSell : Number(dev?.['selling_price'] ?? 0)
+      const cost = Number(dev?.['cost_price'] ?? 0)
       const bname = String(brand?.['name'] ?? '—')
       const mname = String(model?.['name'] ?? '—')
-      const key   = `${bname}::${mname}`
-      const cost  = Number(dev?.['cost_price'] ?? 0)
-      // السعر الفعلي = actual_selling_price من بند الفاتورة (بعد أي تعديل يدوي)
-      const actualSell = Number(r['actual_selling_price'] ?? 0)
-      const rev   = actualSell > 0 ? actualSell : Number(dev?.['selling_price'] ?? 0)
 
-      if (!map.has(key)) {
-        map.set(key, { brand_name: bname, model_name: mname,
-          total_units: 0, total_cost: 0, total_revenue: 0, profit: 0, margin_pct: 0 })
+      if (!invMap.has(invKey)) invMap.set(invKey, { total_amount: totalAmt, lines: [] })
+      invMap.get(invKey)!.lines.push({ actualSell: sell, cost, bname, mname })
+    }
+
+    // ثاني خطوة: نوزع total_amount على الأجهزة نسبياً
+    const map = new Map<string, DeviceSalesSummary>()
+    for (const { total_amount, lines } of invMap.values()) {
+      const sumSell = lines.reduce((s, l) => s + l.actualSell, 0)
+      for (const line of lines) {
+        const { cost, bname, mname } = line
+        // الإيراد الفعلي لكل جهاز = نسبته من total_amount (بعد الخصم)
+        const rev = sumSell > 0 ? (line.actualSell / sumSell) * total_amount : 0
+        const key = `${bname}::${mname}`
+
+        if (!map.has(key)) {
+          map.set(key, { brand_name: bname, model_name: mname,
+            total_units: 0, total_cost: 0, total_revenue: 0, profit: 0, margin_pct: 0 })
+        }
+        const e = map.get(key)!
+        e.total_units++
+        e.total_cost    += cost
+        e.total_revenue += rev
       }
-      const e = map.get(key)!
-      e.total_units++
-      e.total_cost    += cost
-      e.total_revenue += rev
     }
 
     return Array.from(map.values()).map(e => ({
@@ -281,22 +298,27 @@ export const reportsRepository = {
   },
 
   // ── أفضل العملاء ──────────────────────────────────────────────────────────
+  // بنقرأ من sale_invoices عشان ناخد total_amount بعد الخصم
   getTopCustomers: async (from?: string, to?: string): Promise<TopCustomer[]> => {
-    const { data, error } = await supabase
-      .from('mobile_devices')
-      .select('actual_selling_price, selling_price, customers!sold_to_customer_id ( id, name )')
-      .eq('status', 'sold').not('sold_to_customer_id', 'is', null)
+    let query = supabase
+      .from('sale_invoices')
+      .select('total_amount, invoice_date, customer_id, customers!customer_id ( id, name ), sale_invoice_devices ( id )')
+      .eq('status', 'confirmed')
+      .not('customer_id', 'is', null)
+    if (from) query = query.gte('invoice_date', from)
+    if (to)   query = query.lte('invoice_date', to)
+    const { data, error } = await query
     if (error) throw error
     const map = new Map<string, TopCustomer>()
     for (const row of (data ?? []) as unknown[]) {
       const r    = row as Record<string, unknown>
       const cust = r['customers'] as Record<string, unknown> | null
       if (!cust) continue
-      const id  = String(cust['id'])
-      const _actual = Number(r['actual_selling_price'] ?? 0)
-      const rev = _actual > 0 ? _actual : Number(r['selling_price'] ?? 0)
+      const id   = String(cust['id'])
+      const rev  = Number(r['total_amount'] ?? 0)
+      const devs = Array.isArray(r['sale_invoice_devices']) ? r['sale_invoice_devices'].length : 0
       if (!map.has(id)) map.set(id, { customer_id: id, customer_name: String(cust['name']), device_count: 0, total_spent: 0 })
-      const e = map.get(id)!; e.device_count++; e.total_spent += rev
+      const e = map.get(id)!; e.device_count += devs; e.total_spent += rev
     }
     return Array.from(map.values()).sort((a, b) => b.total_spent - a.total_spent).slice(0, 10)
   },
@@ -404,6 +426,7 @@ export const reportsRepository = {
       const key    = `${bname}::${mname}`
       const status = String(r['status'] ?? '')
       const cost   = Number(r['cost_price'] ?? 0)
+      // في الـ movement report بنستخدم actual_selling_price كتقريب — الخصم على مستوى الفاتورة
       const _act = Number(r['actual_selling_price'] ?? 0)
       const rev    = _act > 0 ? _act : Number(r['selling_price'] ?? 0)
       const createdOn = String(r['created_at'] ?? '').split('T')[0]
