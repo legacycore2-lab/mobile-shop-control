@@ -238,14 +238,27 @@ export async function printSuppliers(suppliers: unknown[], suppliersWithIds: unk
   const total = rows.reduce((s,r)=>s+r.total_cost,0)
   const today = new Date().toLocaleDateString('ar-EG', {year:'numeric',month:'long',day:'numeric'})
 
-  // Fetch invoices for each supplier
+  // Fetch invoices + payments for each supplier
   const { paymentsService } = await import('@/services/payments.service')
   
   const supplierInvoicesMap = new Map<string, Awaited<ReturnType<typeof paymentsService.getPurchaseInvoicesBySupplier>>>()
+  const invoicePaymentsMap  = new Map<string, { amount: number; payment_method: string; payment_date: string }[]>()
+
   for (const s of suppIds) {
     try {
       const invoices = await paymentsService.getPurchaseInvoicesBySupplier(s.supplier_id)
       supplierInvoicesMap.set(s.supplier_id, invoices)
+      // Fetch payments for each invoice
+      for (const inv of invoices) {
+        try {
+          const pays = await paymentsService.getByInvoice(inv.id)
+          invoicePaymentsMap.set(inv.id, pays.map(p => ({
+            amount: p.amount,
+            payment_method: p.payment_method,
+            payment_date: p.payment_date,
+          })))
+        } catch { /* skip */ }
+      }
     } catch { /* skip */ }
   }
 
@@ -314,20 +327,37 @@ export async function printSuppliers(suppliers: unknown[], suppliersWithIds: unk
             <tr><th>#</th><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>الخصم</th><th>المدفوع</th><th>المتبقي / الرصيد</th></tr>
           </thead>
           <tbody>
-            ${invoices.map((inv,i) => `<tr>
+            ${invoices.map((inv,i) => {
+              const pays = invoicePaymentsMap.get(inv.id) ?? []
+              const METHOD: Record<string,string> = { cash: 'نقدي', bank_transfer: 'تحويل', check: 'شيك', other: 'أخرى' }
+              const paysHtml = pays.length > 1 ? pays.map((p,pi) => `
+                <tr style="background:#f0fdf4!important">
+                  <td></td>
+                  <td colspan="2" style="font-size:10px;color:#15803d;padding-right:24px">
+                    ↳ دفعة ${pi+1}: ${new Date(p.payment_date).toLocaleDateString('ar-EG')} — ${METHOD[p.payment_method]??p.payment_method}
+                  </td>
+                  <td></td><td></td>
+                  <td style="font-size:10px;color:#15803d;font-weight:700">${fmt(p.amount)} ج</td>
+                  <td></td>
+                </tr>`).join('') : ''
+              return `<tr>
               <td>${i+1}</td>
               <td><strong>${inv.invoice_number}</strong></td>
               <td>${new Date(inv.invoice_date).toLocaleDateString('ar-EG')}</td>
               <td>${fmt(inv.total_amount)} ج</td>
               <td>${inv.discount > 0 ? fmt(inv.discount)+' ج' : '—'}</td>
-              <td>${fmt(inv.paid_amount)} ج</td>
+              <td>
+                ${fmt(inv.paid_amount)} ج
+                ${pays.length > 1 ? `<span style="font-size:9px;color:#15803d;display:block">${pays.length} دفعات</span>` : ''}
+              </td>
               <td>${inv.remaining < 0
                 ? `<span class="badge badge-blue">رصيد دائن ${fmt(Math.abs(inv.remaining))} ج</span>`
                 : inv.remaining > 0
                   ? `<span class="badge badge-red">${fmt(inv.remaining)} ج</span>`
                   : `<span class="badge badge-green">مسدد ✓</span>`
               }</td>
-            </tr>`).join('')}
+            </tr>${paysHtml}`
+            }).join('')}
             <tr class="total-row">
               <td colspan="3"><strong>الإجمالي</strong></td>
               <td><strong>${fmt(totalInv)} ج</strong></td>
@@ -352,7 +382,7 @@ export async function printSuppliers(suppliers: unknown[], suppliersWithIds: unk
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تقرير الموردين</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     ${arabicFontLink}
-    <style>*{font-family:'Noto Naskh Arabic',Tahoma,Arial,sans-serif!important}${closeBtnStyle}${styles}</style>
+    <style>*{font-family:'Noto Naskh Arabic','Traditional Arabic','Arabic Typesetting',Tahoma,Arial,sans-serif!important}${closeBtnStyle}${styles}</style>
   </head><body>
     <button class="close-btn" onclick="window.close()">✕</button>
     ${suppliersHtml}
