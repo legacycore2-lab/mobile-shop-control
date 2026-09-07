@@ -5,7 +5,7 @@ import {
   Search, ScanLine, Zap, CheckCircle, Package,
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
-import { useCreateSale, useInStockDevices } from '@/hooks/usePos'
+import { useCreateSale, useConfirmSale, useInStockDevices } from '@/hooks/usePos'
 import { useCustomers } from '@/hooks/useCustomers'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/lib/auth'
@@ -153,7 +153,8 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const { data: customers  = [] } = useCustomers()
   const { data: products   = [] } = useProducts()
   const { data: inStock    = [] } = useInStockDevices()
-  const createMutation            = useCreateSale()
+  const createMutation  = useCreateSale()
+  const confirmMutation = useConfirmSale()
 
   const [customerId,    setCustomerId]    = useState('')
   const [invoiceDate,   setInvoiceDate]   = useState(new Date().toISOString().split('T')[0])
@@ -316,23 +317,51 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const afterDisc    = Math.max(0, grandTotal - (Number(discount) || 0))
   const remaining    = Math.max(0, afterDisc - (Number(paidAmount) || 0))
 
-  async function handleSubmit(e: React.FormEvent) {
+  const salePayload = {
+    customer_id:   customerId || '',
+    invoice_date:  invoiceDate,
+    paid_amount:   Number(paidAmount)  || 0,
+    discount:      Number(discount)    || 0,
+    notes,
+    created_by:    profile?.id         ?? '',
+    device_lines:  deviceLines,
+    product_lines: productLines,
+  }
+
+  async function handleSaveDraft(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (!deviceLines.length && !productLines.length) {
+      setError('أضف جهاز أو منتج واحد على الأقل')
+      return
+    }
     try {
-      await createMutation.mutateAsync({
-        customer_id:   customerId || '',
-        invoice_date:  invoiceDate,
-        paid_amount:   Number(paidAmount)  || 0,
-        discount:      Number(discount)    || 0,
-        notes,
-        created_by:    profile?.id         ?? '',
-        device_lines:  deviceLines,
-        product_lines: productLines,
+      await createMutation.mutateAsync(salePayload)
+      onClose()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع'
+      setError(msg)
+    }
+  }
+
+  async function handleConfirmDirect(e: React.MouseEvent) {
+    e.preventDefault()
+    setError('')
+    if (!deviceLines.length && !productLines.length) {
+      setError('أضف جهاز أو منتج واحد على الأقل')
+      return
+    }
+    try {
+      const invoice = await createMutation.mutateAsync(salePayload)
+      await confirmMutation.mutateAsync({
+        id: invoice.id,
+        customerId: customerId || null,
+        soldById: profile?.id ?? '',
       })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ')
+      const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع'
+      setError(msg)
     }
   }
 
@@ -362,7 +391,7 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <form onSubmit={e => void handleSubmit(e)}>
+        <form onSubmit={e => void handleSaveDraft(e)}>
           <div className="px-6 py-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
 
             {/* ── Scan Preview (أهم حاجة — فوق كل حاجة) ── */}
@@ -599,15 +628,21 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex gap-2 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-wrap">
             <button type="button" onClick={onClose}
               className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               إلغاء
             </button>
-            <button type="submit" disabled={createMutation.isPending}
+            <button type="submit" disabled={createMutation.isPending || confirmMutation.isPending}
+              className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50">
+              {createMutation.isPending && <span className="w-3.5 h-3.5 border-2 border-gray-400/30 border-t-gray-500 rounded-full animate-spin" />}
+              <FileText size={13} /> مسودة
+            </button>
+            <button type="button" onClick={e => void handleConfirmDirect(e)}
+              disabled={createMutation.isPending || confirmMutation.isPending}
               className="h-9 px-5 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center gap-2">
-              {createMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              <FileText size={14} /> حفظ كمسودة
+              {confirmMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              <CheckCircle size={14} /> تأكيد الفاتورة
             </button>
           </div>
         </form>
