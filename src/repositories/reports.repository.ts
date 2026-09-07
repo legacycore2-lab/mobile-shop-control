@@ -94,30 +94,43 @@ export interface DeviceMovementRow {
 export const reportsRepository = {
 
   // ── مبيعات الأجهزة ────────────────────────────────────────────────────────
+  // بنقرأ من sale_invoice_devices عشان ناخد السعر الفعلي بعد الخصم
   getDeviceSalesSummary: async (from?: string, to?: string): Promise<DeviceSalesSummary[]> => {
     let query = supabase
-      .from('mobile_devices')
+      .from('sale_invoice_devices')
       .select(`
-        cost_price, actual_selling_price, selling_price, status, sold_at,
-        mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
+        actual_selling_price,
+        mobile_devices!device_id (
+          cost_price, selling_price,
+          sold_at,
+          mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
+        ),
+        sale_invoices!invoice_id ( status, invoice_date, total_amount, discount, id )
       `)
-      .eq('status', 'sold')
-    if (from) query = query.gte('sold_at', from)
-    if (to)   query = query.lte('sold_at', to + 'T23:59:59')
     const { data, error } = await query
     if (error) throw error
 
     const map = new Map<string, DeviceSalesSummary>()
     for (const row of (data ?? []) as unknown[]) {
-      const r     = row as Record<string, unknown>
-      const model = r['mobile_models'] as Record<string, unknown> | null
+      const r    = row as Record<string, unknown>
+      const inv  = r['sale_invoices'] as Record<string, unknown> | null
+      const dev  = r['mobile_devices'] as Record<string, unknown> | null
+      // بس الفواتير المؤكدة
+      if (!inv || inv['status'] !== 'confirmed') continue
+      // فلتر التاريخ
+      const invDate = String(inv['invoice_date'] ?? '')
+      if (from && invDate < from) continue
+      if (to   && invDate > to)   continue
+
+      const model = dev?.['mobile_models'] as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
       const bname = String(brand?.['name'] ?? '—')
       const mname = String(model?.['name'] ?? '—')
       const key   = `${bname}::${mname}`
-      const cost  = Number(r['cost_price']           ?? 0)
+      const cost  = Number(dev?.['cost_price'] ?? 0)
+      // السعر الفعلي = actual_selling_price من بند الفاتورة (بعد أي تعديل يدوي)
       const actualSell = Number(r['actual_selling_price'] ?? 0)
-      const rev   = actualSell > 0 ? actualSell : Number(r['selling_price'] ?? 0)
+      const rev   = actualSell > 0 ? actualSell : Number(dev?.['selling_price'] ?? 0)
 
       if (!map.has(key)) {
         map.set(key, { brand_name: bname, model_name: mname,
