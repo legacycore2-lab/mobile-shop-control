@@ -1,4 +1,5 @@
 import { purchasesRepository, type InvoiceDeviceLine, type InvoiceProductLine, type InvoiceDetail } from '@/repositories/purchases.repository'
+import { paymentsRepository } from '@/repositories/payments.repository'
 import type { PurchaseInvoice, PurchaseInvoiceView } from '@/types/database'
 
 export type { InvoiceDetail }
@@ -60,6 +61,22 @@ export const purchasesService = {
       purchasesRepository.addDeviceLines(invoice.id, form.device_lines),
       purchasesRepository.addProductLines(invoice.id, form.product_lines),
     ])
+
+    // لو فيه دفعة أولى → تتسجل في payments عشان الـ trigger يحسب صح
+    if (Number(form.paid_amount) > 0) {
+      await paymentsRepository.create({
+        payment_type:   'purchase',
+        invoice_id:     invoice.id,
+        invoice_number: invoiceNumber,
+        party_type:     'supplier',
+        party_id:       form.supplier_id,
+        amount:         Number(form.paid_amount),
+        payment_method: 'cash',
+        payment_date:   form.invoice_date,
+        notes:          'دفعة أولى عند إنشاء الفاتورة',
+        created_by:     form.created_by || null,
+      })
+    }
 
     return invoice
   },
