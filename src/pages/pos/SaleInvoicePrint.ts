@@ -526,7 +526,12 @@ export function printSaleInvoice(data: SaleInvoicePrintData) {
   </div>
 
 </div>
-<script>window.onload = () => { window.print(); }</script>
+<style>
+  .close-btn{position:fixed;top:12px;left:12px;z-index:9999;width:36px;height:36px;border-radius:50%;background:#dc2626;color:#fff;border:none;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;line-height:1}
+  @media print{.close-btn{display:none!important}}
+</style>
+<button class="close-btn" onclick="window.close()">✕</button>
+<script>document.fonts.ready.then(() => window.print())</script>
 </body>
 </html>`
 
