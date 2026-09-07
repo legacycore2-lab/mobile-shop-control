@@ -131,6 +131,13 @@ export function SettingsPage() {
       await supabase.from('product_categories').delete().neq('id', '00000000-0000-0000-0000-000000000000')
       await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000')
       await supabase.from('suppliers').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      // Seed default brands after reset
+      const defaultBrands = [
+        'iPhone', 'Huawei', 'Nokia', 'Lenovo', 'Realme', 'Redmi', 'Xiaomi',
+      ]
+      for (const name of defaultBrands) {
+        await supabase.from('mobile_brands').insert({ name } as never)
+      }
       setResetDone(true)
     } catch (err) {
       setResetError(err instanceof Error ? err.message : 'حدث خطأ أثناء الحذف')
