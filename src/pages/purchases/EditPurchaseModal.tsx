@@ -465,7 +465,6 @@ export function EditPurchaseModal({
           supplier_id:  supplierId,
           invoice_date: invoiceDate,
           total_amount: totalAmount,
-          paid_amount:  Number(paidAmount) || 0,
           discount:     Number(discount)   || 0,
           notes:        notes.trim() || null,
         } as never)
@@ -556,8 +555,11 @@ export function EditPurchaseModal({
                 <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>المبلغ المدفوع (ج.م)</label>
-                <input type="number" min="0" step="0.01" value={paidAmount} onChange={e => setPaidAmount(e.target.value)} placeholder="0.00" className={inputCls} />
+                <label className={labelCls}>الدفعة الأولى (ج.م)</label>
+                <div className="h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center gap-2 cursor-not-allowed select-none">
+                  <span>{fmt(Number(paidAmount))} ج</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">غير قابل للتعديل</span>
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelCls}>الخصم (ج.م)</label>
