@@ -57,36 +57,34 @@ export interface TopCustomer {
   total_spent:   number
 }
 
-// ── SOH + Movement ────────────────────────────────────────────────────────────
-
 export interface ProductMovementRow {
   id:            string
   name:          string
   category_name: string
   sku:           string | null
   unit:          string
-  opening_stock: number   // رصيد أول الفترة (تقريبي)
-  purchased:     number   // مشتريات في الفترة
-  sold:          number   // مبيعات في الفترة
-  current_stock: number   // رصيد حالي
+  opening_stock: number
+  purchased:     number
+  sold:          number
+  current_stock: number
   cost_price:    number
   selling_price: number
-  stock_value:   number   // قيمة الرصيد الحالي
+  stock_value:   number
   reorder_level: number
   needs_reorder: boolean
 }
 
 export interface DeviceMovementRow {
-  brand_name:    string
-  model_name:    string
-  total:         number   // إجمالي الأجهزة
-  in_stock:      number   // في المخزون الآن
-  sold_in_period:number   // بيع في الفترة
-  purchased_in_period: number // اشتري في الفترة
-  avg_cost:      number
-  avg_sell:      number
-  total_revenue: number
-  total_profit:  number
+  brand_name:          string
+  model_name:          string
+  total:               number
+  in_stock:            number
+  sold_in_period:      number
+  purchased_in_period: number
+  avg_cost:            number
+  avg_sell:            number
+  total_revenue:       number
+  total_profit:        number
 }
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -94,18 +92,20 @@ export interface DeviceMovementRow {
 export const reportsRepository = {
 
   // ── إجمالي إيرادات الفواتير المؤكدة (بعد الخصم) ─────────────────────────
-  getConfirmedInvoicesRevenue: async (): Promise<number> => {
-    const { data, error } = await supabase
+  getConfirmedInvoicesRevenue: async (from?: string, to?: string): Promise<number> => {
+    let query = supabase
       .from('sale_invoices')
       .select('total_amount')
       .eq('status', 'confirmed')
+    if (from) query = query.gte('invoice_date', from)
+    if (to)   query = query.lte('invoice_date', to)
+    const { data, error } = await query
     if (error) throw error
     return ((data ?? []) as { total_amount: number }[])
       .reduce((s, r) => s + Number(r.total_amount ?? 0), 0)
   },
 
-  // ── مبيعات الأجهزة ────────────────────────────────────────────────────────
-  // بنقرأ من sale_invoice_devices — الإيراد الفعلي = total_amount الفاتورة مقسم على الأجهزة نسبياً
+  // ── مبيعات الأجهزة — الإيراد من total_amount موزع نسبياً على الأجهزة ─────
   getDeviceSalesSummary: async (from?: string, to?: string): Promise<DeviceSalesSummary[]> => {
     let query = supabase
       .from('sale_invoice_devices')
@@ -113,17 +113,16 @@ export const reportsRepository = {
         actual_selling_price,
         mobile_devices!device_id (
           cost_price, selling_price,
-          sold_at,
           mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
         ),
-        sale_invoices!invoice_id ( status, invoice_date, total_amount, discount )
+        sale_invoices!invoice_id ( id, status, invoice_date, total_amount )
       `)
     const { data, error } = await query
     if (error) throw error
 
-    // أول خطوة: نجمع كل بنود كل فاتورة عشان نعمل توزيع نسبي للـ total_amount
-    type InvLine = { actualSell: number; cost: number; bname: string; mname: string }
-    const invMap = new Map<string, { total_amount: number; lines: InvLine[] }>()
+    // خطوة 1: نجمع بنود كل فاتورة
+    type Line = { sell: number; cost: number; bname: string; mname: string }
+    const invMap = new Map<string, { total_amount: number; lines: Line[] }>()
 
     for (const row of (data ?? []) as unknown[]) {
       const r   = row as Record<string, unknown>
@@ -134,31 +133,29 @@ export const reportsRepository = {
       if (from && invDate < from) continue
       if (to   && invDate > to)   continue
 
-      const model = dev?.['mobile_models'] as Record<string, unknown> | null
-      const brand = model?.['mobile_brands'] as Record<string, unknown> | null
-      // key الفاتورة = invoice_date + total_amount (تقريب — Supabase مش بيرجع invoice_id هنا)
-      const invKey  = `${invDate}::${Number(inv['total_amount'] ?? 0)}`
+      const model  = dev?.['mobile_models']   as Record<string, unknown> | null
+      const brand  = model?.['mobile_brands'] as Record<string, unknown> | null
+      const invId  = String(inv['id'] ?? invDate)
       const totalAmt = Number(inv['total_amount'] ?? 0)
       const actualSell = Number(r['actual_selling_price'] ?? 0)
       const sell = actualSell > 0 ? actualSell : Number(dev?.['selling_price'] ?? 0)
-      const cost = Number(dev?.['cost_price'] ?? 0)
-      const bname = String(brand?.['name'] ?? '—')
-      const mname = String(model?.['name'] ?? '—')
 
-      if (!invMap.has(invKey)) invMap.set(invKey, { total_amount: totalAmt, lines: [] })
-      invMap.get(invKey)!.lines.push({ actualSell: sell, cost, bname, mname })
+      if (!invMap.has(invId)) invMap.set(invId, { total_amount: totalAmt, lines: [] })
+      invMap.get(invId)!.lines.push({
+        sell,
+        cost:  Number(dev?.['cost_price'] ?? 0),
+        bname: String(brand?.['name'] ?? '—'),
+        mname: String(model?.['name'] ?? '—'),
+      })
     }
 
-    // ثاني خطوة: نوزع total_amount على الأجهزة نسبياً
+    // خطوة 2: نوزع total_amount نسبياً على الأجهزة
     const map = new Map<string, DeviceSalesSummary>()
     for (const { total_amount, lines } of invMap.values()) {
-      const sumSell = lines.reduce((s, l) => s + l.actualSell, 0)
-      for (const line of lines) {
-        const { cost, bname, mname } = line
-        // الإيراد الفعلي لكل جهاز = نسبته من total_amount (بعد الخصم)
-        const rev = sumSell > 0 ? (line.actualSell / sumSell) * total_amount : 0
+      const sumSell = lines.reduce((s, l) => s + l.sell, 0)
+      for (const { sell, cost, bname, mname } of lines) {
+        const rev = sumSell > 0 ? (sell / sumSell) * total_amount : 0
         const key = `${bname}::${mname}`
-
         if (!map.has(key)) {
           map.set(key, { brand_name: bname, model_name: mname,
             total_units: 0, total_cost: 0, total_revenue: 0, profit: 0, margin_pct: 0 })
@@ -193,12 +190,11 @@ export const reportsRepository = {
     const map = new Map<string, StockValueRow>()
     for (const row of (data ?? []) as unknown[]) {
       const r     = row as Record<string, unknown>
-      const model = r['mobile_models'] as Record<string, unknown> | null
+      const model = r['mobile_models']   as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
       const bname = String(brand?.['name'] ?? '—')
       const mname = String(model?.['name'] ?? '—')
       const key   = `${bname}::${mname}`
-
       if (!map.has(key)) map.set(key, { brand_name: bname, model_name: mname, count: 0, total_cost: 0, total_selling: 0 })
       const e = map.get(key)!
       e.count++
@@ -220,8 +216,8 @@ export const reportsRepository = {
 
     const map = new Map<string, SupplierPurchaseSummary>()
     for (const row of (data ?? []) as unknown[]) {
-      const r    = row as Record<string, unknown>
-      const sup  = r['suppliers'] as Record<string, unknown> | null
+      const r   = row as Record<string, unknown>
+      const sup = r['suppliers'] as Record<string, unknown> | null
       if (!sup) continue
       const id   = String(sup['id'])
       const name = String(sup['name'])
@@ -297,8 +293,7 @@ export const reportsRepository = {
       .sort((a, b) => a.stock_qty - b.stock_qty)
   },
 
-  // ── أفضل العملاء ──────────────────────────────────────────────────────────
-  // بنقرأ من sale_invoices عشان ناخد total_amount بعد الخصم
+  // ── أفضل العملاء — من total_amount بعد الخصم ─────────────────────────────
   getTopCustomers: async (from?: string, to?: string): Promise<TopCustomer[]> => {
     let query = supabase
       .from('sale_invoices')
@@ -318,14 +313,15 @@ export const reportsRepository = {
       const rev  = Number(r['total_amount'] ?? 0)
       const devs = Array.isArray(r['sale_invoice_devices']) ? r['sale_invoice_devices'].length : 0
       if (!map.has(id)) map.set(id, { customer_id: id, customer_name: String(cust['name']), device_count: 0, total_spent: 0 })
-      const e = map.get(id)!; e.device_count += devs; e.total_spent += rev
+      const e = map.get(id)!
+      e.device_count += devs
+      e.total_spent  += rev
     }
     return Array.from(map.values()).sort((a, b) => b.total_spent - a.total_spent).slice(0, 10)
   },
 
-  // ── SOH + Movement للمنتجات (بفلتر تاريخ) ────────────────────────────────
+  // ── SOH + Movement للمنتجات ────────────────────────────────────────────────
   getProductMovement: async (from: string, to: string): Promise<ProductMovementRow[]> => {
-    // كل المنتجات النشطة
     const { data: prods, error: prodErr } = await supabase
       .from('products')
       .select('id, name, sku, unit, stock_qty, cost_price, selling_price, reorder_level, product_categories!category_id ( name )')
@@ -333,8 +329,6 @@ export const reportsRepository = {
       .order('name')
     if (prodErr) throw prodErr
 
-    // بنود المبيعات في الفترة
-    const toEnd = to + 'T23:59:59'
     const { data: saleLines, error: saleErr } = await supabase
       .from('sale_invoice_products')
       .select('product_id, quantity, sale_invoices!invoice_id ( invoice_date, status )')
@@ -342,7 +336,6 @@ export const reportsRepository = {
       .lte('sale_invoices.invoice_date', to)
     if (saleErr) throw saleErr
 
-    // بنود المشتريات في الفترة
     const { data: purchLines, error: purchErr } = await supabase
       .from('purchase_invoice_products')
       .select('product_id, quantity, purchase_invoices!invoice_id ( invoice_date, status )')
@@ -350,26 +343,22 @@ export const reportsRepository = {
       .lte('purchase_invoices.invoice_date', to)
     if (purchErr) throw purchErr
 
-    // تجميع المبيعات
     const soldMap = new Map<string, number>()
     for (const row of (saleLines ?? []) as unknown[]) {
-      const r    = row as Record<string, unknown>
-      const inv  = r['sale_invoices'] as Record<string, unknown> | null
+      const r   = row as Record<string, unknown>
+      const inv = r['sale_invoices'] as Record<string, unknown> | null
       if (!inv || inv['status'] === 'cancelled') continue
-      const pid  = String(r['product_id'])
-      const qty  = Number(r['quantity'] ?? 0)
-      soldMap.set(pid, (soldMap.get(pid) ?? 0) + qty)
+      const pid = String(r['product_id'])
+      soldMap.set(pid, (soldMap.get(pid) ?? 0) + Number(r['quantity'] ?? 0))
     }
 
-    // تجميع المشتريات
     const purchMap = new Map<string, number>()
     for (const row of (purchLines ?? []) as unknown[]) {
-      const r    = row as Record<string, unknown>
-      const inv  = r['purchase_invoices'] as Record<string, unknown> | null
+      const r   = row as Record<string, unknown>
+      const inv = r['purchase_invoices'] as Record<string, unknown> | null
       if (!inv || inv['status'] === 'cancelled') continue
-      const pid  = String(r['product_id'])
-      const qty  = Number(r['quantity'] ?? 0)
-      purchMap.set(pid, (purchMap.get(pid) ?? 0) + qty)
+      const pid = String(r['product_id'])
+      purchMap.set(pid, (purchMap.get(pid) ?? 0) + Number(r['quantity'] ?? 0))
     }
 
     return ((prods ?? []) as unknown[]).map(row => {
@@ -382,55 +371,85 @@ export const reportsRepository = {
       const reorder = Number(r['reorder_level'] ?? 0)
       const sold  = soldMap.get(pid)  ?? 0
       const purch = purchMap.get(pid) ?? 0
-      // رصيد أول الفترة = الرصيد الحالي - مشتريات الفترة + مبيعات الفترة
       const opening = curr - purch + sold
-
       return {
-        id:            pid,
-        name:          String(r['name']),
+        id: pid, name: String(r['name']),
         category_name: String(cat?.['name'] ?? '—'),
-        sku:           r['sku'] ? String(r['sku']) : null,
-        unit:          String(r['unit'] ?? 'قطعة'),
+        sku:  r['sku'] ? String(r['sku']) : null,
+        unit: String(r['unit'] ?? 'قطعة'),
         opening_stock: Math.max(0, opening),
-        purchased:     purch,
-        sold,
-        current_stock: curr,
-        cost_price:    cost,
-        selling_price: sell,
-        stock_value:   curr * cost,
-        reorder_level: reorder,
-        needs_reorder: curr <= reorder,
+        purchased: purch, sold, current_stock: curr,
+        cost_price: cost, selling_price: sell,
+        stock_value: curr * cost,
+        reorder_level: reorder, needs_reorder: curr <= reorder,
       } satisfies ProductMovementRow
     })
   },
 
-  // ── SOH + Movement للأجهزة (بفلتر تاريخ) ────────────────────────────────
+  // ── SOH + Movement للأجهزة — الإيراد من sale_invoices.total_amount ────────
   getDeviceMovement: async (from: string, to: string): Promise<DeviceMovementRow[]> => {
-    const { data, error } = await supabase
+    // نجيب الأجهزة المباعة في الفترة مع بيانات الفاتورة
+    const { data: soldData, error: soldErr } = await supabase
+      .from('sale_invoice_devices')
+      .select(`
+        actual_selling_price,
+        mobile_devices!device_id (
+          cost_price, selling_price, created_at, sold_at,
+          mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
+        ),
+        sale_invoices!invoice_id ( id, status, invoice_date, total_amount )
+      `)
+    if (soldErr) throw soldErr
+
+    // نجيب كل الأجهزة لحساب total و in_stock و purchased_in_period
+    const { data: allDevices, error: allErr } = await supabase
       .from('mobile_devices')
       .select(`
-        status, cost_price, actual_selling_price, selling_price,
-        created_at, sold_at,
+        status, cost_price, created_at, sold_at,
         mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
       `)
-    if (error) throw error
+    if (allErr) throw allErr
+
+    // خطوة 1: نجمع بنود الفواتير المؤكدة في الفترة عشان نوزع total_amount
+    type InvLine = { sell: number; cost: number; bname: string; mname: string; soldOn: string }
+    const invMap = new Map<string, { total_amount: number; lines: InvLine[] }>()
+
+    for (const row of (soldData ?? []) as unknown[]) {
+      const r   = row as Record<string, unknown>
+      const inv = r['sale_invoices'] as Record<string, unknown> | null
+      const dev = r['mobile_devices'] as Record<string, unknown> | null
+      if (!inv || inv['status'] !== 'confirmed') continue
+      const invDate = String(inv['invoice_date'] ?? '')
+      if (invDate < from || invDate > to) continue
+
+      const model  = dev?.['mobile_models']   as Record<string, unknown> | null
+      const brand  = model?.['mobile_brands'] as Record<string, unknown> | null
+      const invId  = String(inv['id'])
+      const totalAmt = Number(inv['total_amount'] ?? 0)
+      const actualSell = Number(r['actual_selling_price'] ?? 0)
+      const sell = actualSell > 0 ? actualSell : Number(dev?.['selling_price'] ?? 0)
+
+      if (!invMap.has(invId)) invMap.set(invId, { total_amount: totalAmt, lines: [] })
+      invMap.get(invId)!.lines.push({
+        sell, cost: Number(dev?.['cost_price'] ?? 0),
+        bname: String(brand?.['name'] ?? '—'),
+        mname: String(model?.['name'] ?? '—'),
+        soldOn: invDate,
+      })
+    }
 
     const map = new Map<string, DeviceMovementRow>()
 
-    for (const row of (data ?? []) as unknown[]) {
+    // خطوة 2: نبني الـ map من كل الأجهزة
+    for (const row of (allDevices ?? []) as unknown[]) {
       const r      = row as Record<string, unknown>
-      const model  = r['mobile_models']  as Record<string, unknown> | null
+      const model  = r['mobile_models']   as Record<string, unknown> | null
       const brand  = model?.['mobile_brands'] as Record<string, unknown> | null
       const bname  = String(brand?.['name'] ?? '—')
       const mname  = String(model?.['name'] ?? '—')
       const key    = `${bname}::${mname}`
       const status = String(r['status'] ?? '')
-      const cost   = Number(r['cost_price'] ?? 0)
-      // في الـ movement report بنستخدم actual_selling_price كتقريب — الخصم على مستوى الفاتورة
-      const _act = Number(r['actual_selling_price'] ?? 0)
-      const rev    = _act > 0 ? _act : Number(r['selling_price'] ?? 0)
       const createdOn = String(r['created_at'] ?? '').split('T')[0]
-      const soldOn    = r['sold_at'] ? String(r['sold_at']).split('T')[0] : null
 
       if (!map.has(key)) {
         map.set(key, {
@@ -444,43 +463,44 @@ export const reportsRepository = {
       const e = map.get(key)!
       e.total++
       if (status === 'in_stock') e.in_stock++
-      // اشتري في الفترة
       if (createdOn >= from && createdOn <= to) e.purchased_in_period++
-      // بيع في الفترة — avg_cost تتراكم مؤقتاً وتُقسم في النهاية
-      if (soldOn && soldOn >= from && soldOn <= to && status === 'sold') {
+    }
+
+    // خطوة 3: نضيف الإيرادات الفعلية من الفواتير موزعة نسبياً
+    for (const { total_amount, lines } of invMap.values()) {
+      const sumSell = lines.reduce((s, l) => s + l.sell, 0)
+      for (const { sell, cost, bname, mname } of lines) {
+        const rev = sumSell > 0 ? (sell / sumSell) * total_amount : 0
+        const key = `${bname}::${mname}`
+        if (!map.has(key)) continue
+        const e = map.get(key)!
         e.sold_in_period++
         e.total_revenue += rev
         e.total_profit  += rev - cost
-        e.avg_cost      += cost   // تراكم مجموع التكاليف
+        e.avg_cost      += cost
       }
     }
 
     return Array.from(map.values())
       .map(e => ({
         ...e,
-        // avg_cost = متوسط تكلفة الأجهزة المباعة في الفترة
-        avg_cost: e.sold_in_period > 0
-          ? parseFloat((e.avg_cost / e.sold_in_period).toFixed(2))
-          : 0,
-        // avg_sell = متوسط سعر بيع الأجهزة المباعة في الفترة
-        avg_sell: e.sold_in_period > 0
-          ? parseFloat((e.total_revenue / e.sold_in_period).toFixed(2))
-          : 0,
+        avg_cost: e.sold_in_period > 0 ? parseFloat((e.avg_cost / e.sold_in_period).toFixed(2)) : 0,
+        avg_sell: e.sold_in_period > 0 ? parseFloat((e.total_revenue / e.sold_in_period).toFixed(2)) : 0,
       }))
       .sort((a, b) => b.sold_in_period - a.sold_in_period)
   },
 }
 
-// ── أداء الكاشير ──────────────────────────────────────────────────────────────
+// ── أداء الكاشير — من total_amount بعد الخصم ──────────────────────────────────
 
 export interface CashierPerformanceRow {
-  cashier_id:    string
-  cashier_name:  string
-  invoice_count: number
-  total_revenue: number
-  total_devices: number
+  cashier_id:     string
+  cashier_name:   string
+  invoice_count:  number
+  total_revenue:  number
+  total_devices:  number
   total_products: number
-  avg_invoice:   number
+  avg_invoice:    number
 }
 
 export const cashierReportRepository = {
@@ -508,7 +528,7 @@ export const cashierReportRepository = {
       const cid   = String(profile['id'])
       const cname = String(profile['full_name'] ?? '—')
       const rev   = Number(r['total_amount'] ?? 0)
-      const devs  = Array.isArray(r['sale_invoice_devices'])  ? r['sale_invoice_devices'].length  : 0
+      const devs  = Array.isArray(r['sale_invoice_devices']) ? r['sale_invoice_devices'].length : 0
       const prods = Array.isArray(r['sale_invoice_products'])
         ? (r['sale_invoice_products'] as Record<string, unknown>[]).reduce((s, p) => s + Number(p['quantity'] ?? 1), 0)
         : 0
