@@ -472,10 +472,51 @@ export function EditPurchaseModal({
           total_amount: totalAmount,
           discount:     Number(discount) || 0,
           notes:        notes.trim() || null,
-          // فقط لو المدير فتح التعديل
-          ...(paidUnlocked ? { paid_amount: Number(paidAmount) || 0 } : {}),
         } as never)
         .eq('id', invoiceId)
+
+      // لو المدير عدّل الدفعة الأولى → حدّث payment الأولى في payments table
+      if (paidUnlocked) {
+        const newPaid = Number(paidAmount) || 0
+        // ابحث عن الـ payment الأولى للفاتورة دي
+        const { data: firstPayRaw } = await supabase
+          .from('payments')
+          .select('id')
+          .eq('invoice_id', invoiceId)
+          .eq('payment_type', 'purchase')
+          .order('payment_date', { ascending: true })
+          .limit(1)
+          .single()
+        const firstPay = firstPayRaw as { id: string } | null
+
+        if (firstPay) {
+          // حدّث الدفعة الأولى
+          await supabase.from('payments')
+            .update({ amount: newPaid } as never)
+            .eq('id', firstPay.id)
+        } else if (newPaid > 0) {
+          // مفيش payments قديمة — أنشئ واحدة
+          const { data: inv } = await supabase
+            .from('purchase_invoices')
+            .select('supplier_id, invoice_date, invoice_number')
+            .eq('id', invoiceId)
+            .single()
+          if (inv) {
+            await supabase.from('payments').insert({
+              payment_type:   'purchase',
+              invoice_id:     invoiceId,
+              invoice_number: (inv as Record<string,string>)['invoice_number'],
+              party_type:     'supplier',
+              party_id:       (inv as Record<string,string>)['supplier_id'],
+              amount:         newPaid,
+              payment_method: 'cash',
+              payment_date:   (inv as Record<string,string>)['invoice_date'],
+              notes:          'دفعة أولى — تعديل بواسطة المدير',
+              created_by:     profile?.id ?? null,
+            } as never)
+          }
+        }
+      }
 
       // 10. Invalidate queries — full sync across all affected screens
       await qc.invalidateQueries({ queryKey: ['purchases'] })
