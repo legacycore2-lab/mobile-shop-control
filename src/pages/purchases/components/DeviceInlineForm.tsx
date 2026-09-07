@@ -218,10 +218,32 @@ export function AddDeviceInlineForm({
         )}
       </div>
 
-      {/* IMEI 1 + IMEI 2 */}
+      {/* IMEI 1 + IMEI 2 — يدعم سكان مرة واحدة ويقسم الرقمين */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+          IMEI 1 * <span className="text-gray-400 dark:text-gray-500 font-normal">(سكان مرة واحدة يملأ الاتنين)</span>
+        </label>
+        <input
+          value={form.imei1}
+          onChange={e => {
+            const raw = e.target.value
+            // محاولة تقسيم الرقمين بأي فاصل شائع
+            const parts = raw.split(/[\s,;/|\-]+/).map(s => s.trim()).filter(Boolean)
+            if (parts.length >= 2) {
+              set('imei1', parts[0])
+              set('imei2', parts[1])
+            } else {
+              set('imei1', raw)
+            }
+          }}
+          placeholder="355XXXXXXXXXXXX أو IMEI1/IMEI2"
+          className={inp}
+          maxLength={50}
+        />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">IMEI 1 *</label>
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">IMEI 1</label>
           <input value={form.imei1} onChange={e => set('imei1', e.target.value)}
             placeholder="355XXXXXXXXXXXX" className={inp} maxLength={20} />
         </div>
