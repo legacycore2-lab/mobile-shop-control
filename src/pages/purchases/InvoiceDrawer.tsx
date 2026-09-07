@@ -1,28 +1,19 @@
-import { useState, useEffect } from 'react'
+// src/pages/purchases/InvoiceDrawer.tsx
+import { useState } from 'react'
 import { Smartphone, Tag, AlertCircle, CheckCircle, CreditCard, X } from 'lucide-react'
-import { usePurchase, useConfirmPurchase, useCancelPurchase, useUpdatePayment } from '@/hooks/usePurchases'
+import { usePurchase, useConfirmPurchase, useCancelPurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { STATUS_MAP, fmt } from './constants'
-import type { InvoiceDetail } from '@/repositories/purchases.repository'
+import { SimplePayModal } from '@/pages/payments/SimplePayModal'
 
 export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
   const { data: detail, isLoading } = usePurchase(invoiceId)
-  const confirmMutation  = useConfirmPurchase()
-  const cancelMutation   = useCancelPurchase()
-  const paymentMutation  = useUpdatePayment()
+  const confirmMutation = useConfirmPurchase()
+  const cancelMutation  = useCancelPurchase()
 
-  const [showPayment, setShowPayment] = useState(false)
-  const [paidAmt, setPaidAmt]         = useState('')
-  const [discount, setDiscount]       = useState('')
-  const [error, setError]             = useState('')
-
-  useEffect(() => {
-    if (detail) {
-      setPaidAmt(String(detail.invoice.paid_amount))
-      setDiscount(String(detail.invoice.discount))
-    }
-  }, [detail])
+  const [showPay, setShowPay] = useState(false)
+  const [error,   setError]   = useState('')
 
   async function handleConfirm() {
     setError('')
@@ -35,17 +26,6 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
     setError('')
     try { await cancelMutation.mutateAsync(invoiceId) }
     catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
-  }
-
-  async function handlePayment(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    try {
-      await paymentMutation.mutateAsync({ id: invoiceId, paid: Number(paidAmt) || 0, discount: Number(discount) || 0 })
-      setShowPayment(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'خطأ')
-    }
   }
 
   const inv = detail?.invoice
@@ -82,23 +62,48 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
             </div>
           ) : inv ? (
             <>
-              {/* Summary */}
+              {/* Financial Summary */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-3">
                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">الملخص المالي</p>
                 {[
                   ['تاريخ الفاتورة', new Date(inv.invoice_date).toLocaleDateString('ar-EG')],
                   ['إجمالي الفاتورة', `${fmt(inv.total_amount)} ج.م`],
-                  ['الخصم', `${fmt(inv.discount)} ج.م`],
-                  ['المدفوع', `${fmt(inv.paid_amount)} ج.م`],
-                  ['المتبقي', `${fmt(inv.remaining)} ج.م`],
+                  ['الخصم',          `${fmt(inv.discount)} ج.م`],
+                  ['إجمالي المدفوع', `${fmt(inv.paid_amount)} ج.م`],
+                  ['المتبقي',        `${fmt(inv.remaining)} ج.م`],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-                    <span className={cn('text-sm font-bold', label === 'المتبقي' && inv.remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white')}>
+                    <span className={cn(
+                      'text-sm font-bold',
+                      label === 'المتبقي' && inv.remaining > 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : label === 'إجمالي المدفوع'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-gray-900 dark:text-white'
+                    )}>
                       {value}
                     </span>
                   </div>
                 ))}
+
+                {/* Pay now button inline — visible only when there's remaining */}
+                {inv.remaining > 0 && inv.status === 'confirmed' && (
+                  <button
+                    onClick={() => setShowPay(true)}
+                    className="w-full mt-1 h-9 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CreditCard size={13} />
+                    تسجيل دفعة — المتبقي {fmt(inv.remaining)} ج
+                  </button>
+                )}
+
+                {inv.remaining === 0 && inv.status === 'confirmed' && (
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 mt-1">
+                    <CheckCircle size={13} />
+                    تم السداد بالكامل
+                  </div>
+                )}
               </div>
 
               {/* Devices */}
@@ -153,44 +158,13 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                   {error}
                 </div>
               )}
-
-              {/* Payment form */}
-              {showPayment && inv.status !== 'cancelled' && (
-                <form onSubmit={e => void handlePayment(e)} className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">تحديث الدفع</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">المدفوع (ج.م)</label>
-                      <input type="number" min="0" step="0.01" value={paidAmt}
-                        onChange={e => setPaidAmt(e.target.value)}
-                        className="h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">الخصم (ج.م)</label>
-                      <input type="number" min="0" step="0.01" value={discount}
-                        onChange={e => setDiscount(e.target.value)}
-                        className="h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button type="button" onClick={() => setShowPayment(false)}
-                      className="h-8 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                      إلغاء
-                    </button>
-                    <button type="submit" disabled={paymentMutation.isPending}
-                      className="h-8 px-4 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50">
-                      حفظ
-                    </button>
-                  </div>
-                </form>
-              )}
             </>
           ) : (
             <p className="text-center text-gray-400 dark:text-gray-600 py-10">لا توجد بيانات</p>
           )}
         </div>
 
-        {/* Actions */}
+        {/* Actions footer */}
         {inv && (
           <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 p-4 flex flex-wrap gap-2">
             {inv.status === 'draft' && (
@@ -206,15 +180,29 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                 </button>
               </>
             )}
-            {inv.status !== 'cancelled' && (
-              <button onClick={() => setShowPayment(v => !v)}
-                className="h-9 px-3 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
-                <CreditCard size={14} /> الدفع
+            {inv.status === 'confirmed' && inv.remaining > 0 && (
+              <button onClick={() => setShowPay(true)}
+                className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2">
+                <CreditCard size={14} /> تسجيل دفعة
               </button>
             )}
           </div>
         )}
       </div>
+
+      {/* Pay Modal */}
+      {showPay && inv && (
+        <SimplePayModal
+          invoiceId={invoiceId}
+          invoiceNumber={inv.invoice_number}
+          partyId={inv.supplier_id ?? ''}
+          partyName={inv.supplier_name ?? ''}
+          partyType="supplier"
+          paymentType="purchase"
+          remaining={inv.remaining}
+          onClose={() => setShowPay(false)}
+        />
+      )}
     </div>
   )
 }
