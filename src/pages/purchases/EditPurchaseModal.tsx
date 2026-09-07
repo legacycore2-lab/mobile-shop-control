@@ -16,6 +16,8 @@ import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
+import { PasswordConfirmModal } from '@/components/ui/PasswordConfirmModal'
+import { Unlock } from 'lucide-react'
 import { fmt } from './constants'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
@@ -277,6 +279,8 @@ export function EditPurchaseModal({
   const [productSearch, setProductSearch] = useState('')
   const [scanProduct,   setScanProduct]   = useState(false)
   const [showAddDevice, setShowAddDevice] = useState(false)
+  const [paidUnlocked,  setPaidUnlocked]  = useState(false)
+  const [showPwdModal,  setShowPwdModal]  = useState(false)
   const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seeded = useRef(false)
@@ -466,8 +470,10 @@ export function EditPurchaseModal({
           supplier_id:  supplierId,
           invoice_date: invoiceDate,
           total_amount: totalAmount,
-          discount:     Number(discount)   || 0,
+          discount:     Number(discount) || 0,
           notes:        notes.trim() || null,
+          // فقط لو المدير فتح التعديل
+          ...(paidUnlocked ? { paid_amount: Number(paidAmount) || 0 } : {}),
         } as never)
         .eq('id', invoiceId)
 
@@ -557,10 +563,33 @@ export function EditPurchaseModal({
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelCls}>الدفعة الأولى (ج.م)</label>
-                <div className="h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center gap-2 cursor-not-allowed select-none">
-                  <span>{fmt(Number(paidAmount))} ج</span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">غير قابل للتعديل</span>
-                </div>
+                {paidUnlocked ? (
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={paidAmount}
+                      onChange={e => setPaidAmount(e.target.value)}
+                      autoFocus
+                      className={inputCls + ' border-orange-400 focus:border-orange-500 focus:ring-orange-500/10'}
+                    />
+                    <button type="button" onClick={() => setPaidUnlocked(false)}
+                      className="h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap transition-colors">
+                      قفل
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1 h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center gap-2 cursor-not-allowed select-none">
+                      <span>{fmt(Number(paidAmount))} ج</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">مقفول</span>
+                    </div>
+                    <button type="button" onClick={() => setShowPwdModal(true)}
+                      title="تعديل بصلاحية المدير"
+                      className="h-10 w-10 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors flex-shrink-0">
+                      <Unlock size={15} />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelCls}>الخصم (ج.م)</label>
@@ -750,7 +779,15 @@ export function EditPurchaseModal({
           </button>
         </div>
 
-        {scanProduct && (
+        {showPwdModal && (
+        <PasswordConfirmModal
+          title="تعديل الدفعة الأولى"
+          description="هذه العملية تتطلب صلاحية المدير"
+          onConfirm={() => { setPaidUnlocked(true); setShowPwdModal(false) }}
+          onClose={() => setShowPwdModal(false)}
+        />
+      )}
+      {scanProduct && (
           <BarcodeScanner title="مسح باركود المنتج" placeholder="باركود أو SKU..."
             onScan={handleProductScan} onClose={() => setScanProduct(false)} />
         )}
