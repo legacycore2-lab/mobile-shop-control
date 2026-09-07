@@ -18,6 +18,8 @@ import type { ProductFormData } from '@/services/products.service'
 import { AddDeviceInlineForm } from './components/DeviceInlineForm'
 import { AddProductInlineForm } from './components/ProductInlineForm'
 import { useAuth } from '@/lib/auth'
+import { cn } from '@/lib/cn'
+import { fmt } from '@/constants/statusMaps'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 type AddedDevice = InvoiceDeviceLine & { label: string }
