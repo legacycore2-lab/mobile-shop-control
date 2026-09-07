@@ -360,12 +360,13 @@ export function EditPurchaseModal({
 
   useUsbScanner(handleUsbScan, !scanProduct)
 
-  // Totals
+  // Totals — paid_amount comes from DB (read-only), discount is editable
   const deviceTotal  = deviceLines .reduce((s, l) => s + l.cost_price,             0)
   const productTotal = productLines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
   const grandTotal   = deviceTotal + productTotal
   const afterDisc    = Math.max(0, grandTotal - (Number(discount) || 0))
-  const remaining    = Math.max(0, afterDisc - (Number(paidAmount) || 0))
+  const actualPaid   = detail?.invoice.paid_amount ?? Number(paidAmount) ?? 0
+  const remaining    = Math.max(0, afterDisc - actualPaid)
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -711,11 +712,12 @@ export function EditPurchaseModal({
             <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-2">
               <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">ملخص الفاتورة</p>
               {[
-                ['أجهزة',     `${deviceLines.length} جهاز — ${fmt(deviceTotal)} ج`],
-                ['منتجات',    `${fmt(productTotal)} ج`],
-                ['الإجمالي',  `${fmt(grandTotal)} ج`],
-                ['بعد الخصم', `${fmt(afterDisc)} ج`],
-                ['المتبقي',   `${fmt(remaining)} ج`],
+                ['أجهزة',        `${deviceLines.length} جهاز — ${fmt(deviceTotal)} ج`],
+                ['منتجات',       `${fmt(productTotal)} ج`],
+                ['الإجمالي',     `${fmt(grandTotal)} ج`],
+                ['بعد الخصم',    `${fmt(afterDisc)} ج`],
+                ['الدفعة الأولى',`${fmt(actualPaid)} ج`],
+                ['المتبقي',      `${fmt(remaining)} ج`],
               ].map(([l, v]) => (
                 <div key={l} className="flex items-center justify-between">
                   <span className="text-xs text-amber-700 dark:text-amber-400">{l}</span>
