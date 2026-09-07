@@ -1,5 +1,5 @@
 // src/pages/pos/CreateSaleModal.tsx
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
   Plus, X, Smartphone, Tag, AlertCircle, FileText,
   Search, ScanLine, Zap, CheckCircle, Package,
@@ -316,6 +316,12 @@ export function CreateSaleModal({ onClose }: { onClose: () => void }) {
   const grandTotal   = deviceTotal + productTotal
   const afterDisc    = Math.max(0, grandTotal - (Number(discount) || 0))
   const remaining    = Math.max(0, afterDisc - (Number(paidAmount) || 0))
+
+  // تحديث المدفوع تلقائياً = إجمالي الفاتورة (افتراضي نقدي)
+  useEffect(() => {
+    if (afterDisc > 0) setPaidAmount(String(afterDisc))
+    else setPaidAmount('')
+  }, [afterDisc])
 
   const salePayload = {
     customer_id:   customerId || '',
