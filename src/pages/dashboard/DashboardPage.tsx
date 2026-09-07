@@ -336,13 +336,18 @@ export function DashboardPage() {
             trend={{ value: `${salePaidPct.toFixed(0)}% محصّل`, up: salePaidPct >= 75 }}
           />
           <KpiCard
-            label="رصيد دائن عند الموردين"
-            value={`${fmt(supplierCreditBalance)} ج`}
-            sub={supplierCreditBalance > 0 ? `متبقي للخصم: ${fmt(purDue)} ج` : `مستحق للموردين: ${fmt(purDue)} ج`}
-            icon={CreditCard} color={supplierCreditBalance > 0 ? 'teal' : 'indigo'}
+            label={supplierCreditBalance > 0 ? 'رصيد دائن عند الموردين' : 'مستحق للموردين'}
+            value={supplierCreditBalance > 0 ? `${fmt(supplierCreditBalance)} ج` : `${fmt(purDue)} ج`}
+            sub={supplierCreditBalance > 0
+              ? `إجمالي المشتريات: ${fmt(purchases)} ج`
+              : `مدفوع: ${fmt(purPaid)} ج · إجمالي: ${fmt(purchases)} ج`}
+            icon={CreditCard}
+            color={supplierCreditBalance > 0 ? 'teal' : purDue > 0 ? 'red' : 'green'}
             trend={supplierCreditBalance > 0
-              ? { value: 'رصيد دائن', up: true }
-              : { value: `${purPaidPct.toFixed(0)}% مدفوع`, up: purPaidPct >= 75 }
+              ? { value: 'دفعت زيادة', up: true }
+              : purDue > 0
+                ? { value: `${purPaidPct.toFixed(0)}% مدفوع`, up: purPaidPct >= 75 }
+                : { value: 'تم السداد بالكامل', up: true }
             }
           />
         </div>
