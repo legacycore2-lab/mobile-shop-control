@@ -16,8 +16,9 @@ export interface SaleFormData {
 }
 
 export interface PosStats {
-  total: number; draft: number; confirmed: number
+  total: number; draft: number; confirmed: number; cancelled: number
   totalRevenue: number; totalPaid: number; totalDue: number
+  totalCostSold: number
 }
 
 export const posService = {

@@ -254,14 +254,16 @@ export function DashboardPage() {
   const stockSelling    = deviceStats?.totalSellingValue ?? 0
   const potentialProfit = stockSelling - stockValue
 
-  const revenue    = saleStats?.totalRevenue ?? 0
-  const revPaid    = saleStats?.totalPaid    ?? 0
-  const revDue     = saleStats?.totalDue     ?? 0
-  const purchases  = purchaseStats?.totalSpent ?? 0
-  const purPaid    = purchaseStats?.totalPaid  ?? 0
-  const purDue     = purchaseStats?.totalDue   ?? 0
+  const revenue      = saleStats?.totalRevenue   ?? 0
+  const revPaid      = saleStats?.totalPaid      ?? 0
+  const revDue       = saleStats?.totalDue       ?? 0
+  const costSold     = saleStats?.totalCostSold  ?? 0   // تكلفة البضاعة المباعة فعلاً
+  const purchases    = purchaseStats?.totalSpent ?? 0
+  const purPaid      = purchaseStats?.totalPaid  ?? 0
+  const purDue       = purchaseStats?.totalDue   ?? 0
 
-  const grossProfit = revenue - purchases
+  // الربح الحقيقي = إيرادات المبيعات - تكلفة البضاعة المباعة فقط (مش كل المشتريات)
+  const grossProfit = revenue - costSold
   const salePaidPct   = revenue  > 0 ? (revPaid  / revenue)  * 100 : 0
   const saleDuePct    = revenue  > 0 ? (revDue   / revenue)  * 100 : 0
   const purPaidPct    = purchases > 0 ? (purPaid  / purchases) * 100 : 0
@@ -347,8 +349,8 @@ export function DashboardPage() {
             <PieChart size={14} className="text-green-500" /> ربحية الأعمال
           </p>
           <div className="grid grid-cols-1 gap-2">
-            <FinBar label="إجمالي الإيرادات" value={revenue}   color="green" />
-            <FinBar label="إجمالي التكاليف"  value={purchases} color="purple" />
+            <FinBar label="إجمالي الإيرادات" value={revenue} color="green" />
+            <FinBar label="تكلفة البضاعة المباعة" value={costSold} color="purple" />
             <div className={cn(
               'rounded-xl border p-4 flex flex-col gap-1',
               grossProfit >= 0

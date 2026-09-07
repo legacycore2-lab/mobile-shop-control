@@ -372,6 +372,7 @@ export const posRepository = {
   },
 
   getStats: async () => {
+    // فواتير المبيعات
     const { data, error } = await supabase
       .from('sale_invoices')
       .select('status, total_amount, paid_amount, discount')
@@ -379,13 +380,40 @@ export const posRepository = {
 
     const rows      = (data ?? []) as { status: string; total_amount: number; paid_amount: number; discount: number }[]
     const confirmed = rows.filter(r => r.status === 'confirmed')
+
+    // تكلفة الأجهزة المباعة فعلاً (cost_price من mobile_devices حالتها sold)
+    const { data: devCost, error: devErr } = await supabase
+      .from('mobile_devices')
+      .select('cost_price')
+      .eq('status', 'sold')
+    if (devErr) throw devErr
+
+    // تكلفة المنتجات المباعة (بنود فواتير مبيعات مؤكدة)
+    const { data: prodLines, error: prodErr } = await supabase
+      .from('sale_invoice_products')
+      .select('quantity, products!product_id ( cost_price ), sale_invoices!invoice_id ( status )')
+    if (prodErr) throw prodErr
+
+    const costDevices = (devCost ?? []).reduce<number>(
+      (s, r) => s + Number((r as Record<string,unknown>)['cost_price'] ?? 0), 0
+    )
+    const costProducts = ((prodLines ?? []) as unknown[]).reduce<number>((s, row) => {
+      const r   = row as Record<string, unknown>
+      const inv = r['sale_invoices'] as Record<string, unknown> | null
+      const prd = r['products']      as Record<string, unknown> | null
+      if (!inv || inv['status'] !== 'confirmed') return s
+      return s + Number(prd?.['cost_price'] ?? 0) * Number(r['quantity'] ?? 0)
+    }, 0)
+
     return {
-      total:        rows.length,
-      draft:        rows.filter(r => r.status === 'draft').length,
-      confirmed:    confirmed.length,
-      totalRevenue: confirmed.reduce((s, r) => s + (r.total_amount ?? 0), 0),
-      totalPaid:    confirmed.reduce((s, r) => s + (r.paid_amount  ?? 0), 0),
-      totalDue:     confirmed.reduce((s, r) => s + Math.max(0, (r.total_amount ?? 0) - (r.paid_amount ?? 0) - (r.discount ?? 0)), 0),
+      total:         rows.length,
+      draft:         rows.filter(r => r.status === 'draft').length,
+      confirmed:     confirmed.length,
+      cancelled:     rows.filter(r => r.status === 'cancelled').length,
+      totalRevenue:  confirmed.reduce((s, r) => s + Number(r.total_amount ?? 0), 0),
+      totalPaid:     confirmed.reduce((s, r) => s + Number(r.paid_amount  ?? 0), 0),
+      totalDue:      confirmed.reduce((s, r) => s + Math.max(0, Number(r.total_amount ?? 0) - Number(r.paid_amount ?? 0) - Number(r.discount ?? 0)), 0),
+      totalCostSold: costDevices + costProducts,
     }
   },
 }
