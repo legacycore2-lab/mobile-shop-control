@@ -116,7 +116,8 @@ export const reportsRepository = {
       const mname = String(model?.['name'] ?? '—')
       const key   = `${bname}::${mname}`
       const cost  = Number(r['cost_price']           ?? 0)
-      const rev   = Number(r['actual_selling_price'] ?? r['selling_price'] ?? 0)
+      const actualSell = Number(r['actual_selling_price'] ?? 0)
+      const rev   = actualSell > 0 ? actualSell : Number(r['selling_price'] ?? 0)
 
       if (!map.has(key)) {
         map.set(key, { brand_name: bname, model_name: mname,
@@ -268,7 +269,8 @@ export const reportsRepository = {
       const cust = r['customers'] as Record<string, unknown> | null
       if (!cust) continue
       const id  = String(cust['id'])
-      const rev = Number(r['actual_selling_price'] ?? r['selling_price'] ?? 0)
+      const _actual = Number(r['actual_selling_price'] ?? 0)
+      const rev = _actual > 0 ? _actual : Number(r['selling_price'] ?? 0)
       if (!map.has(id)) map.set(id, { customer_id: id, customer_name: String(cust['name']), device_count: 0, total_spent: 0 })
       const e = map.get(id)!; e.device_count++; e.total_spent += rev
     }
@@ -378,7 +380,8 @@ export const reportsRepository = {
       const key    = `${bname}::${mname}`
       const status = String(r['status'] ?? '')
       const cost   = Number(r['cost_price'] ?? 0)
-      const rev    = Number(r['actual_selling_price'] ?? r['selling_price'] ?? 0)
+      const _act = Number(r['actual_selling_price'] ?? 0)
+      const rev    = _act > 0 ? _act : Number(r['selling_price'] ?? 0)
       const createdOn = String(r['created_at'] ?? '').split('T')[0]
       const soldOn    = r['sold_at'] ? String(r['sold_at']).split('T')[0] : null
 
