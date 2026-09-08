@@ -23,6 +23,7 @@ import { ImportPage }         from '@/pages/import/ImportPage'
 import { ExpensesPage }       from '@/pages/expenses/ExpensesPage'
 import { QuickScanModal } from '@/pages/dashboard/QuickScanModal'
 import { DeviceFlashCard } from '@/components/shared/DeviceFlashCard'
+import { AppErrorBoundary, PageErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -98,6 +99,7 @@ function Guard() {
   if (!session && !profile) return <LoginPage />
 
   return (
+    <AppErrorBoundary>
     <>
       <RealtimeStarter />
       {/* Global USB Scanner — يقرأ في كل الصفحات */}
@@ -105,21 +107,21 @@ function Guard() {
 
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/"           element={<DashboardPage />} />
-          <Route path="/devices"    element={<DevicesPage />} />
-          <Route path="/pos"        element={<PosPage />} />
-          <Route path="/purchases"  element={<PurchasesPage />} />
-          <Route path="/suppliers"  element={<SuppliersPage />} />
-          <Route path="/customers"  element={<CustomersPage />} />
-          <Route path="/products"   element={<ProductsPage />} />
-          <Route path="/reports"    element={<ReportsPage />} />
-          <Route path="/audit"      element={<AuditLogsPage />} />
-          <Route path="/ledger"                    element={<LedgerPage />} />
-          <Route path="/ledger/:type/:id"          element={<PartyStatementPage />} />
-          <Route path="/expenses"   element={<ExpensesPage />} />
-          <Route path="/import"     element={<ImportPage />} />
-          <Route path="/settings"   element={<SettingsPage />} />
-          <Route path="*"           element={<Navigate to="/" replace />} />
+          <Route path="/"           element={<PageErrorBoundary><DashboardPage /></PageErrorBoundary>} />
+          <Route path="/devices"    element={<PageErrorBoundary><DevicesPage /></PageErrorBoundary>} />
+          <Route path="/pos"        element={<PageErrorBoundary><PosPage /></PageErrorBoundary>} />
+          <Route path="/purchases"  element={<PageErrorBoundary><PurchasesPage /></PageErrorBoundary>} />
+          <Route path="/suppliers"  element={<PageErrorBoundary><SuppliersPage /></PageErrorBoundary>} />
+          <Route path="/customers"  element={<PageErrorBoundary><CustomersPage /></PageErrorBoundary>} />
+          <Route path="/products"   element={<PageErrorBoundary><ProductsPage /></PageErrorBoundary>} />
+          <Route path="/reports"    element={<PageErrorBoundary><ReportsPage /></PageErrorBoundary>} />
+          <Route path="/audit"      element={<PageErrorBoundary><AuditLogsPage /></PageErrorBoundary>} />
+          <Route path="/ledger"                    element={<PageErrorBoundary><LedgerPage /></PageErrorBoundary>} />
+          <Route path="/ledger/:type/:id"          element={<PageErrorBoundary><PartyStatementPage /></PageErrorBoundary>} />
+          <Route path="/expenses"   element={<PageErrorBoundary><ExpensesPage /></PageErrorBoundary>} />
+          <Route path="/import"     element={<PageErrorBoundary><ImportPage /></PageErrorBoundary>} />
+          <Route path="/settings"   element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
+          <Route path="*"           element={<PageErrorBoundary><Navigate to="/" replace /></PageErrorBoundary>} />
         </Route>
       </Routes>
 
@@ -131,6 +133,7 @@ function Guard() {
         />
       )}
     </>
+    </AppErrorBoundary>
   )
 }
 
