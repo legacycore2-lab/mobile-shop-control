@@ -339,6 +339,12 @@ export const posRepository = {
   },
 
   getInStockDevices: async (): Promise<MobileDeviceView[]> => {
+    // أجيب الأجهزة اللي موجودة في أي فاتورة بيع (حتى المسودات) عشان أستثنيها
+    const { data: soldRows } = await supabase
+      .from('sale_invoice_devices')
+      .select('device_id')
+    const soldIds = new Set((soldRows ?? []).map((r: Record<string, unknown>) => String(r['device_id'])))
+
     const { data, error } = await supabase
       .from('mobile_devices')
       .select(`
@@ -353,22 +359,24 @@ export const posRepository = {
       .order('created_at', { ascending: false })
     if (error) throw error
 
-    return ((data ?? []) as unknown[]).map(row => {
-      const r     = row as Record<string, unknown>
-      const model = r['mobile_models']   as Record<string, unknown> | null
-      const brand = model?.['mobile_brands'] as Record<string, unknown> | null
-      const sup   = r['suppliers']       as Record<string, unknown> | null
-      return {
-        ...r,
-        brand_name:     String(brand?.['name'] ?? '—'),
-        model_name:     String(model?.['name'] ?? '—'),
-        supplier_name:  String(sup?.['name']   ?? '—'),
-        customer_name:  null,
-        customer_phone: null,
-        added_by_name:  '—',
-        sold_by_name:   null,
-      } as MobileDeviceView
-    })
+    return ((data ?? []) as unknown[])
+      .filter(row => !soldIds.has(String((row as Record<string, unknown>)['id'])))
+      .map(row => {
+        const r     = row as Record<string, unknown>
+        const model = r['mobile_models']   as Record<string, unknown> | null
+        const brand = model?.['mobile_brands'] as Record<string, unknown> | null
+        const sup   = r['suppliers']       as Record<string, unknown> | null
+        return {
+          ...r,
+          brand_name:     String(brand?.['name'] ?? '—'),
+          model_name:     String(model?.['name'] ?? '—'),
+          supplier_name:  String(sup?.['name']   ?? '—'),
+          customer_name:  null,
+          customer_phone: null,
+          added_by_name:  '—',
+          sold_by_name:   null,
+        } as MobileDeviceView
+      })
   },
 
   getStats: async () => {
