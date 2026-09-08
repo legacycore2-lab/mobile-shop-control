@@ -1,13 +1,20 @@
 // src/repositories/devices.repository.ts
 import { supabase } from '@/lib/supabase'
-import type { MobileDevice, MobileDeviceView, MobileBrand, MobileModel } from '@/types/database'
+import type { MobileDevice, MobileDeviceView, MobileBrand, MobileModel, DeviceStatus } from '@/types/database'
 
 type DeviceInsert = Omit<MobileDevice, 'id' | 'created_at' | 'updated_at'>
 type DeviceUpdate = Partial<Omit<MobileDevice, 'id' | 'created_at' | 'updated_at'>>
 
+export interface DeviceStatusCount {
+  status:            DeviceStatus
+  count:             number
+  total_cost_value:  number
+  total_sell_value:  number
+}
+
 export const devicesRepository = {
 
-  // ── Devices ──────────────────────────────────────────────────────────────
+  // ── Devices ───────────────────────────────────────────────────────────────
 
   getAll: async (): Promise<MobileDeviceView[]> => {
     const { data, error } = await supabase
@@ -26,6 +33,28 @@ export const devicesRepository = {
       .single()
     if (error) throw error
     return data as unknown as MobileDeviceView | null
+  },
+
+  // ── Aggregate stats — no full table fetch ─────────────────────────────────
+
+  getStatusCounts: async (): Promise<DeviceStatusCount[]> => {
+    const { data, error } = await supabase
+      .from('mobile_devices')
+      .select('status, cost_price, selling_price')
+    if (error) throw error
+
+    const map = new Map<string, DeviceStatusCount>()
+    for (const row of (data ?? []) as { status: string; cost_price: number; selling_price: number | null }[]) {
+      const s = row.status
+      if (!map.has(s)) map.set(s, { status: s as DeviceStatus, count: 0, total_cost_value: 0, total_sell_value: 0 })
+      const e = map.get(s)!
+      e.count++
+      if (s === 'in_stock') {
+        e.total_cost_value += Number(row.cost_price    ?? 0)
+        e.total_sell_value += Number(row.selling_price ?? 0)
+      }
+    }
+    return Array.from(map.values())
   },
 
   lookupByImei: async (imei: string): Promise<MobileDeviceView[]> => {
@@ -56,7 +85,6 @@ export const devicesRepository = {
     return data as MobileDevice
   },
 
-  // ── Soft Delete — يضع is_deleted = true بدل الحذف الفعلي ──────────────
   softDelete: async (id: string): Promise<void> => {
     const { error } = await supabase
       .from('mobile_devices')
@@ -65,16 +93,7 @@ export const devicesRepository = {
     if (error) throw error
   },
 
-  // ── Hard Delete — للطوارئ فقط (مش مستخدم في الواجهة) ────────────────
-  remove: async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('mobile_devices')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
-  },
-
-  // ── Brands ───────────────────────────────────────────────────────────────
+  // ── Brands ────────────────────────────────────────────────────────────────
 
   getAllBrands: async (): Promise<MobileBrand[]> => {
     const { data, error } = await supabase
@@ -95,7 +114,7 @@ export const devicesRepository = {
     return data as MobileBrand
   },
 
-  // ── Models ───────────────────────────────────────────────────────────────
+  // ── Models ────────────────────────────────────────────────────────────────
 
   getModelsByBrand: async (brandId: string): Promise<MobileModel[]> => {
     const { data, error } = await supabase
