@@ -1,12 +1,11 @@
 // src/repositories/purchases.repository.ts
 // ── SQL queries ONLY — no business logic ─────────────────────────────────────
 import { supabase } from '@/lib/supabase'
+import { buildPurchaseInvoiceView, adjustProductStock, n } from '@/lib/db-helpers'
 import type {
   PurchaseInvoice, PurchaseInvoiceView,
-  PurchaseInvoiceDevice, PurchaseInvoiceProduct,
+  PurchaseInvoiceDetail, PurchaseInvoiceDetailDevice, PurchaseInvoiceDetailProduct,
 } from '@/types/database'
-
-// ── Line insert shapes ────────────────────────────────────────────────────────
 
 export interface InvoiceDeviceLine {
   device_id:  string
@@ -19,37 +18,6 @@ export interface InvoiceProductLine {
   unit_price: number
 }
 
-// ── Detail shape ──────────────────────────────────────────────────────────────
-
-export interface InvoiceDetailDevice extends PurchaseInvoiceDevice {
-  brand_name:      string
-  model_name:      string
-  imei1:           string
-  imei2:           string | null
-  storage:         string | null
-  color:           string | null
-  condition:       string
-  selling_price:   number
-  warranty_months: number
-}
-
-export interface InvoiceDetailProduct extends PurchaseInvoiceProduct {
-  product_name:  string
-  unit:          string
-  sku:           string | null
-  barcode:       string | null
-  selling_price: number
-  category_name: string
-}
-
-export interface InvoiceDetail {
-  invoice:  PurchaseInvoiceView
-  devices:  InvoiceDetailDevice[]
-  products: InvoiceDetailProduct[]
-}
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
 const INVOICE_SELECT = `
   id, invoice_number, supplier_id, invoice_date,
   total_amount, paid_amount, discount, remaining,
@@ -59,29 +27,6 @@ const INVOICE_SELECT = `
   devices_agg:purchase_invoice_devices ( id ),
   products_agg:purchase_invoice_products ( id )
 `
-
-function toView(r: Record<string, unknown>): PurchaseInvoiceView {
-  const sup = r['suppliers']     as Record<string, unknown> | null
-  const cby = r['profiles']      as Record<string, unknown> | null
-  const dev = r['devices_agg']   as unknown[] | null
-  const prd = r['products_agg']  as unknown[] | null
-  const total    = Number(r['total_amount'] ?? 0)
-  const paid     = Number(r['paid_amount']  ?? 0)
-  const discount = Number(r['discount']     ?? 0)
-  return {
-    ...r,
-    total_amount:    total,
-    paid_amount:     paid,
-    discount:        discount,
-    remaining:       total - paid - discount,
-    supplier_name:   String(sup?.['name']      ?? '—'),
-    created_by_name: String(cby?.['full_name'] ?? '—'),
-    devices_count:   (dev  ?? []).length,
-    products_count:  (prd  ?? []).length,
-  } as PurchaseInvoiceView
-}
-
-// ── Repository ────────────────────────────────────────────────────────────────
 
 export const purchasesRepository = {
 
@@ -98,19 +43,19 @@ export const purchasesRepository = {
       const r = row as Record<string, unknown>
       return {
         ...(r as unknown as PurchaseInvoiceView),
-        total_amount:    Number(r['total_amount']   ?? 0),
-        paid_amount:     Number(r['paid_amount']    ?? 0),
-        discount:        Number(r['discount']       ?? 0),
-        remaining:       Number(r['remaining']      ?? 0),
-        devices_count:   Number(r['devices_count']  ?? 0),
-        products_count:  Number(r['products_count'] ?? 0),
+        total_amount:    n(r['total_amount']),
+        paid_amount:     n(r['paid_amount']),
+        discount:        n(r['discount']),
+        remaining:       n(r['remaining']),
+        devices_count:   n(r['devices_count']),
+        products_count:  n(r['products_count']),
         supplier_name:   String(r['supplier_name']   ?? '—'),
         created_by_name: String(r['created_by_name'] ?? '—'),
       } as PurchaseInvoiceView
     })
   },
 
-  getById: async (id: string): Promise<InvoiceDetail | null> => {
+  getById: async (id: string): Promise<PurchaseInvoiceDetail | null> => {
     const { data: inv, error: invErr } = await supabase
       .from('purchase_invoices')
       .select(INVOICE_SELECT)
@@ -119,7 +64,7 @@ export const purchasesRepository = {
     if (invErr) throw invErr
     if (!inv) return null
 
-    const invoice = toView(inv as unknown as Record<string, unknown>)
+    const invoice = buildPurchaseInvoiceView(inv as unknown as Record<string, unknown>)
 
     const { data: devRows, error: devErr } = await supabase
       .from('purchase_invoice_devices')
@@ -134,26 +79,26 @@ export const purchasesRepository = {
       .eq('invoice_id', id)
     if (devErr) throw devErr
 
-    const devices: InvoiceDetailDevice[] = ((devRows ?? []) as unknown[]).map(row => {
+    const devices: PurchaseInvoiceDetailDevice[] = ((devRows ?? []) as unknown[]).map(row => {
       const d     = row as Record<string, unknown>
-      const dev   = d['mobile_devices']    as Record<string, unknown> | null
-      const model = dev?.['mobile_models'] as Record<string, unknown> | null
+      const dev   = d['mobile_devices']      as Record<string, unknown> | null
+      const model = dev?.['mobile_models']   as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
       return {
         id:              String(d['id']),
         invoice_id:      String(d['invoice_id']),
         device_id:       String(d['device_id']),
-        cost_price:      Number(d['cost_price']),
+        cost_price:      n(d['cost_price']),
         created_at:      String(d['created_at']),
         brand_name:      String(brand?.['name']       ?? '—'),
         model_name:      String(model?.['name']       ?? '—'),
         imei1:           String(dev?.['imei1']         ?? '—'),
-        imei2:           dev?.['imei2'] ? String(dev['imei2']) : null,
+        imei2:           dev?.['imei2']   ? String(dev['imei2'])   : null,
         storage:         dev?.['storage'] ? String(dev['storage']) : null,
         color:           dev?.['color']   ? String(dev['color'])   : null,
         condition:       String(dev?.['condition']     ?? 'new'),
-        selling_price:   Number(dev?.['selling_price'] ?? 0),
-        warranty_months: Number(dev?.['warranty_months'] ?? 0),
+        selling_price:   n(dev?.['selling_price']),
+        warranty_months: n(dev?.['warranty_months']),
       }
     })
 
@@ -169,7 +114,7 @@ export const purchasesRepository = {
       .eq('invoice_id', id)
     if (prdErr) throw prdErr
 
-    const products: InvoiceDetailProduct[] = ((prdRows ?? []) as unknown[]).map(row => {
+    const products: PurchaseInvoiceDetailProduct[] = ((prdRows ?? []) as unknown[]).map(row => {
       const p   = row as Record<string, unknown>
       const prd = p['products'] as Record<string, unknown> | null
       const cat = prd?.['product_categories'] as Record<string, unknown> | null
@@ -177,15 +122,15 @@ export const purchasesRepository = {
         id:            String(p['id']),
         invoice_id:    String(p['invoice_id']),
         product_id:    String(p['product_id']),
-        quantity:      Number(p['quantity']),
-        unit_price:    Number(p['unit_price']),
-        subtotal:      Number(p['subtotal']),
+        quantity:      n(p['quantity']),
+        unit_price:    n(p['unit_price']),
+        subtotal:      n(p['subtotal']),
         created_at:    String(p['created_at']),
         product_name:  String(prd?.['name']     ?? '—'),
         unit:          String(prd?.['unit']      ?? 'قطعة'),
         sku:           prd?.['sku']     ? String(prd['sku'])     : null,
         barcode:       prd?.['barcode'] ? String(prd['barcode']) : null,
-        selling_price: Number(prd?.['selling_price'] ?? 0),
+        selling_price: n(prd?.['selling_price']),
         category_name: String(cat?.['name'] ?? '—'),
       }
     })
@@ -238,8 +183,6 @@ export const purchasesRepository = {
     if (error) throw error
   },
 
-  // ── Bulk helpers (called from service) ───────────────────────────────────
-
   getDeviceLinesByInvoice: async (invoiceId: string) => {
     const { data, error } = await supabase
       .from('purchase_invoice_devices')
@@ -258,7 +201,7 @@ export const purchasesRepository = {
     return (data ?? []) as { product_id: string; quantity: number }[]
   },
 
-  // Bulk link devices to invoice (single .in() update)
+  // Single .in() — all devices share same invoice link
   linkDevicesToInvoice: async (deviceIds: string[], invoiceId: string): Promise<void> => {
     if (!deviceIds.length) return
     const { error } = await supabase
@@ -268,23 +211,8 @@ export const purchasesRepository = {
     if (error) throw error
   },
 
-  // Bulk adjust product stock (parallel, not serial)
-  adjustProductStock: async (lines: { product_id: string; qty_delta: number }[]): Promise<void> => {
-    if (!lines.length) return
-    await Promise.all(lines.map(async ({ product_id, qty_delta }) => {
-      const { data: prod } = await supabase
-        .from('products')
-        .select('stock_qty')
-        .eq('id', product_id)
-        .single()
-      if (!prod) return
-      const current = Number((prod as Record<string, unknown>)['stock_qty'] ?? 0)
-      await supabase
-        .from('products')
-        .update({ stock_qty: Math.max(0, current + qty_delta) } as never)
-        .eq('id', product_id)
-    }))
-  },
+  // Shared helper from db-helpers — no duplication
+  adjustProductStock,
 
   remove: async (id: string): Promise<void> => {
     const { error } = await supabase.from('purchase_invoices').delete().eq('id', id)
@@ -303,12 +231,12 @@ export const purchasesRepository = {
     if (error) throw error
     return ((data ?? []) as unknown[]).map(row => {
       const r     = row as Record<string, unknown>
-      const model = r['mobile_models']     as Record<string, unknown> | null
+      const model = r['mobile_models']       as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
       return {
         id:         String(r['id']),
         imei1:      String(r['imei1']),
-        cost_price: Number(r['cost_price']),
+        cost_price: n(r['cost_price']),
         brand_name: String(brand?.['name'] ?? '—'),
         model_name: String(model?.['name'] ?? '—'),
       }
@@ -327,9 +255,9 @@ export const purchasesRepository = {
       draft:      rows.filter(r => r.status === 'draft').length,
       confirmed:  confirmed.length,
       cancelled:  rows.filter(r => r.status === 'cancelled').length,
-      totalSpent: confirmed.reduce((s, r) => s + (r.total_amount ?? 0), 0),
-      totalPaid:  confirmed.reduce((s, r) => s + (r.paid_amount  ?? 0), 0),
-      totalDue:   confirmed.reduce((s, r) => s + Math.max(0, (r.total_amount ?? 0) - (r.paid_amount ?? 0) - (r.discount ?? 0)), 0),
+      totalSpent: confirmed.reduce((s, r) => s + n(r.total_amount), 0),
+      totalPaid:  confirmed.reduce((s, r) => s + n(r.paid_amount),  0),
+      totalDue:   confirmed.reduce((s, r) => s + Math.max(0, n(r.total_amount) - n(r.paid_amount) - n(r.discount)), 0),
     }
   },
 }
