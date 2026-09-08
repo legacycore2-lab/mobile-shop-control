@@ -1,5 +1,5 @@
 // src/pages/dashboard/QuickScanModal.tsx
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { X, ScanLine, Smartphone, Package, DollarSign, Settings, Tag, AlertCircle, CheckCircle, Edit3 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import { supabase } from '@/lib/supabase'
@@ -316,7 +316,7 @@ function EditPricePanel({ result, onSave, onCancel }: {
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
-export function QuickScanModal({ onClose }: { onClose: () => void }) {
+export function QuickScanModal({ onClose, initialCode }: { onClose: () => void; initialCode?: string }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -343,6 +343,12 @@ export function QuickScanModal({ onClose }: { onClose: () => void }) {
   }, [])
 
   useUsbScanner(handleScan, !showScanner)
+
+  // لو جه كود من الـ global scanner — ابدأ البحث تلقائي
+  useEffect(() => {
+    if (initialCode) void handleScan(initialCode)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleSell() {
     if (!result || result.kind !== 'device') return
