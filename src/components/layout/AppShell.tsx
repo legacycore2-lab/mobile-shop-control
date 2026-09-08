@@ -1,5 +1,6 @@
 // src/components/layout/AppShell.tsx
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, signOut } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
