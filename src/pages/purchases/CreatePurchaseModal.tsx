@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import { LabelPrintModal, type LabelData } from './LabelPrintModal'
-import { useCreatePurchase } from '@/hooks/usePurchases'
+import { useCreatePurchase, useConfirmPurchase } from '@/hooks/usePurchases'
 import { useSuppliers, useCreateSupplier } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
 import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel } from '@/hooks/useDevices'
@@ -172,6 +172,29 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
         device_lines:  deviceLines.map(({ device_id, cost_price }) => ({ device_id, cost_price })),
         product_lines: productLines,
       })
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+    }
+  }
+
+  async function handleConfirmDirect(e: React.MouseEvent) {
+    e.preventDefault()
+    setError('')
+    try {
+      const inv = await createMutation.mutateAsync({
+        supplier_id:   supplierId,
+        invoice_date:  invoiceDate,
+        paid_amount:   Number(paidAmount)  || 0,
+        discount:      Number(discount)    || 0,
+        notes,
+        created_by:    profile?.id         ?? '',
+        device_lines:  deviceLines.map(({ device_id, cost_price }) => ({ device_id, cost_price })),
+        product_lines: productLines,
+      })
+      if (inv?.id) {
+        await confirmMutation.mutateAsync(inv.id)
+      }
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ')
@@ -575,10 +598,16 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
               className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               إلغاء
             </button>
-            <button type="submit" disabled={createMutation.isPending}
+            <button type="submit" disabled={createMutation.isPending || confirmMutation.isPending}
+              className="h-9 px-5 text-sm font-semibold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+              {createMutation.isPending && !confirmMutation.isPending && <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-500 rounded-full animate-spin" />}
+              <FileText size={14} /> مسودة
+            </button>
+            <button type="button" onClick={e => void handleConfirmDirect(e)}
+              disabled={createMutation.isPending || confirmMutation.isPending}
               className="h-9 px-5 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-2">
-              {createMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              <FileText size={14} /> حفظ كمسودة
+              {confirmMutation.isPending && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              <CheckCircle size={14} /> تأكيد الشراء
             </button>
           </div>
         </form>
