@@ -1,9 +1,10 @@
 // src/pages/payments/LedgerPage.tsx
 import { useState, useMemo, useEffect } from 'react'
-import { Search, TrendingDown, TrendingUp, Users, Truck, DollarSign, CreditCard, ExternalLink } from 'lucide-react'
+import { Search, TrendingDown, TrendingUp, Users, Truck, DollarSign, CreditCard, ExternalLink, Banknote } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useSupplierLedger, useCustomerLedger } from '@/hooks/usePayments'
 import { AddPaymentModal } from './AddPaymentModal'
+import { QuickPaySupplierModal } from './components/QuickPaySupplierModal'
 import { useAuth } from '@/lib/auth'
 import { useQueryClient } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/Badge'
@@ -20,6 +21,7 @@ const METHOD_LABELS: Record<string, string> = {
 function SupplierLedgerTable({ search }: { search: string }) {
   const { data: ledger = [], isLoading } = useSupplierLedger()
   const navigate = useNavigate()
+  const [quickPay, setQuickPay] = useState<{ id: string; name: string; balance: number } | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -71,8 +73,18 @@ function SupplierLedgerTable({ search }: { search: string }) {
                   {s.balance > 0 ? ' (مديونية)' : s.balance < 0 ? ' (رصيد دائن)' : ' (مسدد)'}
                 </span>
               </td>
-              <td className="px-4 py-3 text-gray-400">
-                <ExternalLink size={14} />
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                  {s.balance > 0 && (
+                    <button
+                      onClick={() => setQuickPay({ id: s.supplier_id, name: s.supplier_name, balance: s.balance })}
+                      className="flex items-center gap-1 h-7 px-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors"
+                    >
+                      <Banknote size={12} /> دفع
+                    </button>
+                  )}
+                  <ExternalLink size={14} className="text-gray-400" />
+                </div>
               </td>
             </tr>
           ))}
@@ -84,6 +96,14 @@ function SupplierLedgerTable({ search }: { search: string }) {
   return (
     <>
       {table}
+      {quickPay && (
+        <QuickPaySupplierModal
+          supplierId={quickPay.id}
+          supplierName={quickPay.name}
+          totalBalance={quickPay.balance}
+          onClose={() => setQuickPay(null)}
+        />
+      )}
     </>
   )
 }
