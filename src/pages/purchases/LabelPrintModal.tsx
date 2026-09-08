@@ -42,7 +42,7 @@ export type LabelData = DeviceLabelData | ProductLabelData
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getLabelCode(data: LabelData): string {
-  if (data.type === 'device') return data.imei1
+  if (data.type === 'device') return data.imei2 ? `${data.imei1}/${data.imei2}` : data.imei1
   return data.barcode ?? data.sku ?? data.product_id.slice(0, 12)
 }
 
