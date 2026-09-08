@@ -6,7 +6,7 @@ import { useTheme } from '@/lib/theme'
 import {
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
-  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp, Receipt, Bell,
+  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp, Receipt, Bell, RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
@@ -30,7 +30,15 @@ const NAV = [
 export function AppShell() {
   const { profile } = useAuth()
   const { isDark, toggle } = useTheme()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]         = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const qc = useQueryClient()
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    await qc.invalidateQueries()
+    setTimeout(() => setRefreshing(false), 800)
+  }
   const location = useLocation()
 
   // ── تفعيل مراقبة المخزون وإرسال Browser Notifications ──
@@ -165,6 +173,13 @@ export function AppShell() {
             </NavLink>
           )}
 
+          <button
+            onClick={() => void handleRefresh()}
+            title="تحديث البيانات"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <RefreshCw size={17} className={refreshing ? 'animate-spin text-blue-500' : ''} />
+          </button>
           <button
             onClick={toggle}
             className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
