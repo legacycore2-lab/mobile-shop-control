@@ -4,12 +4,13 @@ import {
   purchasesRepository,
   type InvoiceDeviceLine,
   type InvoiceProductLine,
-  type InvoiceDetail,
 } from '@/repositories/purchases.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
-import type { PurchaseInvoice, PurchaseInvoiceView } from '@/types/database'
+import type {
+  PurchaseInvoice, PurchaseInvoiceView, PurchaseInvoiceDetail,
+} from '@/types/database'
 
-export type { InvoiceDetail }
+export type { InvoiceDeviceLine, InvoiceProductLine, PurchaseInvoiceDetail }
 
 export interface PurchaseFormData {
   supplier_id:   string
@@ -29,18 +30,11 @@ export interface PurchaseStats {
 
 export const purchasesService = {
 
-  getAll: (): Promise<PurchaseInvoiceView[]> => purchasesRepository.getAll(),
-
-  getById: (id: string): Promise<InvoiceDetail | null> => purchasesRepository.getById(id),
-
-  getStats: (): Promise<PurchaseStats> => purchasesRepository.getStats(),
-
-  getUnlinkedDevicesBySupplier: (supplierId: string) =>
-    purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
-
-  nextInvoiceNumber: (): Promise<string> => purchasesRepository.nextInvoiceNumber(),
-
-  // ── Create draft invoice ──────────────────────────────────────────────────
+  getAll: (): Promise<PurchaseInvoiceView[]>            => purchasesRepository.getAll(),
+  getById: (id: string): Promise<PurchaseInvoiceDetail | null> => purchasesRepository.getById(id),
+  getStats: (): Promise<PurchaseStats>                  => purchasesRepository.getStats(),
+  nextInvoiceNumber: (): Promise<string>                => purchasesRepository.nextInvoiceNumber(),
+  getUnlinkedDevicesBySupplier: (supplierId: string)    => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
 
   create: async (form: PurchaseFormData): Promise<PurchaseInvoice> => {
     if (!form.supplier_id)  throw new Error('المورد مطلوب')
@@ -48,10 +42,10 @@ export const purchasesService = {
     if (!form.device_lines.length && !form.product_lines.length)
       throw new Error('يجب إضافة جهاز أو منتج واحد على الأقل')
 
-    const invoiceNumber  = await purchasesRepository.nextInvoiceNumber()
-    const deviceTotal    = form.device_lines .reduce((s, l) => s + l.cost_price,            0)
-    const productTotal   = form.product_lines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
-    const totalAmount    = Math.max(0, deviceTotal + productTotal - (form.discount ?? 0))
+    const invoiceNumber = await purchasesRepository.nextInvoiceNumber()
+    const deviceTotal   = form.device_lines .reduce((s, l) => s + l.cost_price,            0)
+    const productTotal  = form.product_lines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
+    const totalAmount   = Math.max(0, deviceTotal + productTotal - (form.discount ?? 0))
 
     const invoice = await purchasesRepository.create({
       invoice_number: invoiceNumber,
@@ -70,7 +64,6 @@ export const purchasesService = {
       purchasesRepository.addProductLines(invoice.id, form.product_lines),
     ])
 
-    // Initial payment → payments table (trigger syncs paid_amount)
     if (Number(form.paid_amount) > 0) {
       await paymentsRepository.create({
         payment_type:   'purchase',
@@ -94,12 +87,10 @@ export const purchasesService = {
     return purchasesRepository.update(id, { paid_amount: paidAmount, discount })
   },
 
-  // ── Confirm invoice — link devices + add product stock ────────────────────
-
   confirm: async (id: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
-    if (!detail)                               throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status !== 'draft')     throw new Error('يمكن تأكيد الفواتير المسودة فقط')
+    if (!detail)                           throw new Error('الفاتورة غير موجودة')
+    if (detail.invoice.status !== 'draft') throw new Error('يمكن تأكيد الفواتير المسودة فقط')
 
     const deviceLines  = await purchasesRepository.getDeviceLinesByInvoice(id)
     const productLines = await purchasesRepository.getProductLinesByInvoice(id)
@@ -111,16 +102,12 @@ export const purchasesService = {
     ])
   },
 
-  // ── Cancel (draft only) ───────────────────────────────────────────────────
-
   cancel: async (id: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
     if (!detail)                               throw new Error('الفاتورة غير موجودة')
     if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن إلغاء فاتورة مؤكدة')
     await purchasesRepository.updateStatus(id, 'cancelled')
   },
-
-  // ── Delete (draft only) ───────────────────────────────────────────────────
 
   remove: async (id: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
