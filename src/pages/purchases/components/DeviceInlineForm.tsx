@@ -250,17 +250,27 @@ export function AddDeviceInlineForm({
         </div>
         {/* IMEI 2 — يظهر بعد ما IMEI 1 يتملى */}
         {form.imei1 && (
-          <input
-            value={form.imei2}
-            onChange={e => {
-              const strip = (s: string) => s.replace(/^0\d\//, '').trim()
-              set('imei2', strip(e.target.value))
-            }}
-            placeholder="سكان IMEI 2... (اختياري)"
-            className={inp}
-            maxLength={20}
-            autoFocus
-          />
+          <div className="flex gap-2">
+            <input
+              value={form.imei2}
+              onChange={e => {
+                const strip = (s: string) => s.replace(/^0\d\//, '').trim()
+                set('imei2', strip(e.target.value))
+              }}
+              placeholder="سكان IMEI 2... (اختياري)"
+              className={inp}
+              maxLength={20}
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowImeiScanner(true)}
+              title="سكان بالكاميرا"
+              className="h-9 w-9 flex-shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 hover:border-blue-400 transition-colors"
+            >
+              <Camera size={15} />
+            </button>
+          </div>
         )}
       </div>
 
