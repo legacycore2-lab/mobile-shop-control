@@ -223,25 +223,21 @@ export function AddDeviceInlineForm({
       {/* IMEI — حقل سكان واحد + زر كاميرا */}
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-          IMEI * <span className="text-gray-400 dark:text-gray-500 font-normal">(USB أو كاميرا — يملأ الاتنين تلقائي)</span>
+          IMEI * <span className="text-gray-400 dark:text-gray-500 font-normal">(سكان الأول ثم الثاني)</span>
         </label>
+        {/* IMEI 1 */}
         <div className="flex gap-2">
           <input
             ref={imeiInputRef}
             autoFocus
-            value={!form.imei1 ? '' : !form.imei2 ? form.imei1 : `${form.imei1} / ${form.imei2}`}
+            value={form.imei1}
             onChange={e => {
               const strip = (s: string) => s.replace(/^0\d\//, '').trim()
-              const val   = strip(e.target.value)
-              if (!form.imei1) {
-                set('imei1', val)
-              } else {
-                set('imei2', val)
-              }
+              set('imei1', strip(e.target.value))
             }}
-            placeholder={!form.imei1 ? "سكان IMEI 1..." : "سكان IMEI 2..."}
+            placeholder="سكان IMEI 1..."
             className={inp}
-            maxLength={60}
+            maxLength={20}
           />
           <button
             type="button"
@@ -252,19 +248,19 @@ export function AddDeviceInlineForm({
             <Camera size={15} />
           </button>
         </div>
-        {(form.imei1 || form.imei2) && (
-          <div className="flex gap-4 mt-1 px-1">
-            {form.imei1 && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-semibold text-blue-600 dark:text-blue-400">IMEI 1: </span>{form.imei1}
-              </span>
-            )}
-            {form.imei2 && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-semibold text-green-600 dark:text-green-400">IMEI 2: </span>{form.imei2}
-              </span>
-            )}
-          </div>
+        {/* IMEI 2 — يظهر بعد ما IMEI 1 يتملى */}
+        {form.imei1 && (
+          <input
+            value={form.imei2}
+            onChange={e => {
+              const strip = (s: string) => s.replace(/^0\d\//, '').trim()
+              set('imei2', strip(e.target.value))
+            }}
+            placeholder="سكان IMEI 2... (اختياري)"
+            className={inp}
+            maxLength={20}
+            autoFocus
+          />
         )}
       </div>
 
