@@ -72,7 +72,7 @@ export interface MobileDeviceView extends MobileDevice {
   added_by_name: string; sold_by_name: string | null
 }
 
-// ── Invoice base (shared shape between purchase & sale) ───────────────────────
+// ── Invoice base (shared fields between purchase & sale) ──────────────────────
 
 interface BaseInvoice {
   id:             string
@@ -103,21 +103,33 @@ export interface PurchaseInvoiceView extends PurchaseInvoice {
 }
 
 export interface PurchaseInvoiceDevice {
-  id:         string
-  invoice_id: string
-  device_id:  string
-  cost_price: number
-  created_at: string
+  id: string; invoice_id: string; device_id: string; cost_price: number; created_at: string
 }
 
 export interface PurchaseInvoiceProduct {
-  id:         string
-  invoice_id: string
-  product_id: string
-  quantity:   number
-  unit_price: number
-  subtotal:   number
-  created_at: string
+  id: string; invoice_id: string; product_id: string
+  quantity: number; unit_price: number; subtotal: number; created_at: string
+}
+
+// ── Purchase detail (view model — enriched with joined data) ──────────────────
+
+export interface PurchaseInvoiceDetailDevice extends PurchaseInvoiceDevice {
+  brand_name: string; model_name: string
+  imei1: string; imei2: string | null
+  storage: string | null; color: string | null; condition: string
+  selling_price: number; warranty_months: number
+}
+
+export interface PurchaseInvoiceDetailProduct extends PurchaseInvoiceProduct {
+  product_name: string; unit: string
+  sku: string | null; barcode: string | null
+  selling_price: number; category_name: string
+}
+
+export interface PurchaseInvoiceDetail {
+  invoice:  PurchaseInvoiceView
+  devices:  PurchaseInvoiceDetailDevice[]
+  products: PurchaseInvoiceDetailProduct[]
 }
 
 // ── Sale Invoices ─────────────────────────────────────────────────────────────
@@ -135,58 +147,48 @@ export interface SaleInvoiceView extends SaleInvoice {
 }
 
 export interface SaleInvoiceDevice {
-  id:                   string
-  invoice_id:           string
-  device_id:            string
-  actual_selling_price: number
-  created_at:           string
+  id: string; invoice_id: string; device_id: string
+  actual_selling_price: number; created_at: string
 }
 
 export interface SaleInvoiceProduct {
-  id:         string
-  invoice_id: string
-  product_id: string
-  quantity:   number
-  unit_price: number
-  subtotal:   number
-  created_at: string
+  id: string; invoice_id: string; product_id: string
+  quantity: number; unit_price: number; subtotal: number; created_at: string
+}
+
+// ── Sale detail (view model — enriched with joined data) ──────────────────────
+
+export interface SaleInvoiceDetailDevice extends SaleInvoiceDevice {
+  brand_name: string; model_name: string; imei1: string; cost_price: number
+}
+
+export interface SaleInvoiceDetailProduct extends SaleInvoiceProduct {
+  product_name: string; unit: string; cost_price: number
+}
+
+export interface SaleInvoiceDetail {
+  invoice:  SaleInvoiceView
+  devices:  SaleInvoiceDetailDevice[]
+  products: SaleInvoiceDetailProduct[]
 }
 
 // ── Payments & Ledger ─────────────────────────────────────────────────────────
 
 export interface Payment {
-  id:             string
-  payment_type:   PaymentType
-  invoice_id:     string
-  invoice_number: string
-  party_type:     PartyType
-  party_id:       string
-  amount:         number
-  payment_method: PaymentMethod
-  payment_date:   string
-  notes:          string | null
-  created_by:     string | null
-  created_at:     string
+  id: string; payment_type: PaymentType; invoice_id: string; invoice_number: string
+  party_type: PartyType; party_id: string; amount: number
+  payment_method: PaymentMethod; payment_date: string
+  notes: string | null; created_by: string | null; created_at: string
 }
 
 export interface SupplierLedger {
-  supplier_id:      string
-  supplier_name:    string
-  supplier_phone:   string | null
-  opening_balance:  number
-  total_invoiced:   number
-  total_paid:       number
-  balance:          number
+  supplier_id: string; supplier_name: string; supplier_phone: string | null
+  opening_balance: number; total_invoiced: number; total_paid: number; balance: number
 }
 
 export interface CustomerLedger {
-  customer_id:      string
-  customer_name:    string
-  customer_phone:   string | null
-  opening_balance:  number
-  total_invoiced:   number
-  total_paid:       number
-  balance:          number
+  customer_id: string; customer_name: string; customer_phone: string | null
+  opening_balance: number; total_invoiced: number; total_paid: number; balance: number
 }
 
 // ── Audit ─────────────────────────────────────────────────────────────────────
@@ -201,28 +203,18 @@ export interface AuditLog {
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
 export interface ExpenseCategory {
-  id:         string
-  name:       string
-  created_at: string
+  id: string; name: string; created_at: string
 }
 
 export interface Expense {
-  id:               string
-  category_id:      string | null
-  amount:           number
-  description:      string | null
-  expense_date:     string
-  payment_method:   string
-  reference_number: string | null
-  notes:            string | null
-  created_by:       string | null
-  created_at:       string
-  updated_at:       string
+  id: string; category_id: string | null; amount: number
+  description: string | null; expense_date: string; payment_method: string
+  reference_number: string | null; notes: string | null
+  created_by: string | null; created_at: string; updated_at: string
 }
 
 export interface ExpenseView extends Expense {
-  category_name:   string
-  created_by_name: string
+  category_name: string; created_by_name: string
 }
 
 // ── Supabase DB map ───────────────────────────────────────────────────────────
@@ -230,28 +222,28 @@ export interface ExpenseView extends Expense {
 export type Database = {
   public: {
     Tables: {
-      profiles:                  { Row: Profile;                Insert: Omit<Profile, 'created_at'|'updated_at'>;                         Update: Partial<Profile> }
-      suppliers:                 { Row: Supplier;               Insert: Omit<Supplier, 'id'|'created_at'|'updated_at'>;                   Update: Partial<Supplier> }
-      customers:                 { Row: Customer;               Insert: Omit<Customer, 'id'|'created_at'|'updated_at'>;                   Update: Partial<Customer> }
-      product_categories:        { Row: ProductCategory;        Insert: Omit<ProductCategory, 'id'|'created_at'>;                         Update: Partial<ProductCategory> }
-      products:                  { Row: Product;                Insert: Omit<Product, 'id'|'created_at'|'updated_at'>;                    Update: Partial<Product> }
-      mobile_brands:             { Row: MobileBrand;            Insert: Omit<MobileBrand, 'id'|'created_at'>;                             Update: Partial<MobileBrand> }
-      mobile_models:             { Row: MobileModel;            Insert: Omit<MobileModel, 'id'|'created_at'>;                             Update: Partial<MobileModel> }
-      mobile_devices:            { Row: MobileDevice;           Insert: Omit<MobileDevice, 'id'|'created_at'|'updated_at'>;               Update: Partial<MobileDevice> }
+      profiles:                  { Row: Profile;                Insert: Omit<Profile, 'created_at'|'updated_at'>;                          Update: Partial<Profile> }
+      suppliers:                 { Row: Supplier;               Insert: Omit<Supplier, 'id'|'created_at'|'updated_at'>;                    Update: Partial<Supplier> }
+      customers:                 { Row: Customer;               Insert: Omit<Customer, 'id'|'created_at'|'updated_at'>;                    Update: Partial<Customer> }
+      product_categories:        { Row: ProductCategory;        Insert: Omit<ProductCategory, 'id'|'created_at'>;                          Update: Partial<ProductCategory> }
+      products:                  { Row: Product;                Insert: Omit<Product, 'id'|'created_at'|'updated_at'>;                     Update: Partial<Product> }
+      mobile_brands:             { Row: MobileBrand;            Insert: Omit<MobileBrand, 'id'|'created_at'>;                              Update: Partial<MobileBrand> }
+      mobile_models:             { Row: MobileModel;            Insert: Omit<MobileModel, 'id'|'created_at'>;                              Update: Partial<MobileModel> }
+      mobile_devices:            { Row: MobileDevice;           Insert: Omit<MobileDevice, 'id'|'created_at'|'updated_at'>;                Update: Partial<MobileDevice> }
       purchase_invoices:         { Row: PurchaseInvoice;        Insert: Omit<PurchaseInvoice, 'id'|'created_at'|'updated_at'|'remaining'>; Update: Partial<PurchaseInvoice> }
-      purchase_invoice_devices:  { Row: PurchaseInvoiceDevice;  Insert: Omit<PurchaseInvoiceDevice, 'id'|'created_at'>;                   Update: never }
-      purchase_invoice_products: { Row: PurchaseInvoiceProduct; Insert: Omit<PurchaseInvoiceProduct, 'id'|'created_at'|'subtotal'>;       Update: never }
-      sale_invoices:             { Row: SaleInvoice;            Insert: Omit<SaleInvoice, 'id'|'created_at'|'updated_at'|'remaining'>;    Update: Partial<SaleInvoice> }
-      sale_invoice_devices:      { Row: SaleInvoiceDevice;      Insert: Omit<SaleInvoiceDevice, 'id'|'created_at'>;                       Update: never }
-      sale_invoice_products:     { Row: SaleInvoiceProduct;     Insert: Omit<SaleInvoiceProduct, 'id'|'created_at'|'subtotal'>;           Update: never }
-      payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                 Update: never }
-      audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                Update: never }
+      purchase_invoice_devices:  { Row: PurchaseInvoiceDevice;  Insert: Omit<PurchaseInvoiceDevice, 'id'|'created_at'>;                    Update: never }
+      purchase_invoice_products: { Row: PurchaseInvoiceProduct; Insert: Omit<PurchaseInvoiceProduct, 'id'|'created_at'|'subtotal'>;        Update: never }
+      sale_invoices:             { Row: SaleInvoice;            Insert: Omit<SaleInvoice, 'id'|'created_at'|'updated_at'|'remaining'>;     Update: Partial<SaleInvoice> }
+      sale_invoice_devices:      { Row: SaleInvoiceDevice;      Insert: Omit<SaleInvoiceDevice, 'id'|'created_at'>;                        Update: never }
+      sale_invoice_products:     { Row: SaleInvoiceProduct;     Insert: Omit<SaleInvoiceProduct, 'id'|'created_at'|'subtotal'>;            Update: never }
+      payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
+      audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
     }
     Functions: {
-      lookup_device_by_imei:        { Args: { p_imei: string };       Returns: MobileDeviceView[] }
-      get_low_stock_products:       { Args: Record<never, never>;      Returns: { product_id: string; product_name: string; stock_qty: number; reorder_level: number; category_name: string }[] }
-      next_purchase_invoice_number: { Args: Record<never, never>;      Returns: string }
-      next_sale_invoice_number:     { Args: Record<never, never>;      Returns: string }
+      lookup_device_by_imei:        { Args: { p_imei: string };      Returns: MobileDeviceView[] }
+      get_low_stock_products:       { Args: Record<never, never>;     Returns: { product_id: string; product_name: string; stock_qty: number; reorder_level: number; category_name: string }[] }
+      next_purchase_invoice_number: { Args: Record<never, never>;     Returns: string }
+      next_sale_invoice_number:     { Args: Record<never, never>;     Returns: string }
     }
   }
 }
