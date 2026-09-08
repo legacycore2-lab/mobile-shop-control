@@ -232,16 +232,19 @@ export function AddDeviceInlineForm({
             value={form.imei2 ? `${form.imei1} / ${form.imei2}` : form.imei1}
             onChange={e => {
               const raw = e.target.value
-              const parts = raw.split(/[\s/|,;\t]+/).map(s => s.trim()).filter(s => s.length > 0)
+              // شيل prefix زي 02/ أو 01/ اللي بييجي من باركود بعض الموبايلات
+              const stripPrefix = (s: string) => s.replace(/^0\d\//, '').trim()
+              const clean = stripPrefix(raw)
+              const parts = clean.split(/[\s/|,;\t]+/).map(s => stripPrefix(s)).filter(s => s.length > 0)
               if (parts.length >= 2) {
                 set('imei1', parts[0])
                 set('imei2', parts[1])
-              } else if (raw.replace(/[^0-9]/g, '').length >= 30) {
-                const digits = raw.replace(/[^0-9]/g, '')
+              } else if (clean.replace(/[^0-9]/g, '').length >= 30) {
+                const digits = clean.replace(/[^0-9]/g, '')
                 set('imei1', digits.slice(0, 15))
                 set('imei2', digits.slice(15, 30))
               } else {
-                set('imei1', raw.trim())
+                set('imei1', clean)
                 set('imei2', '')
               }
             }}
