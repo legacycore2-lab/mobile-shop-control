@@ -1,13 +1,12 @@
 // src/repositories/pos.repository.ts
 // ── SQL queries ONLY — no business logic ─────────────────────────────────────
 import { supabase } from '@/lib/supabase'
+import { buildSaleInvoiceView, adjustProductStock, n } from '@/lib/db-helpers'
 import type {
   MobileDeviceView,
   SaleInvoice, SaleInvoiceView,
-  SaleInvoiceDevice, SaleInvoiceProduct,
+  SaleInvoiceDetail, SaleInvoiceDetailDevice, SaleInvoiceDetailProduct,
 } from '@/types/database'
-
-// ── Line insert shapes ────────────────────────────────────────────────────────
 
 export interface SaleDeviceLine {
   device_id:            string
@@ -20,38 +19,6 @@ export interface SaleProductLine {
   unit_price: number
 }
 
-// ── Detail shape returned by getById ─────────────────────────────────────────
-
-export interface SaleInvoiceDetail {
-  invoice:  SaleInvoiceView
-  devices:  (SaleInvoiceDevice & { brand_name: string; model_name: string; imei1: string; cost_price: number })[]
-  products: (SaleInvoiceProduct & { product_name: string; unit: string; cost_price: number })[]
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function toView(r: Record<string, unknown>): SaleInvoiceView {
-  const cust = r['customers'] as Record<string, unknown> | null
-  const cby  = r['profiles']  as Record<string, unknown> | null
-  const dev  = r['devices_agg']  as unknown[] | null
-  const prd  = r['products_agg'] as unknown[] | null
-  const total    = Number(r['total_amount'] ?? 0)
-  const paid     = Number(r['paid_amount']  ?? 0)
-  const discount = Number(r['discount']     ?? 0)
-  return {
-    ...r,
-    total_amount:    total,
-    paid_amount:     paid,
-    discount:        discount,
-    remaining:       Math.max(0, total - paid - discount),
-    customer_name:   (cust?.['name']  as string | null) ?? null,
-    customer_phone:  (cust?.['phone'] as string | null) ?? null,
-    created_by_name: String(cby?.['full_name'] ?? '—'),
-    devices_count:   (dev  ?? []).length,
-    products_count:  (prd  ?? []).length,
-  } as SaleInvoiceView
-}
-
 const INVOICE_SELECT = `
   *,
   customers!customer_id ( name, phone ),
@@ -59,8 +26,6 @@ const INVOICE_SELECT = `
   devices_agg:sale_invoice_devices ( id ),
   products_agg:sale_invoice_products ( id )
 `
-
-// ── Repository ────────────────────────────────────────────────────────────────
 
 export const posRepository = {
 
@@ -76,7 +41,7 @@ export const posRepository = {
       .select(INVOICE_SELECT)
       .order('created_at', { ascending: false })
     if (error) throw error
-    return ((data ?? []) as unknown[]).map(r => toView(r as Record<string, unknown>))
+    return ((data ?? []) as unknown[]).map(r => buildSaleInvoiceView(r as Record<string, unknown>))
   },
 
   getById: async (id: string): Promise<SaleInvoiceDetail | null> => {
@@ -88,7 +53,7 @@ export const posRepository = {
     if (invErr) throw invErr
     if (!inv) return null
 
-    const invoice = toView(inv as unknown as Record<string, unknown>)
+    const invoice = buildSaleInvoiceView(inv as unknown as Record<string, unknown>)
 
     const { data: devRows, error: devErr } = await supabase
       .from('sale_invoice_devices')
@@ -102,21 +67,21 @@ export const posRepository = {
       .eq('invoice_id', id)
     if (devErr) throw devErr
 
-    const devices = ((devRows ?? []) as unknown[]).map(row => {
+    const devices: SaleInvoiceDetailDevice[] = ((devRows ?? []) as unknown[]).map(row => {
       const d     = row as Record<string, unknown>
-      const dev   = d['mobile_devices']    as Record<string, unknown> | null
-      const model = dev?.['mobile_models'] as Record<string, unknown> | null
+      const dev   = d['mobile_devices']      as Record<string, unknown> | null
+      const model = dev?.['mobile_models']   as Record<string, unknown> | null
       const brand = model?.['mobile_brands'] as Record<string, unknown> | null
       return {
         id:                   String(d['id']),
         invoice_id:           String(d['invoice_id']),
         device_id:            String(d['device_id']),
-        actual_selling_price: Number(d['actual_selling_price']),
+        actual_selling_price: n(d['actual_selling_price']),
         created_at:           String(d['created_at']),
         brand_name:           String(brand?.['name'] ?? '—'),
         model_name:           String(model?.['name'] ?? '—'),
         imei1:                String(dev?.['imei1']  ?? '—'),
-        cost_price:           Number(dev?.['cost_price'] ?? 0),
+        cost_price:           n(dev?.['cost_price']),
       }
     })
 
@@ -126,20 +91,20 @@ export const posRepository = {
       .eq('invoice_id', id)
     if (prdErr) throw prdErr
 
-    const products = ((prdRows ?? []) as unknown[]).map(row => {
+    const products: SaleInvoiceDetailProduct[] = ((prdRows ?? []) as unknown[]).map(row => {
       const p   = row as Record<string, unknown>
       const prd = p['products'] as Record<string, unknown> | null
       return {
         id:           String(p['id']),
         invoice_id:   String(p['invoice_id']),
         product_id:   String(p['product_id']),
-        quantity:     Number(p['quantity']),
-        unit_price:   Number(p['unit_price']),
-        subtotal:     Number(p['subtotal']),
+        quantity:     n(p['quantity']),
+        unit_price:   n(p['unit_price']),
+        subtotal:     n(p['subtotal']),
         created_at:   String(p['created_at']),
         product_name: String(prd?.['name'] ?? '—'),
         unit:         String(prd?.['unit'] ?? 'قطعة'),
-        cost_price:   Number(prd?.['cost_price'] ?? 0),
+        cost_price:   n(prd?.['cost_price']),
       }
     })
 
@@ -180,8 +145,6 @@ export const posRepository = {
     if (error) throw error
   },
 
-  // ── Bulk device update — no N+1 ───────────────────────────────────────────
-
   getDeviceLinesByInvoice: async (invoiceId: string) => {
     const { data, error } = await supabase
       .from('sale_invoice_devices')
@@ -200,7 +163,7 @@ export const posRepository = {
     return (data ?? []) as { product_id: string; quantity: number }[]
   },
 
-  // Bulk mark devices as sold (single query per call via .in())
+  // Parallel update — each device has a different actual_selling_price so .in() isn't possible
   markDevicesSold: async (
     deviceIds: string[],
     invoiceId: string,
@@ -209,8 +172,6 @@ export const posRepository = {
     priceMap: Map<string, number>,
   ): Promise<void> => {
     if (!deviceIds.length) return
-    // Supabase doesn't support per-row different values in bulk update,
-    // so we do one update per device but batch them with Promise.all — not N+1 serially
     await Promise.all(deviceIds.map(deviceId =>
       supabase
         .from('mobile_devices')
@@ -226,7 +187,7 @@ export const posRepository = {
     ))
   },
 
-  // Bulk return devices to stock (single .in() query)
+  // Single .in() query — all devices share the same reset values
   markDevicesInStock: async (deviceIds: string[]): Promise<void> => {
     if (!deviceIds.length) return
     const { error } = await supabase
@@ -242,33 +203,15 @@ export const posRepository = {
     if (error) throw error
   },
 
-  // Bulk adjust product stock (one query per product but parallel)
-  adjustProductStock: async (lines: { product_id: string; qty_delta: number }[]): Promise<void> => {
-    if (!lines.length) return
-    await Promise.all(lines.map(async ({ product_id, qty_delta }) => {
-      const { data: prod } = await supabase
-        .from('products')
-        .select('stock_qty')
-        .eq('id', product_id)
-        .single()
-      if (!prod) return
-      const current = Number((prod as Record<string, unknown>)['stock_qty'] ?? 0)
-      await supabase
-        .from('products')
-        .update({ stock_qty: Math.max(0, current + qty_delta) } as never)
-        .eq('id', product_id)
-    }))
-  },
+  // Shared helper from db-helpers — no duplication
+  adjustProductStock,
 
   remove: async (id: string): Promise<void> => {
     const { error } = await supabase.from('sale_invoices').delete().eq('id', id)
     if (error) throw error
   },
 
-  // ── POS — available devices (exclude those already in any sale invoice) ───
-
   getInStockDevices: async (): Promise<MobileDeviceView[]> => {
-    // Get device IDs already in any sale invoice (draft or confirmed)
     const { data: soldRows } = await supabase
       .from('sale_invoice_devices')
       .select('device_id')
@@ -289,9 +232,9 @@ export const posRepository = {
       .filter(row => !soldIds.has(String((row as Record<string, unknown>)['id'])))
       .map(row => {
         const r     = row as Record<string, unknown>
-        const model = r['mobile_models']     as Record<string, unknown> | null
+        const model = r['mobile_models']       as Record<string, unknown> | null
         const brand = model?.['mobile_brands'] as Record<string, unknown> | null
-        const sup   = r['suppliers']         as Record<string, unknown> | null
+        const sup   = r['suppliers']           as Record<string, unknown> | null
         return {
           ...r,
           brand_name:     String(brand?.['name'] ?? '—'),
@@ -305,8 +248,6 @@ export const posRepository = {
       })
   },
 
-  // ── Stats (aggregate query — no full table scan) ──────────────────────────
-
   getStats: async () => {
     const { data, error } = await supabase
       .from('sale_invoices')
@@ -317,9 +258,7 @@ export const posRepository = {
     const confirmed = rows.filter(r => r.status === 'confirmed')
 
     const { data: devCost, error: devErr } = await supabase
-      .from('mobile_devices')
-      .select('cost_price')
-      .eq('status', 'sold')
+      .from('mobile_devices').select('cost_price').eq('status', 'sold')
     if (devErr) throw devErr
 
     const { data: prodLines, error: prodErr } = await supabase
@@ -327,15 +266,13 @@ export const posRepository = {
       .select('quantity, products!product_id ( cost_price ), sale_invoices!invoice_id ( status )')
     if (prodErr) throw prodErr
 
-    const costDevices = (devCost ?? []).reduce<number>(
-      (s, r) => s + Number((r as Record<string, unknown>)['cost_price'] ?? 0), 0
-    )
+    const costDevices  = (devCost ?? []).reduce<number>((s, r) => s + n((r as Record<string, unknown>)['cost_price']), 0)
     const costProducts = ((prodLines ?? []) as unknown[]).reduce<number>((s, row) => {
       const r   = row as Record<string, unknown>
       const inv = r['sale_invoices'] as Record<string, unknown> | null
       const prd = r['products']      as Record<string, unknown> | null
       if (!inv || inv['status'] !== 'confirmed') return s
-      return s + Number(prd?.['cost_price'] ?? 0) * Number(r['quantity'] ?? 0)
+      return s + n(prd?.['cost_price']) * n(r['quantity'])
     }, 0)
 
     return {
@@ -343,9 +280,9 @@ export const posRepository = {
       draft:         rows.filter(r => r.status === 'draft').length,
       confirmed:     confirmed.length,
       cancelled:     rows.filter(r => r.status === 'cancelled').length,
-      totalRevenue:  confirmed.reduce((s, r) => s + Number(r.total_amount ?? 0), 0),
-      totalPaid:     confirmed.reduce((s, r) => s + Number(r.paid_amount  ?? 0), 0),
-      totalDue:      confirmed.reduce((s, r) => s + Math.max(0, Number(r.total_amount ?? 0) - Number(r.paid_amount ?? 0) - Number(r.discount ?? 0)), 0),
+      totalRevenue:  confirmed.reduce((s, r) => s + n(r.total_amount), 0),
+      totalPaid:     confirmed.reduce((s, r) => s + n(r.paid_amount),  0),
+      totalDue:      confirmed.reduce((s, r) => s + Math.max(0, n(r.total_amount) - n(r.paid_amount) - n(r.discount)), 0),
       totalCostSold: costDevices + costProducts,
     }
   },
