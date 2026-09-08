@@ -137,7 +137,7 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
   <meta charset="UTF-8"><title>طباعة ليبلات</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:#f5f5f5; direction:rtl; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap'); *{font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important} body{background:#f5f5f5;direction:rtl;}
     .labels-wrap { display:flex; flex-wrap:wrap; gap:8px; padding:10px; justify-content:center; }
     .label { width:85mm; background:#fff; border:1px solid #ddd; border-radius:6px; padding:8px; page-break-inside:avoid; }
     .label-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #eee; }
@@ -168,7 +168,7 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
   </style>
 </head><body>
 <div class="labels-wrap">${labelBlocks.join('')}</div>
-<script>window.onload=()=>{ window.print(); }<\/script>
+<script>document.fonts.ready.then(()=>window.print())<\/script>
 </body></html>`
 
   const win = window.open('', '_blank')

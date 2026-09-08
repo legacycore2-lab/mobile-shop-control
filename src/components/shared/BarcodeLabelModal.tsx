@@ -162,7 +162,7 @@ async function printLabel(label: BarcodeLabel, copies: number) {
   <title>ليبل — ${label.name}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;direction:rtl;}
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap'); *{font-family:'Cairo','Segoe UI',Arial,sans-serif!important} body{background:#f5f5f5;direction:rtl;}
     .wrap{display:flex;flex-wrap:wrap;gap:6px;padding:8px;justify-content:flex-start;}
     .label{width:80mm;background:#fff;border:1px solid #d1d5db;border-radius:5px;padding:7px;page-break-inside:avoid;}
     .shop-name{font-size:8px;font-weight:800;color:#1d4ed8;margin-bottom:3px;}
@@ -195,7 +195,7 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     function bc(code){const s=code.replace(/[^\\x20-\\x7E]/g,'').substring(0,48);const v=[104];for(let i=0;i<s.length;i++){const c=s.charCodeAt(i)-32;if(c>=0&&c<=95)v.push(c);}let ck=104;for(let i=1;i<v.length;i++)ck+=v[i]*i;v.push(ck%103);v.push(106);return v.map(x=>C128[x]||'').join('');}
     function drawBC(el,code){const bits=bc(code);if(!bits)return;const W=160,H=42,mw=(W-16)/bits.length;const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('class','bc');svg.setAttribute('width',W);svg.setAttribute('height',H);const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');bg.setAttribute('width',W);bg.setAttribute('height',H);bg.setAttribute('fill','#fff');svg.appendChild(bg);let x=8;for(let i=0;i<bits.length;i++){if(bits[i]==='1'){const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',x);r.setAttribute('y',0);r.setAttribute('width',mw);r.setAttribute('height',H);r.setAttribute('fill','#000');svg.appendChild(r);}x+=mw;}el.appendChild(svg);}
     document.querySelectorAll('[id^="bc_"]').forEach(el=>{drawBC(el,'${label.code}');});
-    window.onload=()=>window.print();
+    document.fonts.ready.then(()=>window.print());
   </script>
   </body></html>`
 

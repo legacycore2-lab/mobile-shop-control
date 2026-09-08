@@ -64,11 +64,11 @@ export function openPrint(body: string, title: string, dateRange?: string) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-      * { font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, Arial, sans-serif !important; }
+      * { font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important; }
       ${printStyles()}
-      body { font-family: 'Noto Naskh Arabic', Tahoma, Arial, sans-serif !important; }
+      body { font-family: 'Cairo', Tahoma, Arial, sans-serif !important; }
       .close-btn {
         position: fixed; top: 12px; left: 12px; z-index: 9999;
         width: 36px; height: 36px; border-radius: 50%;
@@ -376,13 +376,13 @@ export async function printSuppliers(suppliers: unknown[], suppliersWithIds: unk
     `
   }).join('')
 
-  const arabicFontLink = '<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">'
+  const arabicFontLink = '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">'
   const closeBtnStyle = `.close-btn{position:fixed;top:12px;left:12px;z-index:9999;width:36px;height:36px;border-radius:50%;background:#dc2626;color:#fff;border:none;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}@media print{.close-btn{display:none!important}}`
   const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تقرير الموردين</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     ${arabicFontLink}
-    <style>*{font-family:'Noto Naskh Arabic','Traditional Arabic','Arabic Typesetting',Tahoma,Arial,sans-serif!important}${closeBtnStyle}${styles}</style>
+    <style>*{font-family:'Cairo','Traditional Arabic','Arabic Typesetting',Tahoma,Arial,sans-serif!important}${closeBtnStyle}${styles}</style>
   </head><body>
     <button class="close-btn" onclick="window.close()">✕</button>
     ${suppliersHtml}
