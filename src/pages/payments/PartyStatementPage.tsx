@@ -63,9 +63,11 @@ function printStatement(opts: {
 <head>
   <meta charset="UTF-8">
   <title>كشف حساب — ${partyName}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; direction: rtl; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important; }
+    body { font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; direction: rtl; }
     .page { padding: 24px 32px; max-width: 900px; margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1d4ed8; padding-bottom: 16px; margin-bottom: 20px; }
     .header-title h1 { font-size: 22px; font-weight: 800; color: #1d4ed8; }
@@ -203,7 +205,7 @@ function printStatement(opts: {
   </div>
 
 </div>
-<script>window.onload = () => window.print()</script>
+<script>document.fonts.ready.then(() => window.print())</script>
 </body>
 </html>`
 
