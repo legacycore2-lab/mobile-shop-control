@@ -3,7 +3,7 @@
 // src/pages/purchases/CreatePurchaseModal.tsx
 import { useState, useCallback, useRef } from 'react'
 import {
-  Plus, X, Smartphone, Tag, AlertCircle, FileText,
+  Plus, X, Smartphone, Tag, AlertCircle, FileText, CheckCircle,
   Search, ScanLine, Zap, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
