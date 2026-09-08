@@ -58,6 +58,9 @@ async function lookupCode(code: string): Promise<ScanResult> {
     }
   }
 
+  // لو الكود فيه / يعني IMEI1/IMEI2 — خد الأول بس للبحث
+  const searchImei = clean.includes('/') ? clean.split('/')[0].trim() : clean
+
   // 1. Try IMEI lookup
   const { data: devices } = await supabase
     .from('mobile_devices')
@@ -68,7 +71,7 @@ async function lookupCode(code: string): Promise<ScanResult> {
       suppliers!supplier_id ( name ),
       purchase_invoices!invoice_id ( invoice_number )
     `)
-    .or(`imei1.eq.${clean},imei2.eq.${clean}`)
+    .or(`imei1.eq.${searchImei},imei2.eq.${searchImei}`)
     .limit(1)
 
   if (devices && devices.length > 0) {
