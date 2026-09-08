@@ -78,6 +78,12 @@ export function AddDeviceInlineForm({
   const [showNewModel, setShowNewModel] = useState(false)
   const [showImeiScanner, setShowImeiScanner] = useState(false)
   const [imeiTarget,      setImeiTarget]      = useState<1|2>(1)
+
+  function openCamera(target: 1|2) {
+    setImeiTarget(target)
+    // نستنى React تحدث الـ state الأول قبل ما نفتح الـ modal
+    setTimeout(() => setShowImeiScanner(true), 0)
+  }
   const imeiInputRef = useRef<HTMLInputElement>(null)
 
   async function handleAddBrand() {
@@ -242,7 +248,7 @@ export function AddDeviceInlineForm({
           />
           <button
             type="button"
-            onClick={() => { setImeiTarget(1); setShowImeiScanner(true) }}
+            onClick={() => openCamera(1)}
             title="سكان بالكاميرا"
             className="h-9 w-9 flex-shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 hover:border-blue-400 transition-colors"
           >
@@ -265,7 +271,7 @@ export function AddDeviceInlineForm({
             />
             <button
               type="button"
-              onClick={() => { setImeiTarget(2); setShowImeiScanner(true) }}
+              onClick={() => openCamera(2)}
               title="سكان بالكاميرا"
               className="h-9 w-9 flex-shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 hover:border-blue-400 transition-colors"
             >
