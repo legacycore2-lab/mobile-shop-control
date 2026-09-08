@@ -3,37 +3,37 @@ import { devicesRepository } from '@/repositories/devices.repository'
 import type { MobileDevice, MobileDeviceView, MobileBrand, MobileModel, DeviceStatus } from '@/types/database'
 
 export interface DeviceFormData {
-  imei1: string
-  imei2: string
-  serial_number: string
-  brand_id: string
-  model_id: string
-  storage: string
-  color: string
-  condition: string
-  supplier_id: string
-  purchase_date: string
-  cost_price: number
-  selling_price: number
+  imei1:           string
+  imei2:           string
+  serial_number:   string
+  brand_id:        string
+  model_id:        string
+  storage:         string
+  color:           string
+  condition:       string
+  supplier_id:     string
+  purchase_date:   string
+  cost_price:      number
+  selling_price:   number
   warranty_months: number
-  location: string
-  notes: string
-  added_by: string
+  location:        string
+  notes:           string
+  added_by:        string
 }
 
 export interface DeviceStats {
-  total: number
-  inStock: number
-  sold: number
-  defective: number
-  repair: number
-  returned: number
-  totalCostValue: number
+  total:             number
+  inStock:           number
+  sold:              number
+  defective:         number
+  repair:            number
+  returned:          number
+  totalCostValue:    number
   totalSellingValue: number
 }
 
 export interface ImeiLookupResult {
-  found: boolean
+  found:  boolean
   device: MobileDeviceView | null
 }
 
@@ -44,23 +44,24 @@ export const devicesService = {
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
-  getAll: (): Promise<MobileDeviceView[]> =>
-    devicesRepository.getAll(),
+  getAll: (): Promise<MobileDeviceView[]> => devicesRepository.getAll(),
 
-  getById: (id: string): Promise<MobileDeviceView | null> =>
-    devicesRepository.getById(id),
+  getById: (id: string): Promise<MobileDeviceView | null> => devicesRepository.getById(id),
 
+  // Uses aggregate query — does NOT fetch full device records
   getStats: async (): Promise<DeviceStats> => {
-    const devices = await devicesRepository.getAll()
+    const counts = await devicesRepository.getStatusCounts()
+    const byStatus = new Map(counts.map(c => [c.status, c]))
+    const inStock = byStatus.get('in_stock')
     return {
-      total:             devices.length,
-      inStock:           devices.filter(d => d.status === 'in_stock').length,
-      sold:              devices.filter(d => d.status === 'sold').length,
-      defective:         devices.filter(d => d.status === 'defective').length,
-      repair:            devices.filter(d => d.status === 'sent_to_repair').length,
-      returned:          devices.filter(d => d.status === 'returned').length,
-      totalCostValue:    devices.filter(d => d.status === 'in_stock').reduce((s, d) => s + (d.cost_price ?? 0), 0),
-      totalSellingValue: devices.filter(d => d.status === 'in_stock').reduce((s, d) => s + (d.selling_price ?? 0), 0),
+      total:             counts.reduce((s, c) => s + c.count, 0),
+      inStock:           byStatus.get('in_stock')?.count           ?? 0,
+      sold:              byStatus.get('sold')?.count               ?? 0,
+      defective:         byStatus.get('defective')?.count          ?? 0,
+      repair:            byStatus.get('sent_to_repair')?.count     ?? 0,
+      returned:          byStatus.get('returned')?.count           ?? 0,
+      totalCostValue:    inStock?.total_cost_value                 ?? 0,
+      totalSellingValue: inStock?.total_sell_value                 ?? 0,
     }
   },
 
@@ -75,8 +76,7 @@ export const devicesService = {
 
   // ── Brands & Models ───────────────────────────────────────────────────────
 
-  getAllBrands: (): Promise<MobileBrand[]> =>
-    devicesRepository.getAllBrands(),
+  getAllBrands: (): Promise<MobileBrand[]> => devicesRepository.getAllBrands(),
 
   getModelsByBrand: (brandId: string): Promise<MobileModel[]> =>
     devicesRepository.getModelsByBrand(brandId),
@@ -87,7 +87,7 @@ export const devicesService = {
   },
 
   createModel: async (brandId: string, name: string): Promise<MobileModel> => {
-    if (!brandId)    throw new Error('اختر الماركة أولاً')
+    if (!brandId)     throw new Error('اختر الماركة أولاً')
     if (!name.trim()) throw new Error('اسم الموديل مطلوب')
     return devicesRepository.createModel(brandId, name.trim())
   },
@@ -95,11 +95,11 @@ export const devicesService = {
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   create: async (form: DeviceFormData): Promise<MobileDevice> => {
-    if (!form.imei1?.trim())       throw new Error('IMEI 1 مطلوب')
+    if (!form.imei1?.trim())          throw new Error('IMEI 1 مطلوب')
     if (form.imei1.trim().length < 15) throw new Error('IMEI يجب أن يكون 15 رقم على الأقل')
-    if (!form.model_id)            throw new Error('الموديل مطلوب')
-    if (!form.supplier_id)         throw new Error('المورد مطلوب')
-    if (!form.purchase_date)       throw new Error('تاريخ الشراء مطلوب')
+    if (!form.model_id)               throw new Error('الموديل مطلوب')
+    if (!form.supplier_id)            throw new Error('المورد مطلوب')
+    if (!form.purchase_date)          throw new Error('تاريخ الشراء مطلوب')
     if (Number(form.cost_price) <= 0) throw new Error('سعر الشراء يجب أن يكون أكبر من صفر')
 
     const warrantyMonths = Number(form.warranty_months) || 0
@@ -109,40 +109,38 @@ export const devicesService = {
       : null
 
     return devicesRepository.create({
-      imei1:              form.imei1.trim(),
-      imei2:              form.imei2?.trim()         || null,
-      serial_number:      form.serial_number?.trim() || null,
-      model_id:           form.model_id,
-      storage:            form.storage?.trim()       || null,
-      color:              form.color?.trim()         || null,
-      condition:          (VALID_CONDITIONS.includes(form.condition as Condition) ? form.condition : 'new'),
-      supplier_id:        form.supplier_id,
+      imei1:               form.imei1.trim(),
+      imei2:               form.imei2?.trim()         || null,
+      serial_number:       form.serial_number?.trim() || null,
+      model_id:            form.model_id,
+      storage:             form.storage?.trim()       || null,
+      color:               form.color?.trim()         || null,
+      condition:           VALID_CONDITIONS.includes(form.condition as Condition) ? form.condition : 'new',
+      supplier_id:         form.supplier_id,
       purchase_invoice_id: null,
-      purchase_date:      form.purchase_date,
-      cost_price:         Number(form.cost_price),
-      selling_price:      Number(form.selling_price) || null,
+      purchase_date:       form.purchase_date,
+      cost_price:          Number(form.cost_price),
+      selling_price:       Number(form.selling_price) || null,
       actual_selling_price: null,
-      sold_to_customer_id: null,
-      sale_invoice_id:    null,
-      sold_at:            null,
-      warranty_months:    warrantyMonths,
-      warranty_expires_at: warrantyExpiry,
-      status:             'in_stock',
-      location:           form.location?.trim()      || null,
-      notes:              form.notes?.trim()         || null,
-      added_by:           form.added_by,
-      sold_by:            null,
+      sold_to_customer_id:  null,
+      sale_invoice_id:      null,
+      sold_at:              null,
+      warranty_months:      warrantyMonths,
+      warranty_expires_at:  warrantyExpiry,
+      status:               'in_stock',
+      location:             form.location?.trim() || null,
+      notes:                form.notes?.trim()    || null,
+      added_by:             form.added_by,
+      sold_by:              null,
     })
   },
 
-  updateStatus: async (id: string, status: DeviceStatus, extra?: Partial<MobileDevice>): Promise<MobileDevice> => {
-    return devicesRepository.update(id, { status, ...extra })
-  },
+  updateStatus: (id: string, status: DeviceStatus, extra?: Partial<MobileDevice>): Promise<MobileDevice> =>
+    devicesRepository.update(id, { status, ...extra }),
 
   update: async (id: string, form: Partial<DeviceFormData>): Promise<MobileDevice> => {
     const payload: Partial<Omit<MobileDevice, 'id' | 'created_at' | 'updated_at'>> = {}
-
-    if (form.imei1 !== undefined) {
+    if (form.imei1         !== undefined) {
       if (!form.imei1.trim()) throw new Error('IMEI 1 مطلوب')
       payload.imei1 = form.imei1.trim()
     }
@@ -159,11 +157,8 @@ export const devicesService = {
     if (form.warranty_months !== undefined) payload.warranty_months = Number(form.warranty_months) || 0
     if (form.location      !== undefined) payload.location      = form.location?.trim()      || null
     if (form.notes         !== undefined) payload.notes         = form.notes?.trim()         || null
-
     return devicesRepository.update(id, payload)
   },
 
-  // ── Soft Delete — يختفي من الواجهة ويبقى في التاريخ ─────────────────────
-  remove: (id: string): Promise<void> =>
-    devicesRepository.softDelete(id),
+  remove: (id: string): Promise<void> => devicesRepository.softDelete(id),
 }
