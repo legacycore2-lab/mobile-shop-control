@@ -211,41 +211,12 @@ export const posRepository = {
     if (error) throw error
   },
 
+  // Single RPC call — filter done in DB via NOT IN subquery
   getInStockDevices: async (): Promise<MobileDeviceView[]> => {
-    const { data: soldRows } = await supabase
-      .from('sale_invoice_devices')
-      .select('device_id')
-    const soldIds = new Set((soldRows ?? []).map((r: Record<string, unknown>) => String(r['device_id'])))
-
     const { data, error } = await supabase
-      .from('mobile_devices')
-      .select(`
-        *,
-        mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ),
-        suppliers!supplier_id ( name )
-      `)
-      .eq('status', 'in_stock')
-      .order('created_at', { ascending: false })
+      .rpc('get_in_stock_available_devices')
     if (error) throw error
-
-    return ((data ?? []) as unknown[])
-      .filter(row => !soldIds.has(String((row as Record<string, unknown>)['id'])))
-      .map(row => {
-        const r     = row as Record<string, unknown>
-        const model = r['mobile_models']       as Record<string, unknown> | null
-        const brand = model?.['mobile_brands'] as Record<string, unknown> | null
-        const sup   = r['suppliers']           as Record<string, unknown> | null
-        return {
-          ...r,
-          brand_name:     String(brand?.['name'] ?? '—'),
-          model_name:     String(model?.['name'] ?? '—'),
-          supplier_name:  String(sup?.['name']   ?? '—'),
-          customer_name:  null,
-          customer_phone: null,
-          added_by_name:  '—',
-          sold_by_name:   null,
-        } as MobileDeviceView
-      })
+    return (data ?? []) as MobileDeviceView[]
   },
 
   getStats: async () => {
