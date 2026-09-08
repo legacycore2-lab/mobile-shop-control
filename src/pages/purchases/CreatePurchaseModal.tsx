@@ -29,7 +29,8 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const { profile }              = useAuth()
   const { data: suppliers = [] } = useSuppliers()
   const { data: products  = [] } = useProducts()
-  const createMutation           = useCreatePurchase()
+  const createMutation   = useCreatePurchase()
+  const confirmMutation  = useConfirmPurchase()
 
   const [supplierId,    setSupplierId]    = useState('')
   const [showAddSupplier, setShowAddSupplier] = useState(false)
