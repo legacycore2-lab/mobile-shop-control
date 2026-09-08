@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn'
 import { SaleDrawer }       from './SaleDrawer'
 import { CreateSaleModal }  from './CreateSaleModal'
 import { STATUS_MAP, PAGE_SIZE, fmt, type FilterStatus } from './constants'
-import type { SaleInvoiceView } from '@/repositories/pos.repository'
+import type { SaleInvoiceView } from '@/types/database'
 import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
 
 export function PosPage() {
@@ -48,7 +48,8 @@ export function PosPage() {
   async function handleCancel(inv: SaleInvoiceView) {
     if (inv.status === 'cancelled') return
     const msg = inv.status === 'confirmed'
-      ? `إلغاء فاتورة مؤكدة سيُرجع الأجهزة والمنتجات للمخزون.\nهل أنت متأكد من إلغاء ${inv.invoice_number}؟`
+      ? `إلغاء فاتورة مؤكدة سيُرجع الأجهزة والمنتجات للمخزون.
+هل أنت متأكد من إلغاء ${inv.invoice_number}؟`
       : `هل أنت متأكد من إلغاء ${inv.invoice_number}؟`
     if (!confirm(msg)) return
     await cancelMutation.mutateAsync(inv.id)
