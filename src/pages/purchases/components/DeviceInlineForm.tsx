@@ -77,6 +77,7 @@ export function AddDeviceInlineForm({
   const [newModelName, setNewModelName] = useState('')
   const [showNewModel, setShowNewModel] = useState(false)
   const [showImeiScanner, setShowImeiScanner] = useState(false)
+  const [imeiTarget,      setImeiTarget]      = useState<1|2>(1)
   const imeiInputRef = useRef<HTMLInputElement>(null)
 
   async function handleAddBrand() {
@@ -241,7 +242,7 @@ export function AddDeviceInlineForm({
           />
           <button
             type="button"
-            onClick={() => setShowImeiScanner(true)}
+            onClick={() => { setImeiTarget(1); setShowImeiScanner(true) }}
             title="سكان بالكاميرا"
             className="h-9 w-9 flex-shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 hover:border-blue-400 transition-colors"
           >
@@ -264,7 +265,7 @@ export function AddDeviceInlineForm({
             />
             <button
               type="button"
-              onClick={() => setShowImeiScanner(true)}
+              onClick={() => { setImeiTarget(2); setShowImeiScanner(true) }}
               title="سكان بالكاميرا"
               className="h-9 w-9 flex-shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 hover:border-blue-400 transition-colors"
             >
@@ -280,17 +281,12 @@ export function AddDeviceInlineForm({
           title="سكان IMEI بالكاميرا"
           placeholder="أو أدخل الـ IMEI يدوياً..."
           onScan={code => {
-            const parts = code.split(/[\s/|,;\t]+/).map(s => s.trim()).filter(s => s.length > 0)
-            if (parts.length >= 2) {
-              set('imei1', parts[0])
-              set('imei2', parts[1])
-            } else if (code.replace(/[^0-9]/g, '').length >= 30) {
-              const digits = code.replace(/[^0-9]/g, '')
-              set('imei1', digits.slice(0, 15))
-              set('imei2', digits.slice(15, 30))
+            const strip = (s: string) => s.replace(/^0\d\//, '').trim()
+            const clean = strip(code)
+            if (imeiTarget === 1) {
+              set('imei1', clean)
             } else {
-              set('imei1', code.trim())
-              set('imei2', '')
+              set('imei2', clean)
             }
             setShowImeiScanner(false)
             setTimeout(() => imeiInputRef.current?.focus(), 100)
