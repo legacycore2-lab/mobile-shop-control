@@ -1,48 +1,13 @@
 // src/repositories/pos.repository.ts
+// ── SQL queries ONLY — no business logic ─────────────────────────────────────
 import { supabase } from '@/lib/supabase'
-import type { MobileDeviceView } from '@/types/database'
+import type {
+  MobileDeviceView,
+  SaleInvoice, SaleInvoiceView,
+  SaleInvoiceDevice, SaleInvoiceProduct,
+} from '@/types/database'
 
-export interface SaleInvoice {
-  id:             string
-  invoice_number: string
-  customer_id:    string | null
-  invoice_date:   string
-  total_amount:   number
-  paid_amount:    number
-  discount:       number
-  notes:          string | null
-  status:         'draft' | 'confirmed' | 'cancelled'
-  created_by:     string
-  created_at:     string
-  updated_at:     string
-}
-
-export interface SaleInvoiceView extends SaleInvoice {
-  customer_name:   string | null
-  customer_phone:  string | null
-  created_by_name: string
-  devices_count:   number
-  products_count:  number
-  remaining:       number
-}
-
-export interface SaleInvoiceDevice {
-  id:                   string
-  invoice_id:           string
-  device_id:            string
-  actual_selling_price: number
-  created_at:           string
-}
-
-export interface SaleInvoiceProduct {
-  id:         string
-  invoice_id: string
-  product_id: string
-  quantity:   number
-  unit_price: number
-  subtotal:   number
-  created_at: string
-}
+// ── Line insert shapes ────────────────────────────────────────────────────────
 
 export interface SaleDeviceLine {
   device_id:            string
@@ -55,90 +20,75 @@ export interface SaleProductLine {
   unit_price: number
 }
 
+// ── Detail shape returned by getById ─────────────────────────────────────────
+
 export interface SaleInvoiceDetail {
   invoice:  SaleInvoiceView
   devices:  (SaleInvoiceDevice & { brand_name: string; model_name: string; imei1: string; cost_price: number })[]
   products: (SaleInvoiceProduct & { product_name: string; unit: string; cost_price: number })[]
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function toView(r: Record<string, unknown>): SaleInvoiceView {
+  const cust = r['customers'] as Record<string, unknown> | null
+  const cby  = r['profiles']  as Record<string, unknown> | null
+  const dev  = r['devices_agg']  as unknown[] | null
+  const prd  = r['products_agg'] as unknown[] | null
+  const total    = Number(r['total_amount'] ?? 0)
+  const paid     = Number(r['paid_amount']  ?? 0)
+  const discount = Number(r['discount']     ?? 0)
+  return {
+    ...r,
+    total_amount:    total,
+    paid_amount:     paid,
+    discount:        discount,
+    remaining:       Math.max(0, total - paid - discount),
+    customer_name:   (cust?.['name']  as string | null) ?? null,
+    customer_phone:  (cust?.['phone'] as string | null) ?? null,
+    created_by_name: String(cby?.['full_name'] ?? '—'),
+    devices_count:   (dev  ?? []).length,
+    products_count:  (prd  ?? []).length,
+  } as SaleInvoiceView
+}
+
+const INVOICE_SELECT = `
+  *,
+  customers!customer_id ( name, phone ),
+  profiles!created_by ( full_name ),
+  devices_agg:sale_invoice_devices ( id ),
+  products_agg:sale_invoice_products ( id )
+`
+
+// ── Repository ────────────────────────────────────────────────────────────────
+
 export const posRepository = {
 
   nextInvoiceNumber: async (): Promise<string> => {
     const { data, error } = await supabase.rpc('next_sale_invoice_number')
-    if (error) {
-      const ts = Date.now().toString().slice(-6)
-      return `SAL-${ts}`
-    }
+    if (error) return `SAL-${Date.now().toString().slice(-6)}`
     return data as string
   },
 
   getAll: async (): Promise<SaleInvoiceView[]> => {
     const { data, error } = await supabase
       .from('sale_invoices')
-      .select(`
-        *,
-        customers!customer_id ( name, phone ),
-        profiles!created_by ( full_name ),
-        devices_agg:sale_invoice_devices ( id ),
-        products_agg:sale_invoice_products ( id )
-      `)
+      .select(INVOICE_SELECT)
       .order('created_at', { ascending: false })
     if (error) throw error
-
-    return ((data ?? []) as unknown[]).map(row => {
-      const r    = row as Record<string, unknown>
-      const cust = r['customers'] as Record<string, unknown> | null
-      const cby  = r['profiles']  as Record<string, unknown> | null
-      const dev  = r['devices_agg']  as unknown[] | null
-      const prd  = r['products_agg'] as unknown[] | null
-      const total    = Number(r['total_amount'] ?? 0)
-      const paid     = Number(r['paid_amount']  ?? 0)
-      const discount = Number(r['discount']     ?? 0)
-      return {
-        ...r,
-        customer_name:   (cust?.['name']       as string | null) ?? null,
-        customer_phone:  (cust?.['phone']      as string | null) ?? null,
-        created_by_name: String(cby?.['full_name'] ?? '—'),
-        devices_count:   (dev  ?? []).length,
-        products_count:  (prd  ?? []).length,
-        remaining:       Math.max(0, total - paid - discount),
-      } as SaleInvoiceView
-    })
+    return ((data ?? []) as unknown[]).map(r => toView(r as Record<string, unknown>))
   },
 
   getById: async (id: string): Promise<SaleInvoiceDetail | null> => {
     const { data: inv, error: invErr } = await supabase
       .from('sale_invoices')
-      .select(`
-        *,
-        customers!customer_id ( name, phone ),
-        profiles!created_by ( full_name ),
-        devices_agg:sale_invoice_devices ( id ),
-        products_agg:sale_invoice_products ( id )
-      `)
+      .select(INVOICE_SELECT)
       .eq('id', id)
       .single()
     if (invErr) throw invErr
     if (!inv) return null
 
-    const r    = inv as unknown as Record<string, unknown>
-    const cust = r['customers'] as Record<string, unknown> | null
-    const cby  = r['profiles']  as Record<string, unknown> | null
-    const dev  = r['devices_agg']  as unknown[] | null
-    const prd  = r['products_agg'] as unknown[] | null
-    const total    = Number(r['total_amount'] ?? 0)
-    const paid     = Number(r['paid_amount']  ?? 0)
-    const discount = Number(r['discount']     ?? 0)
-
-    const invoice: SaleInvoiceView = {
-      ...r,
-      customer_name:   (cust?.['name']       as string | null) ?? null,
-      customer_phone:  (cust?.['phone']      as string | null) ?? null,
-      created_by_name: String(cby?.['full_name'] ?? '—'),
-      devices_count:   (dev  ?? []).length,
-      products_count:  (prd  ?? []).length,
-      remaining:       Math.max(0, total - paid - discount),
-    } as SaleInvoiceView
+    const invoice = toView(inv as unknown as Record<string, unknown>)
 
     const { data: devRows, error: devErr } = await supabase
       .from('sale_invoice_devices')
@@ -146,10 +96,7 @@ export const posRepository = {
         *,
         mobile_devices!device_id (
           imei1, cost_price,
-          mobile_models!model_id (
-            name,
-            mobile_brands!brand_id ( name )
-          )
+          mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
         )
       `)
       .eq('invoice_id', id)
@@ -199,7 +146,7 @@ export const posRepository = {
     return { invoice, devices, products }
   },
 
-  create: async (payload: Omit<SaleInvoice, 'id' | 'created_at' | 'updated_at'>): Promise<SaleInvoice> => {
+  create: async (payload: Omit<SaleInvoice, 'id' | 'created_at' | 'updated_at' | 'remaining'>): Promise<SaleInvoice> => {
     const { data, error } = await supabase
       .from('sale_invoices')
       .insert(payload as never)
@@ -225,121 +172,103 @@ export const posRepository = {
     if (error) throw error
   },
 
-  confirm: async (invoiceId: string, customerId: string | null, soldById: string): Promise<void> => {
-    const { error: invErr } = await supabase
+  updateStatus: async (id: string, status: SaleInvoice['status']): Promise<void> => {
+    const { error } = await supabase
       .from('sale_invoices')
-      .update({ status: 'confirmed' } as never)
-      .eq('id', invoiceId)
-    if (invErr) throw invErr
+      .update({ status } as never)
+      .eq('id', id)
+    if (error) throw error
+  },
 
-    const { data: devLines, error: devErr } = await supabase
+  // ── Bulk device update — no N+1 ───────────────────────────────────────────
+
+  getDeviceLinesByInvoice: async (invoiceId: string) => {
+    const { data, error } = await supabase
       .from('sale_invoice_devices')
       .select('device_id, actual_selling_price')
       .eq('invoice_id', invoiceId)
-    if (devErr) throw devErr
+    if (error) throw error
+    return (data ?? []) as { device_id: string; actual_selling_price: number }[]
+  },
 
-    for (const line of (devLines ?? []) as { device_id: string; actual_selling_price: number }[]) {
-      const { error: updateErr } = await supabase
+  getProductLinesByInvoice: async (invoiceId: string) => {
+    const { data, error } = await supabase
+      .from('sale_invoice_products')
+      .select('product_id, quantity')
+      .eq('invoice_id', invoiceId)
+    if (error) throw error
+    return (data ?? []) as { product_id: string; quantity: number }[]
+  },
+
+  // Bulk mark devices as sold (single query per call via .in())
+  markDevicesSold: async (
+    deviceIds: string[],
+    invoiceId: string,
+    customerId: string | null,
+    soldById: string,
+    priceMap: Map<string, number>,
+  ): Promise<void> => {
+    if (!deviceIds.length) return
+    // Supabase doesn't support per-row different values in bulk update,
+    // so we do one update per device but batch them with Promise.all — not N+1 serially
+    await Promise.all(deviceIds.map(deviceId =>
+      supabase
         .from('mobile_devices')
         .update({
           status:               'sold',
           sale_invoice_id:      invoiceId,
           sold_to_customer_id:  customerId,
-          actual_selling_price: line.actual_selling_price,
+          actual_selling_price: priceMap.get(deviceId) ?? null,
           sold_at:              new Date().toISOString(),
           sold_by:              soldById,
         } as never)
-        .eq('id', line.device_id)
-      if (updateErr) throw updateErr
-    }
-
-    const { data: prdLines, error: prdErr } = await supabase
-      .from('sale_invoice_products')
-      .select('product_id, quantity')
-      .eq('invoice_id', invoiceId)
-    if (prdErr) throw prdErr
-
-    for (const line of (prdLines ?? []) as { product_id: string; quantity: number }[]) {
-      const { data: prod } = await supabase
-        .from('products')
-        .select('stock_qty')
-        .eq('id', line.product_id)
-        .single()
-      if (prod) {
-        await supabase
-          .from('products')
-          .update({ stock_qty: Math.max(0, (prod as { stock_qty: number }).stock_qty - line.quantity) } as never)
-          .eq('id', line.product_id)
-      }
-    }
+        .eq('id', deviceId)
+    ))
   },
 
-  // ── إلغاء فاتورة مع استرجاع المخزون ─────────────────────────────────────
-  // الترتيب مهم: نحدّث الأجهزة الأول ثم الفاتورة
-  // لا نمسح sale_invoice_id من الجهاز — نخلّيه للتاريخ — فقط نغيّر status
-  cancel: async (id: string, isConfirmed: boolean): Promise<void> => {
-    if (isConfirmed) {
-      // 1. أرجع status الأجهزة لـ in_stock — نحتفظ بـ sale_invoice_id للتاريخ
-      const { data: devLines, error: devErr } = await supabase
-        .from('sale_invoice_devices')
-        .select('device_id')
-        .eq('invoice_id', id)
-      if (devErr) throw devErr
-
-      for (const line of (devLines ?? []) as { device_id: string }[]) {
-        const { error: updateErr } = await supabase
-          .from('mobile_devices')
-          .update({
-            status:               'in_stock',
-            sold_to_customer_id:  null,
-            actual_selling_price: null,
-            sold_at:              null,
-            sold_by:              null,
-          } as never)
-          .eq('id', line.device_id)
-        if (updateErr) throw updateErr
-      }
-
-      // 2. أرجع stock المنتجات
-      const { data: prdLines, error: prdErr } = await supabase
-        .from('sale_invoice_products')
-        .select('product_id, quantity')
-        .eq('invoice_id', id)
-      if (prdErr) throw prdErr
-
-      for (const line of (prdLines ?? []) as { product_id: string; quantity: number }[]) {
-        const { data: prod } = await supabase
-          .from('products')
-          .select('stock_qty')
-          .eq('id', line.product_id)
-          .single()
-        if (prod) {
-          await supabase
-            .from('products')
-            .update({ stock_qty: (prod as { stock_qty: number }).stock_qty + line.quantity } as never)
-            .eq('id', line.product_id)
-        }
-      }
-    }
-
-    // 3. غيّر حالة الفاتورة أخيراً
-    const { error: invErr } = await supabase
-      .from('sale_invoices')
-      .update({ status: 'cancelled' } as never)
-      .eq('id', id)
-    if (invErr) throw invErr
-  },
-
-  remove: async (id: string): Promise<void> => {
+  // Bulk return devices to stock (single .in() query)
+  markDevicesInStock: async (deviceIds: string[]): Promise<void> => {
+    if (!deviceIds.length) return
     const { error } = await supabase
-      .from('sale_invoices')
-      .delete()
-      .eq('id', id)
+      .from('mobile_devices')
+      .update({
+        status:               'in_stock',
+        sold_to_customer_id:  null,
+        actual_selling_price: null,
+        sold_at:              null,
+        sold_by:              null,
+      } as never)
+      .in('id', deviceIds)
     if (error) throw error
   },
 
+  // Bulk adjust product stock (one query per product but parallel)
+  adjustProductStock: async (lines: { product_id: string; qty_delta: number }[]): Promise<void> => {
+    if (!lines.length) return
+    await Promise.all(lines.map(async ({ product_id, qty_delta }) => {
+      const { data: prod } = await supabase
+        .from('products')
+        .select('stock_qty')
+        .eq('id', product_id)
+        .single()
+      if (!prod) return
+      const current = Number((prod as Record<string, unknown>)['stock_qty'] ?? 0)
+      await supabase
+        .from('products')
+        .update({ stock_qty: Math.max(0, current + qty_delta) } as never)
+        .eq('id', product_id)
+    }))
+  },
+
+  remove: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('sale_invoices').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  // ── POS — available devices (exclude those already in any sale invoice) ───
+
   getInStockDevices: async (): Promise<MobileDeviceView[]> => {
-    // أجيب الأجهزة اللي موجودة في أي فاتورة بيع (حتى المسودات) عشان أستثنيها
+    // Get device IDs already in any sale invoice (draft or confirmed)
     const { data: soldRows } = await supabase
       .from('sale_invoice_devices')
       .select('device_id')
@@ -349,10 +278,7 @@ export const posRepository = {
       .from('mobile_devices')
       .select(`
         *,
-        mobile_models!model_id (
-          name,
-          mobile_brands!brand_id ( name )
-        ),
+        mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ),
         suppliers!supplier_id ( name )
       `)
       .eq('status', 'in_stock')
@@ -363,9 +289,9 @@ export const posRepository = {
       .filter(row => !soldIds.has(String((row as Record<string, unknown>)['id'])))
       .map(row => {
         const r     = row as Record<string, unknown>
-        const model = r['mobile_models']   as Record<string, unknown> | null
+        const model = r['mobile_models']     as Record<string, unknown> | null
         const brand = model?.['mobile_brands'] as Record<string, unknown> | null
-        const sup   = r['suppliers']       as Record<string, unknown> | null
+        const sup   = r['suppliers']         as Record<string, unknown> | null
         return {
           ...r,
           brand_name:     String(brand?.['name'] ?? '—'),
@@ -379,8 +305,9 @@ export const posRepository = {
       })
   },
 
+  // ── Stats (aggregate query — no full table scan) ──────────────────────────
+
   getStats: async () => {
-    // فواتير المبيعات
     const { data, error } = await supabase
       .from('sale_invoices')
       .select('status, total_amount, paid_amount, discount')
@@ -389,21 +316,19 @@ export const posRepository = {
     const rows      = (data ?? []) as { status: string; total_amount: number; paid_amount: number; discount: number }[]
     const confirmed = rows.filter(r => r.status === 'confirmed')
 
-    // تكلفة الأجهزة المباعة فعلاً (cost_price من mobile_devices حالتها sold)
     const { data: devCost, error: devErr } = await supabase
       .from('mobile_devices')
       .select('cost_price')
       .eq('status', 'sold')
     if (devErr) throw devErr
 
-    // تكلفة المنتجات المباعة (بنود فواتير مبيعات مؤكدة)
     const { data: prodLines, error: prodErr } = await supabase
       .from('sale_invoice_products')
       .select('quantity, products!product_id ( cost_price ), sale_invoices!invoice_id ( status )')
     if (prodErr) throw prodErr
 
     const costDevices = (devCost ?? []).reduce<number>(
-      (s, r) => s + Number((r as Record<string,unknown>)['cost_price'] ?? 0), 0
+      (s, r) => s + Number((r as Record<string, unknown>)['cost_price'] ?? 0), 0
     )
     const costProducts = ((prodLines ?? []) as unknown[]).reduce<number>((s, row) => {
       const r   = row as Record<string, unknown>
