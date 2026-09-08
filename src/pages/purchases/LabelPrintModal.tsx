@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Printer, Tag, Smartphone, Package, CheckSquare, Square, ChevronDown, ChevronUp } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
 import { fmt } from '@/constants/statusMaps'
-import type { InvoiceDetailDevice, InvoiceDetailProduct } from '@/repositories/purchases.repository'
+import type { PurchaseInvoiceDetailDevice as InvoiceDetailDevice, PurchaseInvoiceDetailProduct as InvoiceDetailProduct } from '@/types/database'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
