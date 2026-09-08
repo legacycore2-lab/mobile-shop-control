@@ -22,6 +22,7 @@ import { PartyStatementPage } from '@/pages/payments/PartyStatementPage'
 import { ImportPage }         from '@/pages/import/ImportPage'
 import { ExpensesPage }       from '@/pages/expenses/ExpensesPage'
 import { QuickScanModal } from '@/pages/dashboard/QuickScanModal'
+import { DeviceFlashCard } from '@/components/shared/DeviceFlashCard'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -122,10 +123,10 @@ function Guard() {
         </Route>
       </Routes>
 
-      {/* Quick Scan Modal — بيتفتح تلقائي لما يجي سكان */}
+      {/* Flash Card — بتظهر تلقائي لما يجي سكان */}
       {scanModal && (
-        <QuickScanModal
-          initialCode={scanCode}
+        <DeviceFlashCard
+          code={scanCode}
           onClose={() => { setScanModal(false); setScanCode('') }}
         />
       )}
