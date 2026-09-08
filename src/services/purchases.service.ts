@@ -1,14 +1,12 @@
 // src/services/purchases.service.ts
-// ── Business Logic — orchestrates repository calls ────────────────────────────
 import {
   purchasesRepository,
   type InvoiceDeviceLine,
   type InvoiceProductLine,
 } from '@/repositories/purchases.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
-import type {
-  PurchaseInvoice, PurchaseInvoiceView, PurchaseInvoiceDetail,
-} from '@/types/database'
+import { supabase } from '@/lib/supabase'
+import type { PurchaseInvoice, PurchaseInvoiceView, PurchaseInvoiceDetail } from '@/types/database'
 
 export type { InvoiceDeviceLine, InvoiceProductLine, PurchaseInvoiceDetail }
 
@@ -28,13 +26,19 @@ export interface PurchaseStats {
   totalSpent: number; totalPaid: number; totalDue: number
 }
 
+function parseRpcError(msg: string): string {
+  if (msg.includes('INVOICE_NOT_FOUND')) return 'الفاتورة غير موجودة'
+  if (msg.includes('INVOICE_NOT_DRAFT')) return 'يمكن تأكيد الفواتير المسودة فقط'
+  return msg
+}
+
 export const purchasesService = {
 
-  getAll: (): Promise<PurchaseInvoiceView[]>            => purchasesRepository.getAll(),
-  getById: (id: string): Promise<PurchaseInvoiceDetail | null> => purchasesRepository.getById(id),
-  getStats: (): Promise<PurchaseStats>                  => purchasesRepository.getStats(),
-  nextInvoiceNumber: (): Promise<string>                => purchasesRepository.nextInvoiceNumber(),
-  getUnlinkedDevicesBySupplier: (supplierId: string)    => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
+  getAll:    (): Promise<PurchaseInvoiceView[]>             => purchasesRepository.getAll(),
+  getById:   (id: string): Promise<PurchaseInvoiceDetail | null> => purchasesRepository.getById(id),
+  getStats:  (): Promise<PurchaseStats>                     => purchasesRepository.getStats(),
+  nextInvoiceNumber: (): Promise<string>                    => purchasesRepository.nextInvoiceNumber(),
+  getUnlinkedDevicesBySupplier: (supplierId: string)        => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
 
   create: async (form: PurchaseFormData): Promise<PurchaseInvoice> => {
     if (!form.supplier_id)  throw new Error('المورد مطلوب')
@@ -43,7 +47,7 @@ export const purchasesService = {
       throw new Error('يجب إضافة جهاز أو منتج واحد على الأقل')
 
     const invoiceNumber = await purchasesRepository.nextInvoiceNumber()
-    const deviceTotal   = form.device_lines .reduce((s, l) => s + l.cost_price,            0)
+    const deviceTotal   = form.device_lines .reduce((s, l) => s + l.cost_price,             0)
     const productTotal  = form.product_lines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
     const totalAmount   = Math.max(0, deviceTotal + productTotal - (form.discount ?? 0))
 
@@ -87,19 +91,12 @@ export const purchasesService = {
     return purchasesRepository.update(id, { paid_amount: paidAmount, discount })
   },
 
+  // ── atomic DB transaction via RPC ─────────────────────────────────────────
   confirm: async (id: string): Promise<void> => {
-    const detail = await purchasesRepository.getById(id)
-    if (!detail)                           throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status !== 'draft') throw new Error('يمكن تأكيد الفواتير المسودة فقط')
-
-    const deviceLines  = await purchasesRepository.getDeviceLinesByInvoice(id)
-    const productLines = await purchasesRepository.getProductLinesByInvoice(id)
-
-    await Promise.all([
-      purchasesRepository.updateStatus(id, 'confirmed'),
-      purchasesRepository.linkDevicesToInvoice(deviceLines.map(d => d.device_id), id),
-      purchasesRepository.adjustProductStock(productLines.map(l => ({ product_id: l.product_id, qty_delta: l.quantity }))),
-    ])
+    const { error } = await supabase.rpc('confirm_purchase_invoice', {
+      p_invoice_id: id,
+    } as never)
+    if (error) throw new Error(parseRpcError(error.message))
   },
 
   cancel: async (id: string): Promise<void> => {
