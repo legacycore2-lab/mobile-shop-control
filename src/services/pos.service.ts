@@ -4,12 +4,13 @@ import {
   posRepository,
   type SaleDeviceLine,
   type SaleProductLine,
-  type SaleInvoiceDetail,
 } from '@/repositories/pos.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
-import type { MobileDeviceView, SaleInvoice, SaleInvoiceView } from '@/types/database'
+import type {
+  MobileDeviceView, SaleInvoice, SaleInvoiceView, SaleInvoiceDetail,
+} from '@/types/database'
 
-export type { SaleDeviceLine, SaleProductLine, SaleInvoiceDetail, SaleInvoiceView }
+export type { SaleDeviceLine, SaleProductLine, SaleInvoiceView, SaleInvoiceDetail }
 
 export interface SaleFormData {
   customer_id:   string
@@ -24,21 +25,15 @@ export interface SaleFormData {
 
 export interface PosStats {
   total: number; draft: number; confirmed: number; cancelled: number
-  totalRevenue: number; totalPaid: number; totalDue: number
-  totalCostSold: number
+  totalRevenue: number; totalPaid: number; totalDue: number; totalCostSold: number
 }
 
 export const posService = {
 
-  getAll: (): Promise<SaleInvoiceView[]> => posRepository.getAll(),
-
+  getAll: (): Promise<SaleInvoiceView[]>              => posRepository.getAll(),
   getById: (id: string): Promise<SaleInvoiceDetail | null> => posRepository.getById(id),
-
-  getStats: (): Promise<PosStats> => posRepository.getStats(),
-
-  getInStockDevices: (): Promise<MobileDeviceView[]> => posRepository.getInStockDevices(),
-
-  // ── Create draft invoice ──────────────────────────────────────────────────
+  getStats: (): Promise<PosStats>                     => posRepository.getStats(),
+  getInStockDevices: (): Promise<MobileDeviceView[]>  => posRepository.getInStockDevices(),
 
   create: async (form: SaleFormData): Promise<SaleInvoice> => {
     if (!form.device_lines.length && !form.product_lines.length)
@@ -66,20 +61,34 @@ export const posService = {
       posRepository.addProductLines(invoice.id, form.product_lines),
     ])
 
+    // Initial payment — only when customer exists (needed for ledger party_id)
+    if (Number(form.paid_amount) > 0 && form.customer_id) {
+      await paymentsRepository.create({
+        payment_type:   'sale',
+        invoice_id:     invoice.id,
+        invoice_number: invoiceNumber,
+        party_type:     'customer',
+        party_id:       form.customer_id,
+        amount:         Number(form.paid_amount),
+        payment_method: 'cash',
+        payment_date:   form.invoice_date,
+        notes:          'دفعة أولى عند إنشاء الفاتورة',
+        created_by:     form.created_by || null,
+      })
+    }
+
     return invoice
   },
 
-  // ── Confirm invoice — mark devices sold + deduct product stock ────────────
-
   confirm: async (id: string, customerId: string | null, soldById: string): Promise<void> => {
     const detail = await posRepository.getById(id)
-    if (!detail)                             throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status !== 'draft')   throw new Error('يمكن تأكيد المسودات فقط')
+    if (!detail)                           throw new Error('الفاتورة غير موجودة')
+    if (detail.invoice.status !== 'draft') throw new Error('يمكن تأكيد المسودات فقط')
 
     const deviceLines  = await posRepository.getDeviceLinesByInvoice(id)
     const productLines = await posRepository.getProductLinesByInvoice(id)
 
-    const priceMap = new Map(deviceLines.map(l => [l.device_id, l.actual_selling_price]))
+    const priceMap  = new Map(deviceLines.map(l => [l.device_id, l.actual_selling_price]))
     const deviceIds = deviceLines.map(l => l.device_id)
 
     await Promise.all([
@@ -89,19 +98,14 @@ export const posService = {
     ])
   },
 
-  // ── Cancel — restore devices + product stock ──────────────────────────────
-
   cancel: async (id: string): Promise<void> => {
     const detail = await posRepository.getById(id)
-    if (!detail)                                throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status === 'cancelled')  throw new Error('الفاتورة ملغاة بالفعل')
+    if (!detail)                               throw new Error('الفاتورة غير موجودة')
+    if (detail.invoice.status === 'cancelled') throw new Error('الفاتورة ملغاة بالفعل')
 
-    const isConfirmed = detail.invoice.status === 'confirmed'
-
-    if (isConfirmed) {
+    if (detail.invoice.status === 'confirmed') {
       const deviceLines  = await posRepository.getDeviceLinesByInvoice(id)
       const productLines = await posRepository.getProductLinesByInvoice(id)
-
       await Promise.all([
         posRepository.markDevicesInStock(deviceLines.map(l => l.device_id)),
         posRepository.adjustProductStock(productLines.map(l => ({ product_id: l.product_id, qty_delta: l.quantity }))),
@@ -111,37 +115,10 @@ export const posService = {
     await posRepository.updateStatus(id, 'cancelled')
   },
 
-  // ── Delete draft only ─────────────────────────────────────────────────────
-
   remove: async (id: string): Promise<void> => {
     const detail = await posRepository.getById(id)
-    if (!detail)                                    throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status === 'confirmed')      throw new Error('لا يمكن حذف فاتورة مؤكدة')
+    if (!detail)                               throw new Error('الفاتورة غير موجودة')
+    if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن حذف فاتورة مؤكدة')
     await posRepository.remove(id)
-  },
-
-  // ── Record initial payment (called from hook after create if paid_amount > 0) ─
-
-  recordInitialPayment: async (
-    invoiceId: string,
-    invoiceNumber: string,
-    customerId: string | null,
-    amount: number,
-    date: string,
-    createdBy: string,
-  ): Promise<void> => {
-    if (amount <= 0 || !customerId) return
-    await paymentsRepository.create({
-      payment_type:   'sale',
-      invoice_id:     invoiceId,
-      invoice_number: invoiceNumber,
-      party_type:     'customer',
-      party_id:       customerId,
-      amount,
-      payment_method: 'cash',
-      payment_date:   date,
-      notes:          'دفعة أولى عند إنشاء الفاتورة',
-      created_by:     createdBy || null,
-    })
   },
 }
