@@ -1,4 +1,11 @@
-import { purchasesRepository, type InvoiceDeviceLine, type InvoiceProductLine, type InvoiceDetail } from '@/repositories/purchases.repository'
+// src/services/purchases.service.ts
+// ── Business Logic — orchestrates repository calls ────────────────────────────
+import {
+  purchasesRepository,
+  type InvoiceDeviceLine,
+  type InvoiceProductLine,
+  type InvoiceDetail,
+} from '@/repositories/purchases.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
 import type { PurchaseInvoice, PurchaseInvoiceView } from '@/types/database'
 
@@ -33,26 +40,27 @@ export const purchasesService = {
 
   nextInvoiceNumber: (): Promise<string> => purchasesRepository.nextInvoiceNumber(),
 
+  // ── Create draft invoice ──────────────────────────────────────────────────
+
   create: async (form: PurchaseFormData): Promise<PurchaseInvoice> => {
     if (!form.supplier_id)  throw new Error('المورد مطلوب')
     if (!form.invoice_date) throw new Error('تاريخ الفاتورة مطلوب')
     if (!form.device_lines.length && !form.product_lines.length)
       throw new Error('يجب إضافة جهاز أو منتج واحد على الأقل')
 
-    const invoiceNumber = await purchasesRepository.nextInvoiceNumber()
-
-    const deviceTotal  = form.device_lines .reduce((s, l) => s + l.cost_price,           0)
-    const productTotal = form.product_lines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
-    const totalAmount  = deviceTotal + productTotal - (form.discount ?? 0)
+    const invoiceNumber  = await purchasesRepository.nextInvoiceNumber()
+    const deviceTotal    = form.device_lines .reduce((s, l) => s + l.cost_price,            0)
+    const productTotal   = form.product_lines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
+    const totalAmount    = Math.max(0, deviceTotal + productTotal - (form.discount ?? 0))
 
     const invoice = await purchasesRepository.create({
       invoice_number: invoiceNumber,
       supplier_id:    form.supplier_id,
       invoice_date:   form.invoice_date,
-      total_amount:   Math.max(0, totalAmount),
-      paid_amount:    Number(form.paid_amount)  || 0,
-      discount:       Number(form.discount)     || 0,
-      notes:          form.notes?.trim()        || null,
+      total_amount:   totalAmount,
+      paid_amount:    Number(form.paid_amount) || 0,
+      discount:       Number(form.discount)    || 0,
+      notes:          form.notes?.trim()       || null,
       status:         'draft',
       created_by:     form.created_by,
     })
@@ -62,7 +70,7 @@ export const purchasesService = {
       purchasesRepository.addProductLines(invoice.id, form.product_lines),
     ])
 
-    // لو فيه دفعة أولى → تتسجل في payments عشان الـ trigger يحسب صح
+    // Initial payment → payments table (trigger syncs paid_amount)
     if (Number(form.paid_amount) > 0) {
       await paymentsRepository.create({
         payment_type:   'purchase',
@@ -83,29 +91,40 @@ export const purchasesService = {
 
   updatePayment: async (id: string, paidAmount: number, discount: number): Promise<PurchaseInvoice> => {
     if (paidAmount < 0) throw new Error('المبلغ المدفوع لا يمكن أن يكون سالباً')
-    return purchasesRepository.update(id, {
-      paid_amount: paidAmount,
-      discount:    discount,
-    })
+    return purchasesRepository.update(id, { paid_amount: paidAmount, discount })
   },
+
+  // ── Confirm invoice — link devices + add product stock ────────────────────
 
   confirm: async (id: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
-    if (!detail) throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status !== 'draft') throw new Error('يمكن تأكيد الفواتير المسودة فقط')
-    await purchasesRepository.confirm(id)
+    if (!detail)                               throw new Error('الفاتورة غير موجودة')
+    if (detail.invoice.status !== 'draft')     throw new Error('يمكن تأكيد الفواتير المسودة فقط')
+
+    const deviceLines  = await purchasesRepository.getDeviceLinesByInvoice(id)
+    const productLines = await purchasesRepository.getProductLinesByInvoice(id)
+
+    await Promise.all([
+      purchasesRepository.updateStatus(id, 'confirmed'),
+      purchasesRepository.linkDevicesToInvoice(deviceLines.map(d => d.device_id), id),
+      purchasesRepository.adjustProductStock(productLines.map(l => ({ product_id: l.product_id, qty_delta: l.quantity }))),
+    ])
   },
+
+  // ── Cancel (draft only) ───────────────────────────────────────────────────
 
   cancel: async (id: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
-    if (!detail) throw new Error('الفاتورة غير موجودة')
+    if (!detail)                               throw new Error('الفاتورة غير موجودة')
     if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن إلغاء فاتورة مؤكدة')
-    await purchasesRepository.cancel(id)
+    await purchasesRepository.updateStatus(id, 'cancelled')
   },
+
+  // ── Delete (draft only) ───────────────────────────────────────────────────
 
   remove: async (id: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
-    if (!detail) throw new Error('الفاتورة غير موجودة')
+    if (!detail)                               throw new Error('الفاتورة غير موجودة')
     if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن حذف فاتورة مؤكدة')
     await purchasesRepository.remove(id)
   },
