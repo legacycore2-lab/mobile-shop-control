@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
 import { STATUS_MAP, fmt } from './constants'
 import { SimplePayModal } from '@/pages/payments/SimplePayModal'
 import { BulkLabelPrintModal } from './LabelPrintModal'
-import type { InvoiceDetail } from '@/repositories/purchases.repository'
+import type { PurchaseInvoiceDetail as InvoiceDetail } from '@/types/database'
 
 export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
   const { data: detail, isLoading } = usePurchase(invoiceId)
