@@ -1,5 +1,6 @@
 import { exportToCsv, SUPPLIER_EXPORT_HEADERS } from '@/lib/exportUtils'
 import { useState, useMemo } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import {
   Search, Plus, Download, Phone, MapPin,
   TrendingUp, Users, CheckCircle, XCircle,
@@ -203,6 +204,7 @@ export function SuppliersPage() {
   const [page,        setPage]        = useState(1)
   const [modal,       setModal]       = useState<'add' | 'edit' | null>(null)
   const [selected,    setSelected]    = useState<Supplier | null>(null)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     return suppliers.filter(s => {
@@ -409,5 +411,16 @@ export function SuppliersPage() {
         />
       )}
     </div>
+
+      {confirmDel && (
+        <ConfirmModal
+          title="حذف المورد"
+          message="هل أنت متأكد من حذف هذا المورد؟"
+          confirmText="حذف"
+          loading={deleteSupplier.isPending}
+          onConfirm={async () => { await deleteSupplier.mutateAsync(confirmDel); setConfirmDel(null) }}
+          onCancel={() => setConfirmDel(null)}
+        />
+      )}
   )
 }
