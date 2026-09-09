@@ -19,6 +19,7 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
   const [showPay,       setShowPay]       = useState(false)
   const [showBulkLabel, setShowBulkLabel] = useState(false)
   const [error,         setError]         = useState('')
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   // بعد التأكيد نفتح modal الطباعة مباشرة
   async function handleConfirm() {
@@ -33,10 +34,10 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
   }
 
   async function handleCancel() {
-    if (!confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')) return
     setError('')
     try { await cancelMutation.mutateAsync(invoiceId) }
     catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
+    finally { setConfirmCancel(false) }
   }
 
   const inv = detail?.invoice
@@ -186,7 +187,7 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                     : <CheckCircle size={14} />}
                   تأكيد وطباعة الليبلات
                 </button>
-                <button onClick={handleCancel} disabled={cancelMutation.isPending}
+                <button onClick={() => setConfirmCancel(true)} disabled={cancelMutation.isPending}
                   className="h-9 px-3 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
                   إلغاء
                 </button>
@@ -233,6 +234,17 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
           invoiceNumber={inv.invoice_number}
           supplierName={inv.supplier_name ?? ''}
           onClose={() => setShowBulkLabel(false)}
+        />
+      )}
+      {confirmCancel && (
+        <ConfirmModal
+          title="إلغاء الفاتورة"
+          message="هل أنت متأكد من إلغاء هذه الفاتورة؟"
+          confirmText="إلغاء الفاتورة"
+          variant="warning"
+          loading={cancelMutation.isPending}
+          onConfirm={() => void handleCancel()}
+          onCancel={() => setConfirmCancel(false)}
         />
       )}
     </div>
