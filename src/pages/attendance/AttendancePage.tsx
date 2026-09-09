@@ -602,8 +602,6 @@ export function AttendancePage() {
           onClose={() => setManualEntry(null)}
         />
       )}
-    </div>
-
       {confirmDeactivate && (
         <ConfirmModal
           title="إيقاف موظف"
@@ -615,5 +613,6 @@ export function AttendancePage() {
           onCancel={() => setConfirmDeactivate(null)}
         />
       )}
+    </div>
   )
 }
