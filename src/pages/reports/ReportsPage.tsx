@@ -1,6 +1,6 @@
 // src/pages/reports/ReportsPage.tsx
 // ── Lean shell — state, hooks, routing only ───────────────────────────────────
-import { useState } from 'react'
+import { Suspense, useState, lazy } from 'react'
 import {
   TrendingUp, Package, Truck, Users,
   DollarSign, BarChart2, AlertTriangle,
@@ -27,17 +27,18 @@ import {
   printSuppliers, printCustomers, printAlerts, printMovement,
 } from './print/printEngine'
 import { KpiCard, BarChart } from './components/ReportWidgets'
-import { OverviewTabContent }  from './tabs/OverviewTab'
-import { SalesTabContent }     from './tabs/SalesTab'
-import { StockTabContent }     from './tabs/StockTab'
-import { SuppliersTabContent } from './tabs/SuppliersTab'
-import { CustomersTabContent } from './tabs/CustomersTab'
-import { AlertsTabContent }    from './tabs/AlertsTab'
-import { MovementTabContent }  from './tabs/MovementTab'
-import { ProfitTabContent }       from './tabs/ProfitTab'
-import { BrandsTabContent }       from './tabs/BrandsTab'
-import { ExpensesReportTabContent } from './tabs/ExpensesReportTab'
-import { CashierTabContent }      from './tabs/CashierTab'
+// ── Lazy-loaded report tabs ───────────────────────────────────────────────────
+const OverviewTabContent      = lazy(() => import('./tabs/OverviewTab').then(m      => ({ default: m.OverviewTabContent })))
+const SalesTabContent         = lazy(() => import('./tabs/SalesTab').then(m         => ({ default: m.SalesTabContent })))
+const StockTabContent         = lazy(() => import('./tabs/StockTab').then(m         => ({ default: m.StockTabContent })))
+const SuppliersTabContent     = lazy(() => import('./tabs/SuppliersTab').then(m     => ({ default: m.SuppliersTabContent })))
+const CustomersTabContent     = lazy(() => import('./tabs/CustomersTab').then(m     => ({ default: m.CustomersTabContent })))
+const AlertsTabContent        = lazy(() => import('./tabs/AlertsTab').then(m        => ({ default: m.AlertsTabContent })))
+const MovementTabContent      = lazy(() => import('./tabs/MovementTab').then(m      => ({ default: m.MovementTabContent })))
+const ProfitTabContent        = lazy(() => import('./tabs/ProfitTab').then(m        => ({ default: m.ProfitTabContent })))
+const BrandsTabContent        = lazy(() => import('./tabs/BrandsTab').then(m        => ({ default: m.BrandsTabContent })))
+const ExpensesReportTabContent = lazy(() => import('./tabs/ExpensesReportTab').then(m => ({ default: m.ExpensesReportTabContent })))
+const CashierTabContent       = lazy(() => import('./tabs/CashierTab').then(m       => ({ default: m.CashierTabContent })))
 import type { Tab } from './types'
 
 // ── Tab config ────────────────────────────────────────────────────────────────
@@ -205,17 +206,17 @@ export function ReportsPage() {
       </div>
 
       {/* Tab Content — each tab is a separate component */}
-      {tab === 'overview'  && <OverviewTabContent  {...tabProps} />}
-      {tab === 'sales'     && <SalesTabContent     {...tabProps} />}
-      {tab === 'stock'     && <StockTabContent     {...tabProps} />}
-      {tab === 'suppliers' && <SuppliersTabContent {...tabProps} />}
-      {tab === 'customers' && <CustomersTabContent {...tabProps} />}
-      {tab === 'alerts'    && <AlertsTabContent    {...tabProps} />}
-      {tab === 'movement'  && <MovementTabContent  {...tabProps} />}
-      {tab === 'profit'    && <ProfitTabContent       {...tabProps} />}
-      {tab === 'brands'    && <BrandsTabContent        {...tabProps} />}
-      {tab === 'expenses'  && <ExpensesReportTabContent {...tabProps} />}
-      {tab === 'cashier'   && <CashierTabContent        {...tabProps} />}
+      {tab === 'overview'  && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><OverviewTabContent  {...tabProps} /></Suspense>}
+      {tab === 'sales'     && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><SalesTabContent     {...tabProps} /></Suspense>}
+      {tab === 'stock'     && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><StockTabContent     {...tabProps} /></Suspense>}
+      {tab === 'suppliers' && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><SuppliersTabContent {...tabProps} /></Suspense>}
+      {tab === 'customers' && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><CustomersTabContent {...tabProps} /></Suspense>}
+      {tab === 'alerts'    && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><AlertsTabContent    {...tabProps} /></Suspense>}
+      {tab === 'movement'  && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><MovementTabContent  {...tabProps} /></Suspense>}
+      {tab === 'profit'    && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><ProfitTabContent       {...tabProps} /></Suspense>}
+      {tab === 'brands'    && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><BrandsTabContent        {...tabProps} /></Suspense>}
+      {tab === 'expenses'  && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><ExpensesReportTabContent {...tabProps} /></Suspense>}
+      {tab === 'cashier'   && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><CashierTabContent        {...tabProps} /></Suspense>}
     </div>
   )
 }
