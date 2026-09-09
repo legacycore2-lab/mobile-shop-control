@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/StockTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
@@ -27,9 +27,9 @@ export function StockTabContent(props: Record<string, any>) {
 <div className="space-y-5">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard label="موديلات في المخزون"      value={stock.length}                                                       icon={Package}    color="blue"  />
-            <KpiCard label="إجمالي الوحدات"          value={stock.reduce((s,r)=>s+r.count,0)}                                  icon={Smartphone} color="teal"  />
-            <KpiCard label="قيمة التكلفة"            value={`${fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج`}                icon={DollarSign} color="amber" />
-            <KpiCard label="قيمة البيع المتوقعة"     value={`${fmt(stock.reduce((s,r)=>s+r.total_selling,0))} ج`}             icon={TrendingUp} color="green" />
+            <KpiCard label="إجمالي الوحدات"          value={stock.reduce((s: number, r: any) => s + Number(r.count),0)}                                  icon={Smartphone} color="teal"  />
+            <KpiCard label="قيمة التكلفة"            value={`${fmt(stock.reduce((s: number, r: any) => s + Number(r.total_cost),0))} ج`}                icon={DollarSign} color="amber" />
+            <KpiCard label="قيمة البيع المتوقعة"     value={`${fmt(stock.reduce((s: number, r: any) => s + Number(r.total_selling),0))} ج`}             icon={TrendingUp} color="green" />
           </div>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
@@ -46,7 +46,7 @@ export function StockTabContent(props: Record<string, any>) {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {stckLoad ? <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
-                  : stock.map((r,i)=>(
+                  : stock.map((r: any, i: number) =>(
                     <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                       <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                       <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.brand_name}</td>
@@ -61,10 +61,10 @@ export function StockTabContent(props: Record<string, any>) {
                 {stock.length>0&&<tfoot>
                   <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
                     <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={3}>الإجمالي</td>
-                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{stock.reduce((s,r)=>s+r.count,0)}</td>
-                    <td className="px-3 py-2.5 font-bold text-amber-600">{fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج</td>
-                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(stock.reduce((s,r)=>s+r.total_selling,0))} ج</td>
-                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(stock.reduce((s,r)=>s+r.total_selling-r.total_cost,0))} ج</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{stock.reduce((s: number, r: any) => s + Number(r.count),0)}</td>
+                    <td className="px-3 py-2.5 font-bold text-amber-600">{fmt(stock.reduce((s: number, r: any) => s + Number(r.total_cost),0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(stock.reduce((s: number, r: any) => s + Number(r.total_selling),0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(stock.reduce((s: number, r: any) => s + Number(r.total_selling)-r.total_cost,0))} ج</td>
                   </tr>
                 </tfoot>}
               </table>
@@ -88,7 +88,7 @@ export function StockTabContent(props: Record<string, any>) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {prodMovement.map((r,i)=>(
+                    {prodMovement.map((r: any, i: number) =>(
                       <tr key={i} className={cn('hover:bg-gray-50 dark:hover:bg-gray-800/30', r.needs_reorder && 'bg-red-50/20 dark:bg-red-900/5')}>
                         <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                         <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.name}</td>
@@ -109,9 +109,9 @@ export function StockTabContent(props: Record<string, any>) {
                     <tfoot>
                       <tr className="bg-purple-50 dark:bg-purple-900/10 border-t-2 border-purple-200 dark:border-purple-800">
                         <td className="px-3 py-2.5 text-xs font-bold text-purple-700 dark:text-purple-400" colSpan={4}>الإجمالي</td>
-                        <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s,r)=>s+r.current_stock,0)}</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s: number, r: any) => s + Number(r.current_stock),0)}</td>
                         <td/>
-                        <td className="px-3 py-2.5 font-bold text-purple-600">{fmt(prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج</td>
+                        <td className="px-3 py-2.5 font-bold text-purple-600">{fmt(prodMovement.reduce((s: number, r: any) => s + Number(r.stock_value),0))} ج</td>
                         <td/>
                       </tr>
                     </tfoot>
@@ -128,25 +128,25 @@ export function StockTabContent(props: Record<string, any>) {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="text-center">
                   <p className="text-xs text-gray-500">أجهزة في المخزون</p>
-                  <p className="text-xl font-bold text-blue-600">{stock.reduce((s,r)=>s+r.count,0)}</p>
+                  <p className="text-xl font-bold text-blue-600">{stock.reduce((s: number, r: any) => s + Number(r.count),0)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">منتجات (وحدات)</p>
-                  <p className="text-xl font-bold text-purple-600">{prodMovement.reduce((s,r)=>s+r.current_stock,0)}</p>
+                  <p className="text-xl font-bold text-purple-600">{prodMovement.reduce((s: number, r: any) => s + Number(r.current_stock),0)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">قيمة الأجهزة</p>
-                  <p className="text-xl font-bold text-amber-600">{fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج</p>
+                  <p className="text-xl font-bold text-amber-600">{fmt(stock.reduce((s: number, r: any) => s + Number(r.total_cost),0))} ج</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500">قيمة المنتجات</p>
-                  <p className="text-xl font-bold text-purple-600">{fmt(prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج</p>
+                  <p className="text-xl font-bold text-purple-600">{fmt(prodMovement.reduce((s: number, r: any) => s + Number(r.stock_value),0))} ج</p>
                 </div>
               </div>
               <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800 flex justify-between items-center">
                 <span className="text-sm font-bold text-gray-700 dark:text-gray-300">إجمالي قيمة المخزون الكلي</span>
                 <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                  {fmt(stock.reduce((s,r)=>s+r.total_cost,0) + prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج
+                  {fmt(stock.reduce((s: number, r: any) => s + Number(r.total_cost),0) + prodMovement.reduce((s: number, r: any) => s + Number(r.stock_value),0))} ج
                 </span>
               </div>
             </div>
