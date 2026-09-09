@@ -1,13 +1,14 @@
 // src/types/database.ts
 // ── Single source of truth for ALL entity types ───────────────────────────────
 
-export type UserRole      = 'owner' | 'manager' | 'cashier' | 'warehouse'
-export type DeviceStatus  = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair'
-export type ProductType   = 'accessory' | 'spare_part'
-export type InvoiceStatus = 'draft' | 'confirmed' | 'cancelled'
-export type PaymentType   = 'purchase' | 'sale'
-export type PartyType     = 'supplier' | 'customer'
-export type PaymentMethod = 'cash' | 'bank_transfer' | 'check' | 'other'
+export type UserRole         = 'owner' | 'manager' | 'cashier' | 'warehouse'
+export type DeviceStatus     = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair'
+export type ProductType      = 'accessory' | 'spare_part'
+export type InvoiceStatus    = 'draft' | 'confirmed' | 'cancelled'
+export type PaymentType      = 'purchase' | 'sale'
+export type PartyType        = 'supplier' | 'customer'
+export type PaymentMethod    = 'cash' | 'bank_transfer' | 'check' | 'other'
+export type AttendanceStatus = 'present' | 'late' | 'absent' | 'half_day' | 'holiday'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -111,8 +112,6 @@ export interface PurchaseInvoiceProduct {
   quantity: number; unit_price: number; subtotal: number; created_at: string
 }
 
-// ── Purchase detail (view model — enriched with joined data) ──────────────────
-
 export interface PurchaseInvoiceDetailDevice extends PurchaseInvoiceDevice {
   brand_name: string; model_name: string
   imei1: string; imei2: string | null
@@ -155,8 +154,6 @@ export interface SaleInvoiceProduct {
   id: string; invoice_id: string; product_id: string
   quantity: number; unit_price: number; subtotal: number; created_at: string
 }
-
-// ── Sale detail (view model — enriched with joined data) ──────────────────────
 
 export interface SaleInvoiceDetailDevice extends SaleInvoiceDevice {
   brand_name: string; model_name: string; imei1: string; cost_price: number
@@ -217,6 +214,90 @@ export interface ExpenseView extends Expense {
   category_name: string; created_by_name: string
 }
 
+// ── Attendance ────────────────────────────────────────────────────────────────
+
+export interface Employee {
+  id:               string
+  name:             string
+  phone:            string | null
+  national_id:      string | null
+  job_title:        string | null
+  base_salary:      number
+  work_start_time:  string   // "HH:MM:SS"
+  work_end_time:    string
+  late_grace_min:   number
+  late_deduct_pct:  number
+  absent_deduct:    number
+  is_active:        boolean
+  notes:            string | null
+  created_at:       string
+  updated_at:       string
+}
+
+export interface AttendanceSettings {
+  id:               string
+  shop_latitude:    number
+  shop_longitude:   number
+  allowed_radius_m: number
+  updated_at:       string
+}
+
+export interface AttendanceRecord {
+  id:               string
+  employee_id:      string
+  record_date:      string
+  check_in_at:      string | null
+  check_out_at:     string | null
+  check_in_lat:     number | null
+  check_in_lng:     number | null
+  check_out_lat:    number | null
+  check_out_lng:    number | null
+  check_in_dist_m:  number | null
+  check_out_dist_m: number | null
+  is_within_range:  boolean | null
+  status:           AttendanceStatus
+  late_minutes:     number
+  work_hours:       number | null
+  overtime_hours:   number
+  deduction:        number
+  notes:            string | null
+  created_by:       string | null
+  created_at:       string
+  updated_at:       string
+}
+
+export interface AttendanceRecordView extends AttendanceRecord {
+  employee_name: string
+  job_title:     string | null
+}
+
+export interface AttendanceMonthlySummary {
+  employee_id:          string
+  employee_name:        string
+  base_salary:          number
+  job_title:            string | null
+  month:                string   // "YYYY-MM"
+  total_days:           number
+  present_days:         number
+  late_days:            number
+  absent_days:          number
+  half_days:            number
+  total_late_minutes:   number
+  total_work_hours:     number
+  total_overtime_hours: number
+  total_deductions:     number
+  net_salary:           number
+}
+
+export interface RecordAttendanceResult {
+  success:  boolean
+  type?:    string
+  distance?: number
+  time?:    string
+  error?:   string
+  allowed?: number
+}
+
 // ── Supabase DB map ───────────────────────────────────────────────────────────
 
 export type Database = {
@@ -238,12 +319,17 @@ export type Database = {
       sale_invoice_products:     { Row: SaleInvoiceProduct;     Insert: Omit<SaleInvoiceProduct, 'id'|'created_at'|'subtotal'>;            Update: never }
       payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
       audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
+      employees:                 { Row: Employee;               Insert: Omit<Employee, 'id'|'created_at'|'updated_at'>;                    Update: Partial<Employee> }
+      attendance_records:        { Row: AttendanceRecord;       Insert: Omit<AttendanceRecord, 'id'|'created_at'|'updated_at'>;            Update: Partial<AttendanceRecord> }
+      attendance_settings:       { Row: AttendanceSettings;     Insert: Omit<AttendanceSettings, 'id'|'updated_at'>;                       Update: Partial<AttendanceSettings> }
     }
     Functions: {
       lookup_device_by_imei:        { Args: { p_imei: string };      Returns: MobileDeviceView[] }
       get_low_stock_products:       { Args: Record<never, never>;     Returns: { product_id: string; product_name: string; stock_qty: number; reorder_level: number; category_name: string }[] }
       next_purchase_invoice_number: { Args: Record<never, never>;     Returns: string }
       next_sale_invoice_number:     { Args: Record<never, never>;     Returns: string }
+      record_attendance:            { Args: { p_employee_id: string; p_lat: number; p_lng: number; p_type: string }; Returns: RecordAttendanceResult }
+      haversine_distance:           { Args: { lat1: number; lng1: number; lat2: number; lng2: number }; Returns: number }
     }
   }
 }
