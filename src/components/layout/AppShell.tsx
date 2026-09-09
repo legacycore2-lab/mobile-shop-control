@@ -12,7 +12,6 @@ import { UserCheck,
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
 import { usePermissions } from '@/hooks/usePermissions'
-import { can } from '@/lib/permissions'
 import type { Resource } from '@/lib/permissions'
 
 const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; resource: Resource }[] = [
@@ -35,7 +34,8 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
 
 export function AppShell() {
   const { profile } = useAuth()
-  const { role } = usePermissions()
+  const perm = usePermissions()
+  const { role } = perm
   const { isDark, toggle } = useTheme()
   const [open, setOpen]         = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -52,7 +52,7 @@ export function AppShell() {
   useStockNotifications()
   const alertCount = useAlertCount()
 
-  const visibleNav = NAV.filter(n => can(role, 'view', n.resource))
+  const visibleNav = NAV.filter(n => perm.canView(n.resource as Resource))
 
   const currentPage = NAV.find(n =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
