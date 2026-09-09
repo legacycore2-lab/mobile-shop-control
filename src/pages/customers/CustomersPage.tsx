@@ -1,5 +1,6 @@
 import { exportToCsv, CUSTOMER_EXPORT_HEADERS } from '@/lib/exportUtils'
 import { useState, useMemo } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import {
   Search, Plus, Download, Phone, MapPin,
   TrendingUp, Users, UserCheck, UserX,
@@ -24,7 +25,6 @@ interface FormState {
   opening_balance: string
   notes: string
   is_active: boolean
-}
 
 const EMPTY_FORM: FormState = {
   name: '', phone: '', address: '',
@@ -186,6 +186,7 @@ export function CustomersPage() {
   const [page,     setPage]     = useState(1)
   const [modal,    setModal]    = useState<'add' | 'edit' | null>(null)
   const [selected, setSelected] = useState<Customer | null>(null)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
 
   const filtered = useMemo(() => customers.filter(c => {
     const q = search.toLowerCase()
@@ -387,5 +388,16 @@ export function CustomersPage() {
         />
       )}
     </div>
+
+      {confirmDel && (
+        <ConfirmModal
+          title="حذف العميل"
+          message="هل أنت متأكد من حذف هذا العميل؟"
+          confirmText="حذف"
+          loading={deleteCustomer.isPending}
+          onConfirm={async () => { await deleteCustomer.mutateAsync(confirmDel); setConfirmDel(null) }}
+          onCancel={() => setConfirmDel(null)}
+        />
+      )}
   )
 }
