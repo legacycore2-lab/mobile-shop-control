@@ -2,8 +2,8 @@
 import { useState, useMemo } from 'react'
 import {
   Search, Shield, ChevronLeft, ChevronRight,
-  User, Clock, FileText, RefreshCw, Trash2,
-  Eye, X, AlertTriangle, Filter, ChevronDown,
+  User, Clock, FileText, RefreshCw,
+  Eye, X, Filter, ChevronDown,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -94,16 +94,6 @@ async function fetchLogs(): Promise<LogRow[]> {
       new_data:    r['new_data'] as Record<string, unknown> | null ?? null,
     } as LogRow
   })
-}
-
-async function deleteAllLogs(): Promise<void> {
-  const { error } = await supabase.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  if (error) throw error
-}
-
-async function deleteLogsBefore(date: string): Promise<void> {
-  const { error } = await supabase.from('audit_logs').delete().lt('created_at', date)
-  if (error) throw error
 }
 
 // ── Detail Modal ──────────────────────────────────────────────────────────────
@@ -232,117 +222,6 @@ function DetailModal({ log, onClose }: { log: LogRow; onClose: () => void }) {
   )
 }
 
-// ── Delete Modal ──────────────────────────────────────────────────────────────
-function DeleteModal({ onClose, onDeleted }: { onClose: () => void; onDeleted: () => void }) {
-  const [mode, setMode]   = useState<'all' | 'before'>('before')
-  const [days, setDays]   = useState('30')
-  const [confirm, setConfirm] = useState('')
-  const qc = useQueryClient()
-
-  const mut = useMutation({
-    mutationFn: async () => {
-      if (mode === 'all') {
-        await deleteAllLogs()
-      } else {
-        const d = new Date()
-        d.setDate(d.getDate() - Number(days))
-        await deleteLogsBefore(d.toISOString())
-      }
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['audit_logs'] })
-      onDeleted()
-      onClose()
-    },
-  })
-
-  const isValid = mode === 'all' ? confirm === 'امسح الكل' : confirm === 'تأكيد'
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <AlertTriangle size={18} className="text-red-600" />
-            </div>
-            <div>
-              <p className="font-bold text-gray-900 dark:text-white">حذف سجلات العمليات</p>
-              <p className="text-xs text-gray-400">هذا الإجراء لا يمكن التراجع عنه</p>
-            </div>
-          </div>
-
-          {/* Mode select */}
-          <div className="space-y-2 mb-4">
-            <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors
-              border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700"
-              style={{ borderColor: mode === 'before' ? '#ef4444' : undefined }}
-            >
-              <input type="radio" name="mode" value="before" checked={mode === 'before'} onChange={() => setMode('before')} className="accent-red-500" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">حذف السجلات القديمة</p>
-                <p className="text-xs text-gray-400 mt-0.5">احذف السجلات الأقدم من عدد معين من الأيام</p>
-              </div>
-            </label>
-            {mode === 'before' && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span className="text-sm text-gray-600 dark:text-gray-400">احذف السجلات الأقدم من</span>
-                <input
-                  type="number" value={days} min="1" max="365"
-                  onChange={e => setDays(e.target.value)}
-                  className="w-16 h-8 text-center border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-red-500"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-400">يوم</span>
-              </div>
-            )}
-
-            <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors
-              border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700"
-              style={{ borderColor: mode === 'all' ? '#ef4444' : undefined }}
-            >
-              <input type="radio" name="mode" value="all" checked={mode === 'all'} onChange={() => setMode('all')} className="accent-red-500" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-600 dark:text-red-400">حذف كل السجلات</p>
-                <p className="text-xs text-gray-400 mt-0.5">مسح جميع سجلات العمليات نهائياً</p>
-              </div>
-            </label>
-          </div>
-
-          {/* Confirm input */}
-          <div className="mb-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-              اكتب <strong className="text-red-600">{mode === 'all' ? 'امسح الكل' : 'تأكيد'}</strong> للمتابعة
-            </p>
-            <input
-              value={confirm} onChange={e => setConfirm(e.target.value)}
-              placeholder={mode === 'all' ? 'امسح الكل' : 'تأكيد'}
-              className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/10"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-              إلغاء
-            </button>
-            <button
-              onClick={() => mut.mutate()}
-              disabled={!isValid || mut.isPending}
-              className="flex-1 h-9 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
-            >
-              {mut.isPending ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Trash2 size={14} />}
-              حذف
-            </button>
-          </div>
-
-          {mut.isError && (
-            <p className="mt-2 text-xs text-red-600 text-center">{String((mut.error as Error)?.message ?? 'حدث خطأ')}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function AuditLogsPage() {
   const { data: logs = [], isLoading, refetch, isFetching } = useQuery({
@@ -354,7 +233,6 @@ export function AuditLogsPage() {
   const [search,      setSearch]      = useState('')
   const [page,        setPage]        = useState(1)
   const [selectedLog, setSelectedLog] = useState<LogRow | null>(null)
-  const [showDelete,  setShowDelete]  = useState(false)
   const [filterUser,  setFilterUser]  = useState('')
   const [filterAction,setFilterAction]= useState('')
 
@@ -394,21 +272,6 @@ export function AuditLogsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">تتبع كل حركة في النظام</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => void refetch()}
-            disabled={isFetching}
-            className="h-9 px-3 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-            تحديث
-          </button>
-          <button
-            onClick={() => setShowDelete(true)}
-            className="h-9 px-3 text-sm font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 transition-colors flex items-center gap-2"
-          >
-            <Trash2 size={14} />
-            مسح السجلات
-          </button>
         </div>
       </div>
 
@@ -580,7 +443,7 @@ export function AuditLogsPage() {
 
       {/* Modals */}
       {selectedLog && <DetailModal log={selectedLog} onClose={() => setSelectedLog(null)} />}
-      {showDelete  && <DeleteModal onClose={() => setShowDelete(false)} onDeleted={() => setPage(1)} />}
+
     </div>
   )
 }
