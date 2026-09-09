@@ -11,6 +11,7 @@ export const suppliersRepository = {
       .from('suppliers')
       .select('*')
       .order('created_at', { ascending: false })
+      .limit(2000)
     if (error) throw error
     return (data ?? []) as Supplier[]
   },
