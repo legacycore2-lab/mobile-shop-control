@@ -2,7 +2,7 @@
 // src/pages/reports/tabs/ExpensesReportTab.tsx
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { KpiCard, BarChart } from '../components/ReportWidgets'
 import { TrendingDown, DollarSign, Calendar, Tag, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
