@@ -6,6 +6,7 @@ import { useProductCategories, useCreateProduct, useCreateCategory } from '@/hoo
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
 import type { InvoiceProductLine, InvoiceDeviceLine } from '@/repositories/purchases.repository'
+import { validate } from '@/lib/validate'
 
 interface NewProductForm {
   category_id: string; name: string; sku: string; barcode: string
@@ -59,8 +60,11 @@ export function AddProductInlineForm({
   async function handleAdd() {
     setError('')
     if (!form.name.trim())    return setError('اسم المنتج مطلوب')
-    if (!form.category_id)    return setError('اختر التصنيف')
-    if (!form.cost_price)     return setError('سعر الشراء مطلوب')
+    const errP = validate.first(
+      validate.required(form.category_id,  'التصنيف'),
+      validate.positive(form.cost_price,   'سعر الشراء'),
+    )
+    if (errP) return setError(errP)
 
     setSaving(true)
     try {
