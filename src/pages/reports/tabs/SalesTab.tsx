@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/SalesTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
@@ -27,9 +27,9 @@ export function SalesTabContent(props: Record<string, any>) {
 <div className="space-y-5">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard label="موديلات مباعة"     value={sales.length}                                                       icon={Smartphone} color="blue"   />
-            <KpiCard label="إجمالي الوحدات"   value={sales.reduce((s,r)=>s+r.total_units,0)}                             icon={Package}    color="teal"   />
-            <KpiCard label="إجمالي الإيرادات" value={`${fmt(sales.reduce((s,r)=>s+r.total_revenue,0))} ج`}              icon={DollarSign} color="green"  />
-            <KpiCard label="صافي الربح"       value={`${fmt(sales.reduce((s,r)=>s+r.profit,0))} ج`}                     icon={TrendingUp} color="green"  />
+            <KpiCard label="إجمالي الوحدات"   value={sales.reduce((s: number, r: any) => s + Number(r.total_units),0)}                             icon={Package}    color="teal"   />
+            <KpiCard label="إجمالي الإيرادات" value={`${fmt(sales.reduce((s: number, r: any) => s + Number(r.total_revenue),0))} ج`}              icon={DollarSign} color="green"  />
+            <KpiCard label="صافي الربح"       value={`${fmt(sales.reduce((s: number, r: any) => s + Number(r.profit),0))} ج`}                     icon={TrendingUp} color="green"  />
           </div>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
@@ -47,7 +47,7 @@ export function SalesTabContent(props: Record<string, any>) {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {saleLoad ? <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
-                  : sales.map((r,i)=>(
+                  : sales.map((r: any, i: number) =>(
                     <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                       <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                       <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.brand_name}</td>
@@ -67,10 +67,10 @@ export function SalesTabContent(props: Record<string, any>) {
                 {sales.length>0&&<tfoot>
                   <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
                     <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={3}>الإجمالي</td>
-                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{sales.reduce((s,r)=>s+r.total_units,0)}</td>
-                    <td className="px-3 py-2.5 font-bold text-red-600">{fmt(sales.reduce((s,r)=>s+r.total_cost,0))} ج</td>
-                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(sales.reduce((s,r)=>s+r.total_revenue,0))} ج</td>
-                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(sales.reduce((s,r)=>s+r.profit,0))} ج</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{sales.reduce((s: number, r: any) => s + Number(r.total_units),0)}</td>
+                    <td className="px-3 py-2.5 font-bold text-red-600">{fmt(sales.reduce((s: number, r: any) => s + Number(r.total_cost),0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(sales.reduce((s: number, r: any) => s + Number(r.total_revenue),0))} ج</td>
+                    <td className="px-3 py-2.5 font-bold text-green-600">{fmt(sales.reduce((s: number, r: any) => s + Number(r.profit),0))} ج</td>
                     <td/>
                   </tr>
                 </tfoot>}
