@@ -1,6 +1,6 @@
 // src/hooks/usePayments.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { paymentsService, type PaymentFormData } from '@/services/payments.service'
+import { paymentsService, type PaymentFormData, type PaymentUpdateFormData } from '@/services/payments.service'
 
 const KEYS = {
   all:            ['payments']                          as const,
@@ -11,7 +11,6 @@ const KEYS = {
   customerLedger: ['ledger', 'customers']               as const,
   customerOne:    (id: string) => ['ledger', 'customers', id] as const,
   stats:          ['payments', 'stats']                 as const,
-  // statement invoice lines (used in PartyStatementPage)
   statementLines: (type: string, id: string) => ['statement-invoices-lines', type, id] as const,
 }
 
@@ -32,17 +31,14 @@ export function usePaymentsByParty(partyId: string) {
 }
 
 // ── Invalidate everything related to a party's statement ─────────────────────
-// Call this after any mutation that affects invoices or payments
 function invalidateAll(
   qc: ReturnType<typeof useQueryClient>,
   opts?: { partyId?: string; partyType?: 'supplier' | 'customer'; invoiceId?: string },
 ) {
-  // Payment lists
   void qc.invalidateQueries({ queryKey: KEYS.all })
   if (opts?.invoiceId) void qc.invalidateQueries({ queryKey: KEYS.byInvoice(opts.invoiceId) })
   if (opts?.partyId)   void qc.invalidateQueries({ queryKey: KEYS.byParty(opts.partyId) })
 
-  // Ledger views (list + single)
   void qc.invalidateQueries({ queryKey: KEYS.supplierLedger })
   void qc.invalidateQueries({ queryKey: KEYS.customerLedger })
   if (opts?.partyId && opts?.partyType === 'supplier')
@@ -50,11 +46,9 @@ function invalidateAll(
   if (opts?.partyId && opts?.partyType === 'customer')
     void qc.invalidateQueries({ queryKey: KEYS.customerOne(opts.partyId) })
 
-  // PartyStatementPage invoice lines
   if (opts?.partyId && opts?.partyType)
     void qc.invalidateQueries({ queryKey: KEYS.statementLines(opts.partyType, opts.partyId) })
 
-  // Upstream invoices (so totals refresh everywhere)
   void qc.invalidateQueries({ queryKey: ['purchases'] })
   void qc.invalidateQueries({ queryKey: ['sales'] })
   void qc.invalidateQueries({ queryKey: ['payments', 'stats'] })
@@ -74,18 +68,34 @@ export function useCreatePayment() {
   })
 }
 
+export function useUpdatePayment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, form }: { id: string; form: PaymentUpdateFormData }) =>
+      paymentsService.update(id, form),
+    onSuccess: () => {
+      // Invalidate everything — we don't carry party info here
+      void qc.invalidateQueries({ queryKey: KEYS.all })
+      void qc.invalidateQueries({ queryKey: KEYS.supplierLedger })
+      void qc.invalidateQueries({ queryKey: KEYS.customerLedger })
+      void qc.invalidateQueries({ queryKey: ['ledger'] })
+      void qc.invalidateQueries({ queryKey: ['statement-invoices-lines'] })
+      void qc.invalidateQueries({ queryKey: ['purchases'] })
+      void qc.invalidateQueries({ queryKey: ['sales'] })
+      void qc.invalidateQueries({ queryKey: KEYS.stats })
+    },
+  })
+}
+
 export function useDeletePayment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => paymentsService.remove(id),
     onSuccess: () => {
-      // We don't know party info here, so invalidate everything
       void qc.invalidateQueries({ queryKey: KEYS.all })
       void qc.invalidateQueries({ queryKey: KEYS.supplierLedger })
       void qc.invalidateQueries({ queryKey: KEYS.customerLedger })
-      // Invalidate all single ledger entries
       void qc.invalidateQueries({ queryKey: ['ledger'] })
-      // Invalidate all statement lines
       void qc.invalidateQueries({ queryKey: ['statement-invoices-lines'] })
       void qc.invalidateQueries({ queryKey: ['purchases'] })
       void qc.invalidateQueries({ queryKey: ['sales'] })
