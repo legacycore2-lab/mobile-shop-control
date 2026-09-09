@@ -393,8 +393,8 @@ export function CustomersPage() {
           title="حذف العميل"
           message="هل أنت متأكد من حذف هذا العميل؟"
           confirmText="حذف"
-          loading={deleteCustomer.isPending}
-          onConfirm={async () => { await deleteCustomer.mutateAsync(confirmDel); setConfirmDel(null) }}
+          loading={deleteMutation.isPending}
+          onConfirm={async () => { await deleteMutation.mutateAsync(confirmDel); setConfirmDel(null) }}
           onCancel={() => setConfirmDel(null)}
         />
       )}
