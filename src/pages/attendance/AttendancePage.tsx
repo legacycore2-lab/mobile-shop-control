@@ -1,5 +1,6 @@
 // src/pages/attendance/AttendancePage.tsx
 import { useState, useMemo } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import {
   Plus, Search, X, ChevronLeft, ChevronRight,
   Users, UserCheck, MapPin, Clock, Calendar,
@@ -70,6 +71,7 @@ export function AttendancePage() {
   const [manualEntry,   setManualEntry]   = useState<{ emp: Employee; rec?: AttendanceRecordView } | null>(null)
   const [gpsMsg,        setGpsMsg]        = useState<{ ok: boolean; text: string } | null>(null)
   const [showSettings,  setShowSettings]  = useState(false)
+  const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null)
 
   const { data: employees = [] }                           = useEmployees()
   const { data: daily = [],    isLoading: loadingDaily }   = useDailyAttendance(selectedDate)
@@ -452,7 +454,7 @@ export function AttendancePage() {
                           </button>
                           {emp.is_active && (
                             <button
-                              onClick={() => { if (confirm(`إيقاف ${emp.name}؟`)) deactivate.mutate(emp.id) }}
+                              onClick={() => setConfirmDeactivate({ id: emp.id, name: emp.name })}
                               className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-red-600 hover:border-red-300 transition-colors">
                               <XCircle size={13} />
                             </button>
@@ -601,5 +603,17 @@ export function AttendancePage() {
         />
       )}
     </div>
+
+      {confirmDeactivate && (
+        <ConfirmModal
+          title="إيقاف موظف"
+          message={`هل أنت متأكد من إيقاف ${confirmDeactivate.name}؟`}
+          confirmText="إيقاف"
+          variant="warning"
+          loading={deactivate.isPending}
+          onConfirm={() => { deactivate.mutate(confirmDeactivate.id); setConfirmDeactivate(null) }}
+          onCancel={() => setConfirmDeactivate(null)}
+        />
+      )}
   )
 }
