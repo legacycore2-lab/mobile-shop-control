@@ -1,6 +1,5 @@
 // src/repositories/permissions.repository.ts
-// @ts-nocheck
-
+// @ts-nocheck  — TODO: add employees/attendance to Database type map
 import { supabase } from '@/lib/supabase'
 import type { UserRole } from '@/types/database'
 import type { RolePermission, Resource, Action } from '@/lib/permissions'
