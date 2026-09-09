@@ -1,4 +1,5 @@
 // src/repositories/permissions.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase'
 import type { UserRole } from '@/types/database'
 import type { RolePermission, Resource, Action } from '@/lib/permissions'
