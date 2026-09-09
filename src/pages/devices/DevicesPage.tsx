@@ -1,5 +1,6 @@
 // src/pages/devices/DevicesPage.tsx
 import { useState, useMemo } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import {
   Search, Download, Smartphone,
   Package, CheckCircle, Wrench, AlertTriangle,
@@ -30,6 +31,7 @@ export function DevicesPage() {
   const [selected, setSelected] = useState<MobileDeviceView | null>(null)
   const [modal,    setModal]    = useState<'edit' | null>(null)
   const [drawer,   setDrawer]   = useState<MobileDeviceView | null>(null)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [scanner,  setScanner]  = useState(false)
   const [printLabel, setPrintLabel] = useState<BarcodeLabel | null>(null)
 
@@ -302,5 +304,16 @@ export function DevicesPage() {
         />
       )}
     </div>
+
+      {confirmDel && (
+        <ConfirmModal
+          title="حذف الجهاز"
+          message="هل أنت متأكد من حذف هذا الجهاز؟"
+          confirmText="حذف"
+          loading={deleteDevice.isPending}
+          onConfirm={async () => { await deleteDevice.mutateAsync(confirmDel); setConfirmDel(null) }}
+          onCancel={() => setConfirmDel(null)}
+        />
+      )}
   )
 }
