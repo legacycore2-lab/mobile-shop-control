@@ -281,8 +281,8 @@ export function ProductsPage() {
           title="حذف المنتج"
           message="هل أنت متأكد من حذف هذا المنتج؟"
           confirmText="حذف"
-          loading={deleteProduct.isPending}
-          onConfirm={async () => { await deleteProduct.mutateAsync(confirmDel); setConfirmDel(null) }}
+          loading={deleteMutation.isPending}
+          onConfirm={async () => { await deleteMutation.mutateAsync(confirmDel); setConfirmDel(null) }}
           onCancel={() => setConfirmDel(null)}
         />
       )}
