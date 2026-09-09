@@ -216,6 +216,19 @@ export interface ExpenseView extends Expense {
   category_name: string; created_by_name: string
 }
 
+// ── Permissions ──────────────────────────────────────────────────────────────
+
+export interface RolePermission {
+  id:         string
+  role:       UserRole
+  resource:   string
+  can_view:   boolean
+  can_create: boolean
+  can_edit:   boolean
+  can_delete: boolean
+  updated_at: string
+}
+
 // ── Attendance ────────────────────────────────────────────────────────────────
 
 export interface Employee {
@@ -321,6 +334,9 @@ export type Database = {
       sale_invoice_products:     { Row: SaleInvoiceProduct;     Insert: Omit<SaleInvoiceProduct, 'id'|'created_at'|'subtotal'>;            Update: never }
       payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
       audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
+      expense_categories:        { Row: ExpenseCategory;        Insert: Omit<ExpenseCategory, 'id'|'created_at'>;                          Update: Partial<ExpenseCategory> }
+      expenses:                  { Row: Expense;                Insert: Omit<Expense, 'id'|'created_at'|'updated_at'>;                     Update: Partial<Expense> }
+      role_permissions:          { Row: RolePermission;         Insert: Omit<RolePermission, 'id'|'updated_at'>;                           Update: Partial<RolePermission> }
       employees:                 { Row: Employee;               Insert: Omit<Employee, 'id'|'created_at'|'updated_at'>;                    Update: Partial<Employee> }
       attendance_records:        { Row: AttendanceRecord;       Insert: Omit<AttendanceRecord, 'id'|'created_at'|'updated_at'>;            Update: Partial<AttendanceRecord> }
       attendance_settings:       { Row: AttendanceSettings;     Insert: Omit<AttendanceSettings, 'id'|'updated_at'>;                       Update: Partial<AttendanceSettings> }
