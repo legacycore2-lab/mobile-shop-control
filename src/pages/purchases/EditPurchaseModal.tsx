@@ -488,27 +488,29 @@ export function EditPurchaseModal({
         } as never)
         .eq('id', invoiceId)
 
-      // لو المدير عدّل الدفعة الأولى → حدّث payments + paid_amount على الفاتورة مباشرة
+      // لو المدير عدّل الدفعة الأولى → عدّل أول payment موجودة بس (مش تضيف جديدة)
       if (paidUnlocked) {
         const newPaid = Number(paidAmount) || 0
 
-        // 1. جيب كل payments الفاتورة دي
-        const { data: allPayments } = await supabase
+        // جيب أول payment على الفاتورة دي (الدفعة الأولى)
+        const { data: firstPayRaw } = await supabase
           .from('payments')
-          .select('id, amount')
+          .select('id')
           .eq('invoice_id', invoiceId)
           .eq('payment_type', 'purchase')
-          .order('payment_date', { ascending: true })
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single()
 
-        const payments = (allPayments ?? []) as { id: string; amount: number }[]
+        const firstPay = firstPayRaw as { id: string } | null
 
-        if (payments.length > 0) {
-          // حدّث الدفعة الأولى بالمبلغ الجديد
+        if (firstPay) {
+          // عدّل الدفعة الأولى فقط — الـ trigger هيحدث paid_amount تلقائي
           await supabase.from('payments')
             .update({ amount: newPaid } as never)
-            .eq('id', payments[0].id)
+            .eq('id', firstPay.id)
         } else if (newPaid > 0) {
-          // مفيش payments — أنشئ واحدة
+          // مفيش دفعة أولى أصلاً — أنشئ واحدة
           const { data: inv } = await supabase
             .from('purchase_invoices')
             .select('supplier_id, invoice_date, invoice_number')
@@ -524,17 +526,12 @@ export function EditPurchaseModal({
               amount:         newPaid,
               payment_method: 'cash',
               payment_date:   (inv as Record<string,string>)['invoice_date'],
-              notes:          'دفعة أولى — تعديل بواسطة المدير',
+              notes:          'دفعة أولى',
               created_by:     profile?.id ?? null,
             } as never)
           }
         }
-
-        // 2. حدّث paid_amount على الفاتورة مباشرة (مش بس payments table)
-        //    عشان الـ trigger ممكن يكون متأخر أو مش موجود
-        await supabase.from('purchase_invoices')
-          .update({ paid_amount: newPaid } as never)
-          .eq('id', invoiceId)
+        // الـ trigger بيحدث paid_amount تلقائي — مش محتاج نعمله manually
       }
 
       // 10. Invalidate queries — full sync across all affected screens
