@@ -18,7 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { PasswordConfirmModal } from '@/components/ui/PasswordConfirmModal'
 import { Unlock } from 'lucide-react'
-import { fmt } from './constants'
+import { fmt } from '@/lib/fmt'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -403,36 +403,39 @@ export function EditPurchaseModal({
           .in('id', removedDeviceIds)
       }
 
-      // 2. Rollback removed products → subtract stock
+      // 2 & 3. Update stock in batch — fetch all affected products in one query
       const oldProductMap = new Map(oldDetail.products.map(p => [p.product_id, p.quantity]))
       const newProductMap = new Map(productLines.map(p => [p.product_id, p.quantity]))
 
-      for (const [productId, oldQty] of oldProductMap) {
-        const newQty = newProductMap.get(productId) ?? 0
-        if (newQty < oldQty) {
-          const { data: prod } = await supabase.from('products').select('stock_qty').eq('id', productId).single()
-          const currentStock = (prod as { stock_qty: number } | null)?.stock_qty ?? 0
-          await supabase.from('products')
-            .update({ stock_qty: currentStock - (oldQty - newQty) } as never)
-            .eq('id', productId)
-        } else if (newQty > oldQty) {
-          const { data: prod } = await supabase.from('products').select('stock_qty').eq('id', productId).single()
-          const currentStock = (prod as { stock_qty: number } | null)?.stock_qty ?? 0
-          await supabase.from('products')
-            .update({ stock_qty: currentStock + (newQty - oldQty) } as never)
-            .eq('id', productId)
-        }
-      }
+      const affectedProductIds = Array.from(new Set([
+        ...Array.from(oldProductMap.keys()),
+        ...Array.from(newProductMap.keys()),
+      ]))
 
-      // 3. Add stock for newly added products
-      for (const [productId, newQty] of newProductMap) {
-        if (!oldProductMap.has(productId)) {
-          const { data: prod } = await supabase.from('products').select('stock_qty').eq('id', productId).single()
-          const currentStock = (prod as { stock_qty: number } | null)?.stock_qty ?? 0
-          await supabase.from('products')
-            .update({ stock_qty: currentStock + newQty } as never)
+      if (affectedProductIds.length > 0) {
+        // Single query to get all current stock values
+        const { data: stockRows } = await supabase
+          .from('products')
+          .select('id, stock_qty')
+          .in('id', affectedProductIds)
+
+        const stockMap = new Map(
+          ((stockRows ?? []) as { id: string; stock_qty: number }[])
+            .map(r => [r.id, Number(r.stock_qty ?? 0)])
+        )
+
+        // Calculate new stock for each product and update in parallel
+        await Promise.all(affectedProductIds.map(productId => {
+          const oldQty     = oldProductMap.get(productId) ?? 0
+          const newQty     = newProductMap.get(productId) ?? 0
+          const delta      = newQty - oldQty
+          if (delta === 0) return Promise.resolve()
+          const current    = stockMap.get(productId) ?? 0
+          const newStock   = Math.max(0, current + delta)
+          return supabase.from('products')
+            .update({ stock_qty: newStock } as never)
             .eq('id', productId)
-        }
+        }))
       }
 
       // 4. Update device cost + selling prices on mobile_devices
