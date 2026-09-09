@@ -1,5 +1,4 @@
 // src/repositories/permissions.repository.ts
-// @ts-nocheck — Supabase v2 cannot infer types for post-init tables; fix = generate types via supabase gen types
 import { supabase } from '@/lib/supabase'
 import type { UserRole } from '@/types/database'
 import type { RolePermission, Resource, Action } from '@/lib/permissions'
@@ -51,7 +50,7 @@ export async function upsertPermission(
     if (action !== 'view' && value) {
       update.can_view = true
     }
-    await supabase.from('role_permissions').update(update).eq('id', existing.id)
+    await supabase.from('role_permissions').update(update as never).eq('id', (existing as unknown as {id: string}).id)
   } else {
     const row = {
       role, resource,
@@ -61,7 +60,7 @@ export async function upsertPermission(
       can_delete: action === 'delete' ? value : false,
     }
     if (action !== 'view' && value) row.can_view = true
-    await supabase.from('role_permissions').insert(row)
+    await supabase.from('role_permissions').insert(row as never)
   }
 }
 
@@ -79,7 +78,7 @@ export async function upsertRolePermissions(
   }))
   const { error } = await supabase
     .from('role_permissions')
-    .upsert(rows, { onConflict: 'role,resource' })
+    .upsert(rows as never, { onConflict: 'role,resource' })
   if (error) throw error
 }
 
@@ -94,7 +93,7 @@ export async function saveAllPermissions(rows: RolePermission[]): Promise<void> 
         can_create: r.can_create,
         can_edit:   r.can_edit,
         can_delete: r.can_delete,
-      })),
+      })) as never,
       { onConflict: 'role,resource' }
     )
   if (error) throw error
