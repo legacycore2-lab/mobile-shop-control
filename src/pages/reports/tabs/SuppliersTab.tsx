@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/SuppliersTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { printSuppliers } from '../print/printEngine'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
@@ -35,7 +35,7 @@ export function SuppliersTabContent(props: Record<string, any>) {
                 onChange={e => setSelectedSupplierId(e.target.value)}
                 className="flex-1 h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
                 <option value="all">كل الموردين</option>
-                {supplierLedger.map(s => (
+                {supplierLedger.map((s: any) => (
                   <option key={s.supplier_id} value={s.supplier_id}>{s.supplier_name}</option>
                 ))}
               </select>
@@ -43,21 +43,21 @@ export function SuppliersTabContent(props: Record<string, any>) {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  const ledger = selectedSupplierId === 'all' ? supplierLedger : supplierLedger.filter(s => s.supplier_id === selectedSupplierId)
-                  const supps  = selectedSupplierId === 'all' ? suppliers : suppliers.filter((s: {supplier_name:string}) => ledger.some(l => l.supplier_name === s.supplier_name))
+                  const ledger = selectedSupplierId === 'all' ? supplierLedger : supplierLedger.filter((s: any) => s.supplier_id === selectedSupplierId)
+                  const supps  = selectedSupplierId === 'all' ? suppliers : suppliers.filter((s: {supplier_name:string}) => ledger.some((l: any) => l.supplier_name === s.supplier_name))
                   void printSuppliers(supps, ledger)
                 }}
                 className="h-9 px-4 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-2 whitespace-nowrap">
                 <Printer size={13} />
-                {selectedSupplierId === 'all' ? 'طباعة الكل' : `طباعة ${supplierLedger.find(s=>s.supplier_id===selectedSupplierId)?.supplier_name ?? ''}`}
+                {selectedSupplierId === 'all' ? 'طباعة الكل' : `طباعة ${supplierLedger.find((s: any) =>s.supplier_id===selectedSupplierId)?.supplier_name ?? ''}`}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             <KpiCard label="عدد الموردين"       value={suppliers.length}                                          icon={Truck}      color="blue"  />
-            <KpiCard label="إجمالي الأجهزة"     value={suppliers.reduce((s,r)=>s+r.total_devices,0)}            icon={Smartphone} color="teal"  />
-            <KpiCard label="إجمالي المشتريات"   value={`${fmt(suppliers.reduce((s,r)=>s+r.total_cost,0))} ج`}  icon={DollarSign} color="red"   />
+            <KpiCard label="إجمالي الأجهزة"     value={suppliers.reduce((s: number, r: any) => s + Number(r.total_devices),0)}            icon={Smartphone} color="teal"  />
+            <KpiCard label="إجمالي المشتريات"   value={`${fmt(suppliers.reduce((s: number, r: any) => s + Number(r.total_cost),0))} ج`}  icon={DollarSign} color="red"   />
           </div>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
@@ -74,8 +74,8 @@ export function SuppliersTabContent(props: Record<string, any>) {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {supLoad ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
-                  : suppliers.map((r,i)=>{
-                    const total = suppliers.reduce((s,x)=>s+x.total_cost,0)
+                  : suppliers.map((r: any, i: number) =>{
+                    const total = suppliers.reduce((s: number, x: any) =>s+x.total_cost,0)
                     return (
                       <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                         <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
