@@ -5,7 +5,8 @@ import { useSaleInvoice, useConfirmSale, useCancelSale } from '@/hooks/usePos'
 import { useAuth } from '@/lib/auth'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
-import { STATUS_MAP, fmt } from './constants'
+import { STATUS_MAP } from './constants'
+import { fmt } from '@/lib/fmt'
 import { printSaleInvoice } from './SaleInvoicePrint'
 
 export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
