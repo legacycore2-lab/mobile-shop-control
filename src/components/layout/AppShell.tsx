@@ -11,26 +11,31 @@ import { UserCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
+import { usePermissions } from '@/hooks/usePermissions'
+import { can } from '@/lib/permissions'
+import type { Resource } from '@/lib/permissions'
 
-const NAV = [
-  { to: '/',          icon: LayoutDashboard, label: 'الرئيسية',    end: true   },
-  { to: '/devices',   icon: Smartphone,      label: 'الأجهزة'                 },
-  { to: '/pos',       icon: ShoppingCart,    label: 'نقطة البيع'              },
-  { to: '/purchases', icon: Package,         label: 'المشتريات'               },
-  { to: '/products',  icon: Tag,             label: 'المنتجات'                },
-  { to: '/suppliers', icon: Truck,           label: 'الموردين'                },
-  { to: '/customers', icon: Users,           label: 'العملاء'                 },
-  { to: '/expenses',  icon: Receipt,         label: 'المصروفات'               },
-  { to: '/attendance', icon: UserCheck,       label: 'الحضور والانصراف'        },
-  { to: '/reports',   icon: BarChart3,       label: 'التقارير'                },
-  { to: '/ledger',    icon: BookOpen,        label: 'الحسابات'                },
-  { to: '/audit',     icon: Shield,          label: 'سجل العمليات'            },
-  { to: '/import',    icon: FileUp,          label: 'استيراد البيانات'        },
-  { to: '/settings',  icon: Settings,        label: 'الإعدادات'               },
+const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; resource: Resource }[] = [
+  { to: '/',           icon: LayoutDashboard, label: 'الرئيسية',         end: true, resource: 'dashboard'   },
+  { to: '/devices',    icon: Smartphone,      label: 'الأجهزة',                     resource: 'devices'     },
+  { to: '/pos',        icon: ShoppingCart,    label: 'نقطة البيع',                  resource: 'pos'         },
+  { to: '/purchases',  icon: Package,         label: 'المشتريات',                   resource: 'purchases'   },
+  { to: '/products',   icon: Tag,             label: 'المنتجات',                    resource: 'products'    },
+  { to: '/suppliers',  icon: Truck,           label: 'الموردين',                    resource: 'suppliers'   },
+  { to: '/customers',  icon: Users,           label: 'العملاء',                     resource: 'customers'   },
+  { to: '/expenses',   icon: Receipt,         label: 'المصروفات',                   resource: 'expenses'    },
+  { to: '/attendance', icon: UserCheck,       label: 'الحضور والانصراف',            resource: 'attendance'  },
+  { to: '/reports',    icon: BarChart3,       label: 'التقارير',                    resource: 'reports'     },
+  { to: '/ledger',     icon: BookOpen,        label: 'الحسابات',                    resource: 'ledger'      },
+  { to: '/audit',      icon: Shield,          label: 'سجل العمليات',                resource: 'audit'       },
+  { to: '/import',     icon: FileUp,          label: 'استيراد البيانات',            resource: 'import'      },
+  { to: '/settings',   icon: Settings,        label: 'الإعدادات',                   resource: 'settings'    },
+  { to: '/permissions',icon: Lock,            label: 'الصلاحيات',                   resource: 'permissions' },
 ]
 
 export function AppShell() {
   const { profile } = useAuth()
+  const { role } = usePermissions()
   const { isDark, toggle } = useTheme()
   const [open, setOpen]         = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -46,6 +51,8 @@ export function AppShell() {
   // ── تفعيل مراقبة المخزون وإرسال Browser Notifications ──
   useStockNotifications()
   const alertCount = useAlertCount()
+
+  const visibleNav = NAV.filter(n => can(role, 'view', n.resource))
 
   const currentPage = NAV.find(n =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
@@ -90,7 +97,7 @@ export function AppShell() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
-          {NAV.map(({ to, icon: Icon, label, end }) => (
+          {visibleNav.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}
