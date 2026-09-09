@@ -1,5 +1,6 @@
 // src/pages/pos/SaleDrawer.tsx
 import { useState } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { X, Smartphone, Tag, CheckCircle, XCircle, AlertCircle, Printer } from 'lucide-react'
 import { useSaleInvoice, useConfirmSale, useCancelSale } from '@/hooks/usePos'
 import { useAuth } from '@/lib/auth'
@@ -15,6 +16,7 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
   const confirmMutation             = useConfirmSale()
   const cancelMutation              = useCancelSale()
   const [error, setError]           = useState('')
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   const inv = detail?.invoice
 
@@ -30,13 +32,10 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
   }
 
   async function handleCancel() {
-    const msg = inv?.status === 'confirmed'
-      ? 'سيتم إرجاع الأجهزة والمنتجات للمخزون. هل أنت متأكد من إلغاء الفاتورة المؤكدة؟'
-      : 'هل أنت متأكد من إلغاء هذه الفاتورة؟'
-    if (!confirm(msg)) return
     setError('')
     try { await cancelMutation.mutateAsync(invoiceId) }
     catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
+    finally { setConfirmCancel(false) }
   }
 
   function handlePrint() {
@@ -234,7 +233,7 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
                 <CheckCircle size={14} /> تأكيد البيع
               </button>
             )}
-            <button onClick={handleCancel} disabled={cancelMutation.isPending}
+            <button onClick={() => setConfirmCancel(true)} disabled={cancelMutation.isPending}
               className={cn(
                 'h-9 px-4 text-sm font-medium rounded-lg border transition-colors disabled:opacity-50 flex items-center justify-center gap-2',
                 inv.status === 'draft'
@@ -248,6 +247,19 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
           </div>
         )}
       </div>
+      {confirmCancel && inv && (
+        <ConfirmModal
+          title={inv.status === 'confirmed' ? 'إلغاء فاتورة مؤكدة' : 'إلغاء الفاتورة'}
+          message={inv.status === 'confirmed'
+            ? 'سيتم إرجاع الأجهزة والمنتجات للمخزون.\nهل أنت متأكد من إلغاء الفاتورة؟'
+            : 'هل أنت متأكد من إلغاء هذه الفاتورة؟'}
+          confirmText="إلغاء الفاتورة"
+          variant="warning"
+          loading={cancelMutation.isPending}
+          onConfirm={() => void handleCancel()}
+          onCancel={() => setConfirmCancel(false)}
+        />
+      )}
     </div>
   )
 }
