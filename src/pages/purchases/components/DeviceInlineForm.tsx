@@ -18,7 +18,7 @@ import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
-import { fmt } from './constants'
+import { fmt } from '@/lib/fmt'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 // ── New Device Form (inline inside modal) ─────────────────────────────────────
