@@ -25,6 +25,7 @@ interface FormState {
   opening_balance: string
   notes: string
   is_active: boolean
+}
 
 const EMPTY_FORM: FormState = {
   name: '', phone: '', address: '',
