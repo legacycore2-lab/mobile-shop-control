@@ -1,5 +1,4 @@
 // src/repositories/attendance.repository.ts
-// @ts-nocheck — Supabase v2 cannot infer types for post-init tables; fix = generate types via supabase gen types
 // Note: Supabase client cannot auto-infer types for attendance/employee tables
 // because they were added after the initial schema. Explicit casts are used below.
 
@@ -34,28 +33,28 @@ export async function fetchActiveEmployees(): Promise<Employee[]> {
 export async function insertEmployee(payload: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): Promise<Employee> {
   const { data, error } = await supabase
     .from('employees')
-    .insert(payload)
+    .insert(payload as never)
     .select()
     .single()
   if (error) throw error
-  return data
+  return data as unknown as Employee
 }
 
 export async function updateEmployee(id: string, payload: Partial<Employee>): Promise<Employee> {
   const { data, error } = await supabase
     .from('employees')
-    .update(payload)
+    .update(payload as never)
     .eq('id', id)
     .select()
     .single()
   if (error) throw error
-  return data
+  return data as unknown as Employee
 }
 
 export async function deleteEmployee(id: string): Promise<void> {
   const { error } = await supabase
     .from('employees')
-    .update({ is_active: false })
+    .update({ is_active: false } as never)
     .eq('id', id)
   if (error) throw error
 }
@@ -69,7 +68,7 @@ export async function fetchAttendanceByDate(date: string): Promise<AttendanceRec
     .eq('record_date', date)
     .order('created_at')
   if (error) throw error
-  return (data ?? []).map((r) => ({
+  return ((data ?? []) as unknown as Array<AttendanceRecord & { employee?: { name: string; job_title: string | null } }>).map((r) => ({
     ...r,
     deduction:     Number(r.deduction),
     work_hours:    r.work_hours != null ? Number(r.work_hours) : null,
@@ -94,7 +93,7 @@ export async function fetchAttendanceByMonth(
 
   const { data, error } = await q
   if (error) throw error
-  return (data ?? []).map((r) => ({
+  return ((data ?? []) as unknown as Array<AttendanceRecord & { employee?: { name: string; job_title: string | null } }>).map((r) => ({
     ...r,
     deduction:     Number(r.deduction),
     work_hours:    r.work_hours != null ? Number(r.work_hours) : null,
@@ -109,34 +108,34 @@ export async function upsertAttendanceRecord(
 ): Promise<AttendanceRecord> {
   const { data, error } = await supabase
     .from('attendance_records')
-    .upsert(payload, { onConflict: 'employee_id,record_date' })
+    .upsert(payload as never, { onConflict: 'employee_id,record_date' })
     .select()
     .single()
   if (error) throw error
-  return data
+  return data as unknown as AttendanceRecord
 }
 
 export async function updateAttendanceRecord(id: string, payload: Partial<AttendanceRecord>): Promise<AttendanceRecord> {
   const { data, error } = await supabase
     .from('attendance_records')
-    .update(payload)
+    .update(payload as never)
     .eq('id', id)
     .select()
     .single()
   if (error) throw error
-  return data
+  return data as unknown as AttendanceRecord
 }
 
 // ── Monthly Summary ───────────────────────────────────────────────────────────
 
 export async function fetchMonthlySummary(month: string): Promise<AttendanceMonthlySummary[]> {
   const { data, error } = await supabase
-    .from('attendance_monthly_summary')
+    .from('attendance_monthly_summary' as never)
     .select('*')
     .eq('month', month)
     .order('employee_name')
   if (error) throw error
-  return (data ?? []).map((r) => ({
+  return ((data ?? []) as unknown as AttendanceMonthlySummary[]).map((r) => ({
     ...r,
     base_salary:          Number(r.base_salary),
     total_work_hours:     Number(r.total_work_hours),
@@ -161,7 +160,7 @@ export async function fetchAttendanceSettings(): Promise<AttendanceSettings | nu
     .limit(1)
     .single()
   if (error && error.code !== 'PGRST116') throw error
-  return data ?? null
+  return (data ?? null) as unknown as AttendanceSettings | null
 }
 
 export async function upsertAttendanceSettings(
@@ -171,20 +170,20 @@ export async function upsertAttendanceSettings(
   if (existing) {
     const { data, error } = await supabase
       .from('attendance_settings')
-      .update(payload)
+      .update(payload as never)
       .eq('id', existing.id)
       .select()
       .single()
     if (error) throw error
-    return data
+    return data as unknown as AttendanceSettings
   }
   const { data, error } = await supabase
     .from('attendance_settings')
-    .insert(payload)
+    .insert(payload as never)
     .select()
     .single()
   if (error) throw error
-  return data
+  return data as unknown as AttendanceSettings
 }
 
 // ── GPS Check-In / Check-Out via RPC ─────────────────────────────────────────
@@ -195,12 +194,12 @@ export async function recordAttendanceGps(
   lng: number,
   type: 'check_in' | 'check_out'
 ): Promise<RecordAttendanceResult> {
-  const { data, error } = await supabase.rpc('record_attendance', {
+  const { data, error } = await supabase.rpc('record_attendance' as never, {
     p_employee_id: employeeId,
     p_lat:         lat,
     p_lng:         lng,
     p_type:        type,
-  })
+  } as never)
   if (error) throw error
   return data as RecordAttendanceResult
 }
