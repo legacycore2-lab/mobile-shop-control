@@ -1,4 +1,5 @@
 // src/repositories/pos.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ── SQL queries ONLY — no business logic ─────────────────────────────────────
 import { supabase } from '@/lib/supabase'
 import { buildSaleInvoiceView, adjustProductStock, n } from '@/lib/db-helpers'
