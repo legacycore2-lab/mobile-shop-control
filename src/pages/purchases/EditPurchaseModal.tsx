@@ -24,8 +24,9 @@ import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purch
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface AddedDevice extends InvoiceDeviceLine {
-  label: string
-  isExisting?: boolean // already in DB — not newly added
+  label:          string
+  selling_price?: number
+  isExisting?:    boolean // already in DB — not newly added
 }
 
 interface NewDeviceForm {
@@ -116,7 +117,7 @@ function AddDeviceInlineForm({
       const device = await createDevice.mutateAsync(deviceForm)
       const brand  = brands.find(b => b.id === form.brand_id)
       const model  = models.find(m => m.id === form.model_id)
-      onAdded({ device_id: device.id, cost_price: Number(form.cost_price), label: `${brand?.name ?? ''} ${model?.name ?? ''} — ${form.imei1}` })
+      onAdded({ device_id: device.id, cost_price: Number(form.cost_price), selling_price: form.selling_price ? Number(form.selling_price) : 0, label: `${brand?.name ?? ''} ${model?.name ?? ''} — ${form.imei1}` })
     } catch (err) { setError(err instanceof Error ? err.message : 'حدث خطأ') }
     finally { setSaving(false) }
   }
@@ -296,10 +297,11 @@ export function EditPurchaseModal({
       setDiscount(String(inv.discount))
       setNotes(inv.notes ?? '')
       setDeviceLines(detail.devices.map(d => ({
-        device_id:  d.device_id,
-        cost_price: d.cost_price,
-        label:      `${d.brand_name} ${d.model_name} — ${d.imei1}`,
-        isExisting: true,
+        device_id:     d.device_id,
+        cost_price:    d.cost_price,
+        selling_price: d.selling_price ?? 0,
+        label:         `${d.brand_name} ${d.model_name} — ${d.imei1}`,
+        isExisting:    true,
       })))
       setProductLines(detail.products.map(p => ({
         product_id: p.product_id,
@@ -324,6 +326,10 @@ export function EditPurchaseModal({
 
   function updateDeviceCost(deviceId: string, cost: number) {
     setDeviceLines(prev => prev.map(l => l.device_id === deviceId ? { ...l, cost_price: cost } : l))
+  }
+
+  function updateDeviceSelling(deviceId: string, selling: number) {
+    setDeviceLines(prev => prev.map(l => l.device_id === deviceId ? { ...l, selling_price: selling } : l))
   }
 
   function removeDevice(deviceId: string) {
@@ -426,10 +432,14 @@ export function EditPurchaseModal({
         }
       }
 
-      // 4. Update device cost prices
+      // 4. Update device cost + selling prices on mobile_devices
       for (const line of deviceLines) {
         await supabase.from('mobile_devices')
-          .update({ cost_price: line.cost_price, purchase_invoice_id: invoiceId } as never)
+          .update({
+            cost_price:    line.cost_price,
+            selling_price: line.selling_price ?? 0,
+            purchase_invoice_id: invoiceId,
+          } as never)
           .eq('id', line.device_id)
       }
 
@@ -675,9 +685,18 @@ export function EditPurchaseModal({
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{line.label}</p>
                           {line.isExisting && <p className="text-xs text-blue-500 dark:text-blue-400">موجود</p>}
                         </div>
-                        <input type="number" min="0" step="0.01" value={line.cost_price}
-                          onChange={e => updateDeviceCost(line.device_id, Number(e.target.value))}
-                          className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center" />
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-[10px] text-gray-400">شراء</span>
+                          <input type="number" min="0" step="0.01" value={line.cost_price}
+                            onChange={e => updateDeviceCost(line.device_id, Number(e.target.value))}
+                            className="w-24 h-8 border border-blue-300 dark:border-blue-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 text-center" />
+                        </div>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-[10px] text-gray-400">بيع</span>
+                          <input type="number" min="0" step="0.01" value={line.selling_price ?? 0}
+                            onChange={e => updateDeviceSelling(line.device_id, Number(e.target.value))}
+                            className="w-24 h-8 border border-green-300 dark:border-green-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 text-center" />
+                        </div>
                         <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">ج</span>
                         <button type="button" onClick={() => removeDevice(line.device_id)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
