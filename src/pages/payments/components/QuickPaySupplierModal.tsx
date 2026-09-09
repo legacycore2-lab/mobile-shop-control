@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Banknote } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { paymentsService } from '@/services/payments.service'
 import { useAuth } from '@/lib/auth'
 import { useQueryClient } from '@tanstack/react-query'
