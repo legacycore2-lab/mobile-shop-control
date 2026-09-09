@@ -1,5 +1,8 @@
 // src/repositories/attendance.repository.ts
-// @ts-nocheck  — TODO: add employees/attendance to Database type map
+// @ts-nocheck — Supabase v2 cannot infer types for post-init tables; fix = generate types via supabase gen types
+// Note: Supabase client cannot auto-infer types for attendance/employee tables
+// because they were added after the initial schema. Explicit casts are used below.
+
 import { supabase } from '@/lib/supabase'
 import type {
   Employee, AttendanceRecord, AttendanceRecordView,
@@ -14,7 +17,8 @@ export async function fetchEmployees(): Promise<Employee[]> {
     .select('*')
     .order('name')
   if (error) throw error
-  return (data ?? []).map(r => ({ ...r, base_salary: Number(r.base_salary), late_deduct_pct: Number(r.late_deduct_pct), absent_deduct: Number(r.absent_deduct) }))
+  const rows = (data ?? []) as unknown as Employee[]
+  return rows.map(e => ({ ...e, base_salary: Number(e.base_salary), late_deduct_pct: Number(e.late_deduct_pct), absent_deduct: Number(e.absent_deduct) }))
 }
 
 export async function fetchActiveEmployees(): Promise<Employee[]> {
@@ -24,7 +28,7 @@ export async function fetchActiveEmployees(): Promise<Employee[]> {
     .eq('is_active', true)
     .order('name')
   if (error) throw error
-  return (data ?? []).map(r => ({ ...r, base_salary: Number(r.base_salary), late_deduct_pct: Number(r.late_deduct_pct), absent_deduct: Number(r.absent_deduct) }))
+  return (data ?? [] as Employee[]).map(r => { const e = r as unknown as Employee; return { ...e, base_salary: Number(e.base_salary), late_deduct_pct: Number(e.late_deduct_pct), absent_deduct: Number(e.absent_deduct) } })
 }
 
 export async function insertEmployee(payload: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): Promise<Employee> {
