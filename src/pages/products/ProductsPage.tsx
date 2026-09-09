@@ -18,7 +18,8 @@ import { exportToCsv, PRODUCT_EXPORT_HEADERS } from '@/lib/exportUtils'
 import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { ProductModal } from './ProductModal'
 import { ProductDrawer } from './ProductDrawer'
-import { TYPE_MAP, PAGE_SIZE, fmt, type FilterType } from './constants'
+import { TYPE_MAP, PAGE_SIZE, type FilterType } from './constants'
+import { fmt } from '@/lib/fmt'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 
 export function ProductsPage() {
