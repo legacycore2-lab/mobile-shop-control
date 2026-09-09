@@ -1,7 +1,7 @@
 // src/pages/reports/print/printEngine.ts
 // HTML print-to-window functions — all exported
 
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 
 export function printStyles() {
   return `
