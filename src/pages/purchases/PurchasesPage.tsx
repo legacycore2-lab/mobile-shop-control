@@ -8,7 +8,8 @@ import { cn } from '@/lib/cn'
 import { PurchaseInvoiceDrawer } from './InvoiceDrawer'
 import { CreatePurchaseModal } from './CreatePurchaseModal'
 import { EditPurchaseModal } from './EditPurchaseModal'
-import { STATUS_MAP, PAGE_SIZE, fmt, type FilterStatus } from './constants'
+import { STATUS_MAP, PAGE_SIZE, type FilterStatus } from './constants'
+import { fmt } from '@/lib/fmt'
 import type { PurchaseInvoiceView, InvoiceStatus } from '@/types/database'
 
 export function PurchasesPage() {
