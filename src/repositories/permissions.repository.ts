@@ -1,5 +1,5 @@
 // src/repositories/permissions.repository.ts
-// @ts-nocheck  — TODO: add employees/attendance to Database type map
+// @ts-nocheck — Supabase v2 cannot infer types for post-init tables; fix = generate types via supabase gen types
 import { supabase } from '@/lib/supabase'
 import type { UserRole } from '@/types/database'
 import type { RolePermission, Resource, Action } from '@/lib/permissions'
