@@ -13,6 +13,7 @@ import { useSupplierLedger, useCustomerLedger } from '@/hooks/usePayments'
 import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
 import { useCustomerStats } from '@/hooks/useCustomers'
 import { useSaleStats } from '@/hooks/usePos'
+import { useExpenseStats } from '@/hooks/useExpenses'
 import { usePurchaseStats } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
 import { useNavigate } from 'react-router-dom'
@@ -264,6 +265,9 @@ export function DashboardPage() {
 
   // الربح الحقيقي = إيرادات المبيعات - تكلفة البضاعة المباعة فقط (مش كل المشتريات)
   const grossProfit = revenue - costSold
+  const { data: expenseStatsData } = useExpenseStats()
+  const totalExpenses = expenseStatsData?.total ?? 0
+  const netProfit     = grossProfit - totalExpenses
   const salePaidPct   = revenue  > 0 ? (revPaid  / revenue)  * 100 : 0
   const saleDuePct    = revenue  > 0 ? (revDue   / revenue)  * 100 : 0
   const purPaidPct    = purchases > 0 ? (purPaid  / purchases) * 100 : 0
@@ -364,19 +368,22 @@ export function DashboardPage() {
           <div className="grid grid-cols-1 gap-2">
             <FinBar label="إجمالي الإيرادات" value={revenue} color="green" />
             <FinBar label="تكلفة البضاعة المباعة" value={costSold} color="purple" />
+            {totalExpenses > 0 && (
+              <FinBar label="إجمالي المصروفات" value={totalExpenses} color="red" />
+            )}
             <div className={cn(
               'rounded-xl border p-4 flex flex-col gap-1',
-              grossProfit >= 0
+              netProfit >= 0
                 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                 : 'bg-red-50   dark:bg-red-900/20   border-red-200   dark:border-red-800',
             )}>
-              <p className={cn('text-xs font-semibold', grossProfit >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300')}>
-                {grossProfit >= 0 ? 'الربح الإجمالي' : 'الخسارة الإجمالية'}
+              <p className={cn('text-xs font-semibold', netProfit >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300')}>
+                {netProfit >= 0 ? 'صافي الربح' : 'صافي الخسارة'}
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{fmt(Math.abs(grossProfit))} ج</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{fmt(Math.abs(netProfit))} ج</p>
               {revenue > 0 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  هامش الربح {((grossProfit / revenue) * 100).toFixed(1)}%
+                  هامش صافي {((netProfit / revenue) * 100).toFixed(1)}% • إجمالي {((grossProfit / revenue) * 100).toFixed(1)}%
                 </p>
               )}
             </div>
