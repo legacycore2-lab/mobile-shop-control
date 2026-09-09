@@ -276,8 +276,6 @@ export function ProductsPage() {
           onClose={() => setScanner(false)}
         />
       )}
-    </div>
-
       {confirmDel && (
         <ConfirmModal
           title="حذف المنتج"
@@ -288,5 +286,6 @@ export function ProductsPage() {
           onCancel={() => setConfirmDel(null)}
         />
       )}
+    </div>
   )
 }
