@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/AlertsTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
@@ -27,9 +27,9 @@ export function AlertsTabContent(props: Record<string, any>) {
 <div className="space-y-5">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard label="منتجات تحت الحد"    value={lowStock.length}                                                  icon={AlertTriangle} color="red"   />
-            <KpiCard label="نفذ من المخزون"     value={lowStock.filter(r=>r.stock_qty===0).length}                      icon={Package}       color="red"   />
-            <KpiCard label="تحت الحد الأدنى"   value={lowStock.filter(r=>r.stock_qty>0).length}                        icon={AlertTriangle} color="amber" />
-            <KpiCard label="قيمة المخزون المنخفض" value={`${fmt(lowStock.reduce((s,r)=>s+r.stock_value,0))} ج`}       icon={DollarSign}    color="amber" />
+            <KpiCard label="نفذ من المخزون"     value={lowStock.filter((r: any) => r.stock_qty===0).length}                      icon={Package}       color="red"   />
+            <KpiCard label="تحت الحد الأدنى"   value={lowStock.filter((r: any) => r.stock_qty>0).length}                        icon={AlertTriangle} color="amber" />
+            <KpiCard label="قيمة المخزون المنخفض" value={`${fmt(lowStock.reduce((s: number, r: any) => s + Number(r.stock_value),0))} ج`}       icon={DollarSign}    color="amber" />
           </div>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
@@ -46,7 +46,7 @@ export function AlertsTabContent(props: Record<string, any>) {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {lowLoad ? <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
-                  : lowStock.map((r,i)=>(
+                  : lowStock.map((r: any, i: number) =>(
                     <tr key={i} className="bg-amber-50/30 dark:bg-amber-900/5 hover:bg-amber-50/60 dark:hover:bg-amber-900/10">
                       <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                       <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.product_name}</td>
