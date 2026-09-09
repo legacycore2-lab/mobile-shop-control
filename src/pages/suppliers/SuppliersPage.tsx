@@ -410,8 +410,6 @@ export function SuppliersPage() {
           onClose={closeModal}
         />
       )}
-    </div>
-
       {confirmDel && (
         <ConfirmModal
           title="حذف المورد"
@@ -422,5 +420,6 @@ export function SuppliersPage() {
           onCancel={() => setConfirmDel(null)}
         />
       )}
+    </div>
   )
 }
