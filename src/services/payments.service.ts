@@ -46,11 +46,12 @@ export const paymentsService = {
     })
 
     if (form.created_by) void logAction({
-      userId:   form.created_by,
-      action:   'pay',
-      table:    'payments',
-      recordId: result.id,
-      newData:  { amount: form.amount, payment_method: form.payment_method, invoice_number: form.invoice_number, party_type: form.party_type },
+      userId:      form.created_by,
+      action:      'pay',
+      table:       'payments',
+      recordId:    result.id,
+      description: `دفع ${form.amount} ج على فاتورة ${form.invoice_number}`,
+      newData:     { amount: form.amount, payment_method: form.payment_method, invoice_number: form.invoice_number, party_type: form.party_type },
     })
 
     return result
@@ -67,13 +68,13 @@ export const paymentsService = {
       notes:          form.notes?.trim() || null,
     })
 
-    if (userId) void logAction({ userId, action: 'update', table: 'payments', recordId: id, newData: { amount: form.amount, payment_method: form.payment_method } })
+    if (userId) void logAction({ userId, action: 'update', table: 'payments', recordId: id, description: `تعديل دفعة — المبلغ الجديد: ${form.amount} ج`, newData: { amount: form.amount, payment_method: form.payment_method } })
 
     return result
   },
 
   remove: async (id: string, userId?: string): Promise<void> => {
-    if (userId) void logAction({ userId, action: 'delete', table: 'payments', recordId: id })
+    if (userId) void logAction({ userId, action: 'delete', table: 'payments', recordId: id, description: 'حذف دفعة' })
     return paymentsRepository.remove(id)
   },
 

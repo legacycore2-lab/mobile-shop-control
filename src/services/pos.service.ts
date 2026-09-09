@@ -93,11 +93,12 @@ export const posService = {
     }
 
     void logAction({
-      userId:   form.created_by,
-      action:   'create',
-      table:    'sale_invoices',
-      recordId: invoice.id,
-      newData:  { invoice_number: invoiceNumber, total_amount: totalAmount, customer_id: form.customer_id || null, devices: form.device_lines.length, products: form.product_lines.length },
+      userId:      form.created_by,
+      action:      'create',
+      table:       'sale_invoices',
+      recordId:    invoice.id,
+      description: `فاتورة بيع جديدة ${invoiceNumber} — ${form.device_lines.length} جهاز، إجمالي ${totalAmount} ج`,
+      newData:     { invoice_number: invoiceNumber, total_amount: totalAmount, customer_id: form.customer_id || null, devices: form.device_lines.length, products: form.product_lines.length },
     })
 
     return invoice
@@ -112,20 +113,20 @@ export const posService = {
       .update({ status: 'confirmed' } as never)
       .eq('id', id)
     if (error) throw error
-    void logAction({ userId: soldById, action: 'confirm', table: 'sale_invoices', recordId: id, newData: { invoice_number: detail.invoice.invoice_number } })
+    void logAction({ userId: soldById, action: 'confirm', table: 'sale_invoices', recordId: id, description: `تأكيد فاتورة البيع ${detail.invoice.invoice_number}`, newData: { invoice_number: detail.invoice.invoice_number } })
   },
 
   cancel: async (id: string, userId?: string): Promise<void> => {
     const { error } = await supabase.rpc('cancel_sale_invoice', { p_invoice_id: id } as never)
     if (error) throw new Error(parseRpcError(error.message))
-    if (userId) void logAction({ userId, action: 'cancel', table: 'sale_invoices', recordId: id })
+    if (userId) void logAction({ userId, action: 'cancel', table: 'sale_invoices', recordId: id, description: 'إلغاء فاتورة البيع وإعادة الأجهزة للمخزون' })
   },
 
   remove: async (id: string, userId?: string): Promise<void> => {
     const detail = await posRepository.getById(id)
     if (!detail)                               throw new Error('الفاتورة غير موجودة')
     if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن حذف فاتورة مؤكدة')
-    if (userId) void logAction({ userId, action: 'delete', table: 'sale_invoices', recordId: id, oldData: { invoice_number: detail.invoice.invoice_number } })
+    if (userId) void logAction({ userId, action: 'delete', table: 'sale_invoices', recordId: id, description: `حذف فاتورة البيع ${detail.invoice.invoice_number}`, oldData: { invoice_number: detail.invoice.invoice_number } })
     await posRepository.remove(id)
   },
 }

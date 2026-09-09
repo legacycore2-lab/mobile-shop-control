@@ -40,7 +40,7 @@ export const customersService = {
       created_by:      form.created_by,
     }
     const result = await customersRepository.create(payload as never)
-    void logAction({ userId: form.created_by, action: 'create', table: 'customers', recordId: result.id, newData: { name: payload.name, phone: payload.phone } })
+    void logAction({ userId: form.created_by, action: 'create', table: 'customers', recordId: result.id, description: `إضافة عميل جديد: ${payload.name}`, newData: { name: payload.name, phone: payload.phone } })
     return result
   },
 
@@ -55,14 +55,14 @@ export const customersService = {
       ...(form.is_active       !== undefined && { is_active: form.is_active }),
     }
     const result = await customersRepository.update(id, payload as never)
-    if (userId) void logAction({ userId, action: 'update', table: 'customers', recordId: id, newData: payload as Record<string, unknown> })
+    if (userId) void logAction({ userId, action: 'update', table: 'customers', recordId: id, description: `تعديل بيانات عميل`, newData: payload as Record<string, unknown> })
     return result
   },
 
   remove: async (id: string, userId?: string): Promise<void> => {
     if (userId) {
       const c = await customersRepository.getById(id)
-      void logAction({ userId, action: 'delete', table: 'customers', recordId: id, oldData: c ? { name: c.name } : undefined })
+      void logAction({ userId, action: 'delete', table: 'customers', recordId: id, description: c ? `حذف العميل: ${c.name}` : 'حذف عميل', oldData: c ? { name: c.name } : undefined })
     }
     return customersRepository.remove(id)
   },

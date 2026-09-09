@@ -1,6 +1,4 @@
 // src/lib/audit.ts
-// مساعد مركزي لتسجيل العمليات في audit_logs عبر Supabase RPC
-
 import { supabase } from '@/lib/supabase'
 
 export type AuditAction =
@@ -9,29 +7,29 @@ export type AuditAction =
   | 'sell' | 'buy' | 'login' | 'logout'
 
 interface LogOptions {
-  userId:    string
-  action:    AuditAction
-  table:     string
-  recordId?: string
-  oldData?:  Record<string, unknown>
-  newData?:  Record<string, unknown>
+  userId:       string
+  action:       AuditAction
+  table:        string
+  recordId?:    string
+  description?: string
+  oldData?:     Record<string, unknown>
+  newData?:     Record<string, unknown>
 }
 
-/**
- * يسجل عملية في audit_logs عبر log_action RPC
- * لا يرمي error لو فشل — logging لا يوقف العملية الأصلية
- */
 export async function logAction(opts: LogOptions): Promise<void> {
   try {
-    await supabase.rpc('log_action', {
-      p_user_id:   opts.userId,
-      p_action:    opts.action,
-      p_table:     opts.table,
-      p_record_id: opts.recordId ?? null,
-      p_old_data:  opts.oldData  ? (opts.oldData  as never) : null,
-      p_new_data:  opts.newData  ? (opts.newData  as never) : null,
-    } as never)
+    await (supabase as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: unknown }>
+    }).rpc('log_action_v2', {
+      p_user_id:    opts.userId,
+      p_action:     opts.action,
+      p_table:      opts.table      ?? null,
+      p_record_id:  opts.recordId   ?? null,
+      p_description:opts.description ?? null,
+      p_old_data:   opts.oldData    ?? null,
+      p_new_data:   opts.newData    ?? null,
+    })
   } catch {
-    // silent — audit failure never blocks the main operation
+    // silent
   }
 }
