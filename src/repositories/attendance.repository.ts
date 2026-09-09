@@ -1,6 +1,5 @@
 // src/repositories/attendance.repository.ts
-// @ts-nocheck
-
+// @ts-nocheck  — TODO: add employees/attendance to Database type map
 import { supabase } from '@/lib/supabase'
 import type {
   Employee, AttendanceRecord, AttendanceRecordView,
