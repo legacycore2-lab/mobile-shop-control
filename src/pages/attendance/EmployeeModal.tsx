@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { X, UserCheck, AlertCircle, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { validate } from '@/lib/validate'
 import { useCreateEmployee, useEditEmployee } from '@/hooks/useAttendance'
 import type { Employee } from '@/types/database'
 
@@ -52,8 +53,11 @@ export function EmployeeModal({ employee, onClose }: Props) {
 
   async function handleSave() {
     setError('')
-    if (!form.name.trim()) return setError('الاسم مطلوب')
-    if (!form.base_salary || Number(form.base_salary) < 0) return setError('الراتب غير صحيح')
+    const err2 = validate.first(
+      validate.required(form.name, 'الاسم'),
+      validate.nonNegative(form.base_salary, 'الراتب'),
+    )
+    if (err2) return setError(err2)
     setSaving(true)
     try {
       const payload = {
