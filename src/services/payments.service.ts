@@ -50,7 +50,7 @@ export const paymentsService = {
       action:      'pay',
       table:       'payments',
       recordId:    result.id,
-      description: `دفع ${form.amount} ج بـ${form.payment_method === 'cash' ? 'النقدي' : form.payment_method === 'bank_transfer' ? 'تحويل بنكي' : form.payment_method} على فاتورة ${form.invoice_number} | ${form.party_type === 'supplier' ? 'مورد' : 'عميل'}`,
+      description: `دفع ${form.amount} ج على فاتورة ${form.invoice_number}`,
       newData:     { amount: form.amount, payment_method: form.payment_method, invoice_number: form.invoice_number, party_type: form.party_type },
     })
 

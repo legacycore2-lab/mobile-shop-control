@@ -90,15 +90,14 @@ export const purchasesService = {
       try {
         const detail = await purchasesRepository.getById(invoice.id)
         const supplierName = detail?.invoice.supplier_name ?? '—'
-        const deviceNames  = detail?.devices.map(d => `${d.brand_name} ${d.model_name}`).join('، ') ?? '—'
-        const description  = `إنشاء فاتورة شراء ${invoiceNumber} | المورد: ${supplierName} | الأجهزة: ${deviceNames || `${form.device_lines.length} جهاز`} | الإجمالي: ${totalAmount} ج`
+        const description  = `إنشاء فاتورة شراء ${invoiceNumber}`
         await logAction({
           userId:      form.created_by,
           action:      'create',
           table:       'purchase_invoices',
           recordId:    invoice.id,
           description,
-          newData:     { invoice_number: invoiceNumber, total_amount: totalAmount, supplier: supplierName, devices: deviceNames },
+          newData:     { invoice_number: invoiceNumber, supplier: supplierName },
         })
       } catch { /* silent */ }
     })()
@@ -122,10 +121,8 @@ export const purchasesService = {
       void (async () => {
         const det = await purchasesRepository.getById(id).catch(() => null)
         const num = det?.invoice.invoice_number ?? id.slice(0,8)
-        const sup = det?.invoice.supplier_name ?? '—'
-        const amt = det?.invoice.total_amount ?? 0
         await logAction({ userId, action: 'confirm', table: 'purchase_invoices', recordId: id,
-          description: `تأكيد فاتورة الشراء ${num} | المورد: ${sup} | الإجمالي: ${amt} ج` })
+          description: `تأكيد فاتورة الشراء ${num}` })
       })()
     }
   },

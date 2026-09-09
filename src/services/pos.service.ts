@@ -96,15 +96,14 @@ export const posService = {
       try {
         const detail       = await posRepository.getById(invoice.id)
         const customerName = detail?.invoice.customer_name ?? 'بدون عميل'
-        const deviceNames  = detail?.devices.map(d => `${d.brand_name} ${d.model_name}`).join('، ') ?? '—'
-        const description  = `إنشاء فاتورة بيع ${invoiceNumber} | العميل: ${customerName} | الأجهزة: ${deviceNames || `${form.device_lines.length} جهاز`} | الإجمالي: ${totalAmount} ج`
+        const description  = `إنشاء فاتورة بيع ${invoiceNumber}`
         await logAction({
           userId:      form.created_by,
           action:      'create',
           table:       'sale_invoices',
           recordId:    invoice.id,
           description,
-          newData:     { invoice_number: invoiceNumber, total_amount: totalAmount, customer: customerName, devices: deviceNames },
+          newData:     { invoice_number: invoiceNumber, customer: customerName },
         })
       } catch { /* silent */ }
     })()
@@ -131,9 +130,8 @@ export const posService = {
       void (async () => {
         const det = await posRepository.getById(id).catch(() => null)
         const num = det?.invoice.invoice_number ?? id.slice(0,8)
-        const cus = det?.invoice.customer_name ?? 'بدون عميل'
         await logAction({ userId, action: 'cancel', table: 'sale_invoices', recordId: id,
-          description: `إلغاء فاتورة البيع ${num} | العميل: ${cus} — تمت إعادة الأجهزة للمخزون` })
+          description: `إلغاء فاتورة البيع ${num}` })
       })()
     }
   },

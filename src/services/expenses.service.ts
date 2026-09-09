@@ -31,7 +31,7 @@ export const expensesService = {
       created_by:       form.created_by || null,
     }
     const result = await expensesRepository.create(payload)
-    if (form.created_by) void logAction({ userId: form.created_by, action: 'create', table: 'expenses', recordId: result.id, description: `مصروف جديد: ${amt} ج — ${payload.description ?? 'بدون وصف'}`, newData: { amount: amt, description: payload.description, expense_date: payload.expense_date } })
+    if (form.created_by) void logAction({ userId: form.created_by, action: 'create', table: 'expenses', recordId: result.id, description: `إضافة مصروف: ${amt} ج`, newData: { amount: amt, description: payload.description, expense_date: payload.expense_date } })
     return result
   },
 
