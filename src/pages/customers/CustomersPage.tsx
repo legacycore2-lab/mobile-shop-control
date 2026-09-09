@@ -387,8 +387,6 @@ export function CustomersPage() {
           onClose={closeModal}
         />
       )}
-    </div>
-
       {confirmDel && (
         <ConfirmModal
           title="حذف العميل"
@@ -399,5 +397,6 @@ export function CustomersPage() {
           onCancel={() => setConfirmDel(null)}
         />
       )}
+    </div>
   )
 }
