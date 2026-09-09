@@ -4,13 +4,14 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Printer, DollarSign, FileText,
   TrendingDown, TrendingUp, Truck, Users,
-  CheckCircle, AlertCircle, ChevronDown, ChevronUp, Smartphone, Tag,
+  CheckCircle, AlertCircle, ChevronDown, ChevronUp, Smartphone, Tag, Pencil,
 } from 'lucide-react'
 import { useSupplierLedgerById, useCustomerLedgerById, usePaymentsByParty, useCreatePayment } from '@/hooks/usePayments'
 import { useAuth } from '@/lib/auth'
 import { useQuery } from '@tanstack/react-query'
 import { paymentsService } from '@/services/payments.service'
 import { AddPaymentModal } from './AddPaymentModal'
+import { EditPaymentModal } from './EditPaymentModal'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 
@@ -327,6 +328,7 @@ export function PartyStatementPage() {
   const partyPhone = isSupplier ? supplierLedger?.supplier_phone : customerLedger?.customer_phone
 
   const [payModal, setPayModal] = useState<{ invoiceId: string; invoiceNumber: string; remaining: number } | null>(null)
+  const [editPayModal, setEditPayModal] = useState<{ paymentId: string; invoiceNumber: string; amount: number; method: string; date: string; notes: string | null } | null>(null)
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set())
 
   function toggleInvoice(id: string) {
@@ -566,7 +568,7 @@ export function PartyStatementPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                {['رقم الفاتورة', 'التاريخ', 'طريقة الدفع', 'ملاحظات', 'المبلغ'].map(h => (
+                {['رقم الفاتورة', 'التاريخ', 'طريقة الدفع', 'ملاحظات', 'المبلغ', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -581,6 +583,22 @@ export function PartyStatementPage() {
                   <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</td>
                   <td className="px-4 py-3 text-xs text-gray-400">{p.notes ?? '—'}</td>
                   <td className="px-4 py-3 font-bold text-green-600 dark:text-green-400">{fmt(p.amount)} ج</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setEditPayModal({
+                        paymentId:     p.id,
+                        invoiceNumber: p.invoice_number,
+                        amount:        Number(p.amount),
+                        method:        p.payment_method,
+                        date:          p.payment_date,
+                        notes:         p.notes,
+                      })}
+                      className="h-7 w-7 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors"
+                      title="تعديل الدفعة"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -595,6 +613,19 @@ export function PartyStatementPage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Payment Modal */}
+      {editPayModal && (
+        <EditPaymentModal
+          paymentId={editPayModal.paymentId}
+          invoiceNumber={editPayModal.invoiceNumber}
+          currentAmount={editPayModal.amount}
+          currentMethod={editPayModal.method}
+          currentDate={editPayModal.date}
+          currentNotes={editPayModal.notes}
+          onClose={() => setEditPayModal(null)}
+        />
+      )}
 
       {/* Add Payment Modal */}
       {payModal && (
