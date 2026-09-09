@@ -15,6 +15,13 @@ export interface PaymentInsert {
   created_by:     string | null
 }
 
+export interface PaymentUpdate {
+  amount?:         number
+  payment_method?: string
+  payment_date?:   string
+  notes?:          string | null
+}
+
 export interface PaymentWithParty extends Payment {
   party_name: string
 }
@@ -30,6 +37,19 @@ export const paymentsRepository = {
     const { data, error } = await supabase
       .from('payments')
       .insert(payload as never)
+      .select()
+      .single()
+    if (error) throw error
+    return data as Payment
+  },
+
+  // ── Update payment ────────────────────────────────────────────────────────
+
+  update: async (id: string, payload: PaymentUpdate): Promise<Payment> => {
+    const { data, error } = await supabase
+      .from('payments')
+      .update(payload as never)
+      .eq('id', id)
       .select()
       .single()
     if (error) throw error
@@ -217,10 +237,10 @@ export const paymentsRepository = {
       totalPayments:         rows.length,
     }
   },
+
   // ── Purchase invoice lines by supplier ───────────────────────────────────
 
   getPurchaseInvoiceLinesBySupplier: async (supplierId: string) => {
-    // Get confirmed invoices with device + product lines
     const { data: invoices, error: invErr } = await supabase
       .from('purchase_invoices')
       .select('id, invoice_number, invoice_date, total_amount, paid_amount, discount, status, notes')
@@ -250,7 +270,6 @@ export const paymentsRepository = {
 
     const invoiceIds = invoiceList.map(i => i.id)
 
-    // Device lines
     const { data: devRows, error: devErr } = await supabase
       .from('purchase_invoice_devices')
       .select(`
@@ -266,7 +285,6 @@ export const paymentsRepository = {
       .in('invoice_id', invoiceIds)
     if (devErr) throw devErr
 
-    // Product lines
     const { data: prdRows, error: prdErr } = await supabase
       .from('purchase_invoice_products')
       .select(`
@@ -276,7 +294,6 @@ export const paymentsRepository = {
       .in('invoice_id', invoiceIds)
     if (prdErr) throw prdErr
 
-    // Build map
     const devicesByInvoice = new Map<string, { imei1: string; brand: string; model: string; cost_price: number }[]>()
     const productsByInvoice = new Map<string, { name: string; unit: string; quantity: number; unit_price: number }[]>()
 
@@ -406,6 +423,5 @@ export const paymentsRepository = {
       products: productsByInvoice.get(inv.id) ?? [],
     }))
   },
-
 
 }
