@@ -1,4 +1,5 @@
 // src/repositories/devices.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase'
 import type { MobileDevice, MobileDeviceView, MobileBrand, MobileModel, DeviceStatus } from '@/types/database'
 
