@@ -4,7 +4,7 @@ import {
   Plus, Search, X, ChevronLeft, ChevronRight,
   Users, UserCheck, MapPin, Clock, Calendar,
   CheckCircle, XCircle, AlertCircle, Coffee, Umbrella,
-  Pencil, ClipboardList, TrendingUp, ChevronDown,
+  Pencil, ClipboardList, TrendingUp, ChevronDown, Settings2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
@@ -17,7 +17,8 @@ import {
   useCheckOutGps,
   useDeactivateEmployee,
 } from '@/hooks/useAttendance'
-import { EmployeeModal }         from './EmployeeModal'
+import { EmployeeModal }             from './EmployeeModal'
+import { AttendanceSettingsModal }   from './AttendanceSettingsModal'
 import { ManualAttendanceModal } from './ManualAttendanceModal'
 import type { Employee, AttendanceRecordView, AttendanceStatus } from '@/types/database'
 
@@ -68,6 +69,7 @@ export function AttendancePage() {
   const [empModal,      setEmpModal]      = useState<Employee | null | 'new'>(null)
   const [manualEntry,   setManualEntry]   = useState<{ emp: Employee; rec?: AttendanceRecordView } | null>(null)
   const [gpsMsg,        setGpsMsg]        = useState<{ ok: boolean; text: string } | null>(null)
+  const [showSettings,  setShowSettings]  = useState(false)
 
   const { data: employees = [] }                           = useEmployees()
   const { data: daily = [],    isLoading: loadingDaily }   = useDailyAttendance(selectedDate)
@@ -138,6 +140,12 @@ export function AttendancePage() {
           className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20"
         >
           <Plus size={16} /> إضافة موظف
+        </button>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <MapPin size={16} /> موقع المحل
         </button>
       </div>
 
@@ -580,6 +588,9 @@ export function AttendancePage() {
           employee={empModal === 'new' ? null : empModal}
           onClose={() => setEmpModal(null)}
         />
+      )}
+      {showSettings && (
+        <AttendanceSettingsModal onClose={() => setShowSettings(false)} />
       )}
       {manualEntry && (
         <ManualAttendanceModal
