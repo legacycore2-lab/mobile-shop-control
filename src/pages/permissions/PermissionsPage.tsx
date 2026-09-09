@@ -1,132 +1,94 @@
 // src/pages/permissions/PermissionsPage.tsx
-import { useState, useCallback } from 'react'
-import { Shield, Save, RotateCcw, Check, X, AlertCircle, CheckCircle, Loader } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Save, RotateCcw, Check, X, AlertCircle, CheckCircle, Loader, ShieldCheck,
+} from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
-  PERMISSIONS, RESOURCE_LABELS, ACTION_LABELS, ROLE_LABELS,
-  type PermissionMatrix, type Resource, type Action,
+  RESOURCES, ACTIONS, RESOURCE_LABELS, ACTION_LABELS, ROLE_LABELS,
+  type Resource, type Action, type RolePermission,
 } from '@/lib/permissions'
+import { useAllPermissions, useSavePermissions } from '@/hooks/usePermissions'
 import type { UserRole } from '@/types/database'
 
-const ROLES:     UserRole[] = ['owner', 'manager', 'cashier', 'warehouse']
-const RESOURCES: Resource[] = [
-  'dashboard','devices','pos','purchases','products',
-  'suppliers','customers','expenses','attendance',
-  'reports','ledger','audit','import','settings','permissions',
-]
-const ACTIONS: Action[] = ['view','create','edit','delete']
+const ROLES: UserRole[] = ['owner', 'manager', 'cashier', 'warehouse']
 
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN ?? ''
-const REPO         = 'legacycore2-lab/mobile-shop-control'
-const FILE_PATH    = 'src/lib/permissions.ts'
+type LocalMatrix = Record<UserRole, Record<Resource, Record<Action, boolean>>>
 
-function buildPermissionsFile(matrix: PermissionMatrix): string {
-  const roleBlock = (role: UserRole) => {
-    const resources = RESOURCES.map(res => {
-      const perms = ACTIONS.map(a =>
-        `      ${a}: ${matrix[role][res][a] ? 'true ' : 'false'},`
-      ).join('\n')
-      return `    ${res.padEnd(12)}: {\n${perms}\n    },`
-    }).join('\n')
-    return `  ${role}: {\n${resources}\n  },`
+function rowsToMatrix(rows: RolePermission[]): LocalMatrix {
+  const m = {} as LocalMatrix
+  for (const role of ROLES) {
+    m[role] = {} as Record<Resource, Record<Action, boolean>>
+    for (const res of RESOURCES) {
+      m[role][res] = { view: false, create: false, edit: false, delete: false }
+    }
   }
-
-  return `// src/lib/permissions.ts
-// !! هذا الملف يُولَّد تلقائياً من صفحة إدارة الصلاحيات — لا تعدله يدوياً !!
-
-import type { UserRole } from '@/types/database'
-
-export type Resource =
-  | 'dashboard'
-  | 'devices'
-  | 'pos'
-  | 'purchases'
-  | 'products'
-  | 'suppliers'
-  | 'customers'
-  | 'expenses'
-  | 'attendance'
-  | 'reports'
-  | 'ledger'
-  | 'audit'
-  | 'import'
-  | 'settings'
-  | 'permissions'
-
-export type Action = 'view' | 'create' | 'edit' | 'delete'
-
-export type PermissionMatrix = Record<UserRole, Record<Resource, Record<Action, boolean>>>
-
-export const PERMISSIONS: PermissionMatrix = {
-${ROLES.map(roleBlock).join('\n')}
+  for (const r of rows) {
+    if (m[r.role as UserRole]?.[r.resource as Resource]) {
+      m[r.role as UserRole][r.resource as Resource] = {
+        view:   r.can_view,
+        create: r.can_create,
+        edit:   r.can_edit,
+        delete: r.can_delete,
+      }
+    }
+  }
+  return m
 }
 
-export function can(
-  role: UserRole | null | undefined,
-  action: Action,
-  resource: Resource
-): boolean {
-  if (!role) return false
-  return PERMISSIONS[role]?.[resource]?.[action] ?? false
-}
-
-export const RESOURCE_LABELS: Record<Resource, string> = {
-  dashboard:   'الرئيسية',
-  devices:     'الأجهزة',
-  pos:         'نقطة البيع',
-  purchases:   'المشتريات',
-  products:    'المنتجات',
-  suppliers:   'الموردين',
-  customers:   'العملاء',
-  expenses:    'المصروفات',
-  attendance:  'الحضور والانصراف',
-  reports:     'التقارير',
-  ledger:      'الحسابات',
-  audit:       'سجل العمليات',
-  import:      'استيراد البيانات',
-  settings:    'الإعدادات',
-  permissions: 'الصلاحيات',
-}
-
-export const ACTION_LABELS: Record<Action, string> = {
-  view:   'عرض',
-  create: 'إضافة',
-  edit:   'تعديل',
-  delete: 'حذف',
-}
-
-export const ROLE_LABELS: Record<UserRole, string> = {
-  owner:     'المالك',
-  manager:   'المدير',
-  cashier:   'الكاشير',
-  warehouse: 'المخزن',
-}
-`
+function matrixToRows(matrix: LocalMatrix): RolePermission[] {
+  const rows: RolePermission[] = []
+  for (const role of ROLES) {
+    for (const res of RESOURCES) {
+      const p = matrix[role][res]
+      rows.push({
+        id: '',
+        role:       role,
+        resource:   res as Resource,
+        can_view:   p.view,
+        can_create: p.create,
+        can_edit:   p.edit,
+        can_delete: p.delete,
+        updated_at: '',
+      })
+    }
+  }
+  return rows
 }
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error'
 
 export function PermissionsPage() {
-  const [matrix,     setMatrix]     = useState<PermissionMatrix>(() =>
-    JSON.parse(JSON.stringify(PERMISSIONS))
-  )
+  const { data: rows = [], isLoading } = useAllPermissions()
+  const saveMut = useSavePermissions()
+
+  const [matrix,     setMatrix]     = useState<LocalMatrix | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [errorMsg,   setErrorMsg]   = useState('')
 
-  // ── toggle single cell ──────────────────────────────────────
+  // populate matrix from DB
+  useEffect(() => {
+    if (rows.length > 0) setMatrix(rowsToMatrix(rows))
+  }, [rows])
+
+  const reset = () => {
+    setMatrix(rowsToMatrix(rows))
+    setSaveStatus('idle')
+    setErrorMsg('')
+  }
+
   const toggle = useCallback((role: UserRole, res: Resource, action: Action) => {
-    if (role === 'owner') return  // owner دايماً full access
+    if (role === 'owner') return
     setMatrix(prev => {
-      const next = JSON.parse(JSON.stringify(prev)) as PermissionMatrix
+      if (!prev) return prev
+      const next: LocalMatrix = JSON.parse(JSON.stringify(prev))
       const current = next[role][res][action]
       next[role][res][action] = !current
-      // rule: لو عطلت view، عطل الباقي تلقائي
       if (action === 'view' && current) {
         next[role][res].create = false
         next[role][res].edit   = false
         next[role][res].delete = false
       }
-      // rule: لو فعّلت create/edit/delete، فعّل view تلقائي
       if (action !== 'view' && !current) {
         next[role][res].view = true
       }
@@ -134,92 +96,44 @@ export function PermissionsPage() {
     })
   }, [])
 
-  // ── toggle entire row (resource) for a role ─────────────────
-  const toggleRow = useCallback((role: UserRole, res: Resource) => {
+  const toggleAllForRole = useCallback((role: UserRole) => {
     if (role === 'owner') return
     setMatrix(prev => {
-      const next = JSON.parse(JSON.stringify(prev)) as PermissionMatrix
-      const allOn = ACTIONS.every(a => next[role][res][a])
-      ACTIONS.forEach(a => { next[role][res][a] = !allOn })
-      return next
-    })
-  }, [])
-
-  // ── toggle entire column (role) ─────────────────────────────
-  const toggleCol = useCallback((role: UserRole) => {
-    if (role === 'owner') return
-    setMatrix(prev => {
-      const next = JSON.parse(JSON.stringify(prev)) as PermissionMatrix
+      if (!prev) return prev
+      const next: LocalMatrix = JSON.parse(JSON.stringify(prev))
       const allOn = RESOURCES.every(res => ACTIONS.every(a => next[role][res][a]))
-      RESOURCES.forEach(res => ACTIONS.forEach(a => { next[role][res][a] = !allOn }))
+      for (const res of RESOURCES) {
+        for (const a of ACTIONS) next[role][res][a] = !allOn
+      }
       return next
     })
   }, [])
 
-  // ── reset to original ────────────────────────────────────────
-  const reset = () => {
-    setMatrix(JSON.parse(JSON.stringify(PERMISSIONS)))
-    setSaveStatus('idle')
-  }
+  const toggleAllForResource = useCallback((role: UserRole, res: Resource) => {
+    if (role === 'owner') return
+    setMatrix(prev => {
+      if (!prev) return prev
+      const next: LocalMatrix = JSON.parse(JSON.stringify(prev))
+      const allOn = ACTIONS.every(a => next[role][res][a])
+      for (const a of ACTIONS) next[role][res][a] = !allOn
+      return next
+    })
+  }, [])
 
-  // ── save to GitHub ───────────────────────────────────────────
   const save = async () => {
+    if (!matrix) return
     setSaveStatus('saving')
     setErrorMsg('')
     try {
-      // get current SHA
-      const shaRes = await fetch(
-        `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-        { headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }
-      )
-      const shaData = await shaRes.json()
-      const sha = shaData.sha
-
-      const content = buildPermissionsFile(matrix)
-      const b64     = btoa(unescape(encodeURIComponent(content)))
-
-      const putRes = await fetch(
-        `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: 'chore: update permissions matrix',
-            content: b64,
-            sha,
-            branch: 'main',
-          }),
-        }
-      )
-
-      if (!putRes.ok) throw new Error('فشل حفظ الملف على GitHub')
-
-      // trigger deploy
-      await fetch(
-        `https://api.github.com/repos/${REPO}/actions/workflows/deploy.yml/dispatches`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ref: 'main' }),
-        }
-      )
-
+      await saveMut.mutateAsync(matrixToRows(matrix))
       setSaveStatus('success')
-      setTimeout(() => setSaveStatus('idle'), 4000)
+      setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'حدث خطأ')
       setSaveStatus('error')
     }
   }
 
-  // ── cell colors ──────────────────────────────────────────────
   const ACTION_COLORS: Record<Action, string> = {
     view:   'bg-blue-500',
     create: 'bg-green-500',
@@ -227,17 +141,24 @@ export function PermissionsPage() {
     delete: 'bg-red-500',
   }
   const ACTION_RING: Record<Action, string> = {
-    view:   'ring-blue-300  dark:ring-blue-700',
-    create: 'ring-green-300 dark:ring-green-700',
-    edit:   'ring-amber-300 dark:ring-amber-700',
-    delete: 'ring-red-300   dark:ring-red-700',
+    view:   'ring-blue-300   dark:ring-blue-700',
+    create: 'ring-green-300  dark:ring-green-700',
+    edit:   'ring-amber-300  dark:ring-amber-700',
+    delete: 'ring-red-300    dark:ring-red-700',
   }
-
   const ROLE_COLORS: Record<UserRole, string> = {
     owner:     'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
     manager:   'bg-blue-100   dark:bg-blue-900/30   text-blue-700   dark:text-blue-300',
     cashier:   'bg-green-100  dark:bg-green-900/30  text-green-700  dark:text-green-300',
     warehouse: 'bg-amber-100  dark:bg-amber-900/30  text-amber-700  dark:text-amber-300',
+  }
+
+  if (isLoading || !matrix) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader size={24} className="animate-spin text-gray-400" />
+      </div>
+    )
   }
 
   return (
@@ -248,34 +169,32 @@ export function PermissionsPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">إدارة الصلاحيات</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            تحكم في صلاحيات كل role على كل صفحة وعملية
+            تحكم في صلاحيات كل role — التغييرات فورية بدون deploy
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={reset}
             className="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-            <RotateCcw size={15} /> إعادة تعيين
+            <RotateCcw size={15} /> إلغاء التغييرات
           </button>
           <button
             onClick={save}
             disabled={saveStatus === 'saving'}
             className={cn(
-              'h-10 px-4 rounded-xl text-white text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg',
-              saveStatus === 'success'
-                ? 'bg-green-600 shadow-green-600/20'
-                : saveStatus === 'error'
-                ? 'bg-red-600 shadow-red-600/20'
-                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20 disabled:opacity-60'
+              'h-10 px-4 rounded-xl text-white text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg disabled:opacity-60',
+              saveStatus === 'success' ? 'bg-green-600 shadow-green-600/20'
+              : saveStatus === 'error' ? 'bg-red-600 shadow-red-600/20'
+              : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
             )}
           >
-            {saveStatus === 'saving'  && <Loader    size={15} className="animate-spin" />}
+            {saveStatus === 'saving'  && <Loader      size={15} className="animate-spin" />}
             {saveStatus === 'success' && <CheckCircle size={15} />}
             {saveStatus === 'error'   && <AlertCircle size={15} />}
-            {saveStatus === 'idle'    && <Save size={15} />}
-            {saveStatus === 'saving'  ? 'جاري الحفظ والنشر...'
-             : saveStatus === 'success' ? 'تم الحفظ والنشر ✓'
+            {saveStatus === 'idle'    && <Save        size={15} />}
+            {saveStatus === 'saving'  ? 'جاري الحفظ...'
+             : saveStatus === 'success' ? 'تم الحفظ ✓'
              : saveStatus === 'error'   ? 'فشل الحفظ'
-             : 'حفظ ونشر'}
+             : 'حفظ'}
           </button>
         </div>
       </div>
@@ -296,7 +215,9 @@ export function PermissionsPage() {
             {ACTION_LABELS[a]}
           </span>
         ))}
-        <span className="text-xs text-gray-400 mr-4">💡 اضغط على اسم الصفحة لتفعيل/تعطيل كل صلاحياتها دفعة واحدة</span>
+        <span className="text-xs text-gray-400 mr-4">
+          💡 اضغط على اسم الـ role لتفعيل/تعطيل كل صلاحياته دفعة واحدة
+        </span>
       </div>
 
       {/* Table */}
@@ -305,24 +226,24 @@ export function PermissionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 w-36">
-                  الصفحة / العملية
+                <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 w-40">
+                  الصفحة
                 </th>
                 {ROLES.map(role => (
                   <th key={role} className="px-2 py-3 text-center" colSpan={4}>
                     <button
-                      onClick={() => toggleCol(role)}
+                      onClick={() => toggleAllForRole(role)}
                       className={cn(
-                        'px-3 py-1 rounded-lg text-xs font-bold transition-colors',
+                        'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
                         role === 'owner'
-                          ? ROLE_COLORS[role] + ' cursor-default'
-                          : ROLE_COLORS[role] + ' hover:opacity-80 cursor-pointer'
+                          ? cn(ROLE_COLORS[role], 'cursor-default')
+                          : cn(ROLE_COLORS[role], 'hover:opacity-80 cursor-pointer')
                       )}
                     >
                       {ROLE_LABELS[role]}
-                      {role === 'owner' && <span className="mr-1 opacity-60">🔒</span>}
+                      {role === 'owner' && <span className="mr-1 opacity-50 text-[10px]">🔒</span>}
                     </button>
-                    <div className="flex justify-center gap-1 mt-1.5">
+                    <div className="flex justify-center gap-1 mt-2">
                       {ACTIONS.map(a => (
                         <span key={a} className="text-[10px] text-gray-400 dark:text-gray-600 w-7 text-center">
                           {ACTION_LABELS[a]}
@@ -336,43 +257,44 @@ export function PermissionsPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {RESOURCES.map(res => (
                 <tr key={res} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                  {/* Resource label */}
                   <td className="px-4 py-3">
                     <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                       {RESOURCE_LABELS[res]}
                     </span>
                   </td>
-
-                  {/* Checkboxes per role */}
-                  {ROLES.map(role => (
-                    <td key={role} className="px-2 py-3" colSpan={4}>
-                      <div className="flex justify-center gap-1">
-                        {ACTIONS.map(action => {
-                          const checked = matrix[role][res][action]
-                          const isOwner = role === 'owner'
-                          return (
-                            <button
-                              key={action}
-                              onClick={() => toggle(role, res, action)}
-                              disabled={isOwner}
-                              title={`${ROLE_LABELS[role]} — ${ACTION_LABELS[action]} — ${RESOURCE_LABELS[res]}`}
-                              className={cn(
-                                'w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all',
-                                isOwner
-                                  ? 'cursor-default opacity-70'
-                                  : 'cursor-pointer hover:scale-110',
-                                checked
-                                  ? cn(ACTION_COLORS[action], 'border-transparent text-white', !isOwner && 'ring-2 ring-offset-1 dark:ring-offset-gray-900 ' + ACTION_RING[action])
-                                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-300 dark:text-gray-600'
-                              )}
-                            >
-                              {checked ? <Check size={12} /> : <X size={11} />}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </td>
-                  ))}
+                  {ROLES.map(role => {
+                    const isOwner = role === 'owner'
+                    return (
+                      <td key={role} className="px-2 py-2.5" colSpan={4}>
+                        <div className="flex justify-center gap-1">
+                          {ACTIONS.map(action => {
+                            const checked = matrix[role][res][action]
+                            return (
+                              <button
+                                key={action}
+                                onClick={() => toggle(role, res, action)}
+                                disabled={isOwner}
+                                title={`${ROLE_LABELS[role]} — ${ACTION_LABELS[action]} — ${RESOURCE_LABELS[res]}`}
+                                className={cn(
+                                  'w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all',
+                                  isOwner ? 'cursor-default opacity-60' : 'cursor-pointer hover:scale-110',
+                                  checked
+                                    ? cn(
+                                        ACTION_COLORS[action],
+                                        'border-transparent text-white',
+                                        !isOwner && 'ring-2 ring-offset-1 dark:ring-offset-gray-900 ' + ACTION_RING[action]
+                                      )
+                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-300 dark:text-gray-600'
+                                )}
+                              >
+                                {checked ? <Check size={12} /> : <X size={11} />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -381,13 +303,13 @@ export function PermissionsPage() {
       </div>
 
       {/* Info */}
-      <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl px-4 py-3">
-        <Shield size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
-        <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-          <p className="font-semibold">بعد الحفظ:</p>
-          <p>• هيتم رفع الملف على GitHub وتشغيل deploy تلقائي (~90 ثانية)</p>
-          <p>• الصلاحيات الجديدة هتظهر بعد ما المستخدم يعمل hard refresh</p>
-          <p>• المالك (owner) دايماً عنده كل الصلاحيات ومش ممكن تتغير</p>
+      <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl px-4 py-3">
+        <ShieldCheck size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+          <p className="font-semibold">ملاحظات:</p>
+          <p>• الحفظ فوري — مفيش deploy</p>
+          <p>• المستخدم هيشوف الصلاحيات الجديدة بعد تسجيل دخول من جديد أو refresh</p>
+          <p>• المالك (owner) دايماً full access ومش ممكن يتغير</p>
         </div>
       </div>
     </div>
