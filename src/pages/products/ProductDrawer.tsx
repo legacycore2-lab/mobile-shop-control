@@ -2,7 +2,8 @@
 import { X, Package, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
-import { TYPE_MAP, fmt } from './constants'
+import { TYPE_MAP } from './constants'
+import { fmt } from '@/lib/fmt'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 
 export function ProductDrawer({ product: p, onClose }: { product: ProductWithCategory; onClose: () => void }) {
