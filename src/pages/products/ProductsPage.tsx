@@ -1,5 +1,6 @@
 // src/pages/products/ProductsPage.tsx
 import { useState, useMemo } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import {
   Search, Download, Package, Tag,
   AlertTriangle, TrendingUp, Archive,
@@ -34,6 +35,7 @@ export function ProductsPage() {
   const [selected,  setSelected]  = useState<ProductWithCategory | null>(null)
   const [scanner,   setScanner]   = useState(false)
   const [drawer,    setDrawer]    = useState<ProductWithCategory | null>(null)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -275,5 +277,16 @@ export function ProductsPage() {
         />
       )}
     </div>
+
+      {confirmDel && (
+        <ConfirmModal
+          title="حذف المنتج"
+          message="هل أنت متأكد من حذف هذا المنتج؟"
+          confirmText="حذف"
+          loading={deleteProduct.isPending}
+          onConfirm={async () => { await deleteProduct.mutateAsync(confirmDel); setConfirmDel(null) }}
+          onCancel={() => setConfirmDel(null)}
+        />
+      )}
   )
 }
