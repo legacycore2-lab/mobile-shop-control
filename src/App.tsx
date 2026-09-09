@@ -22,6 +22,7 @@ import { PartyStatementPage } from '@/pages/payments/PartyStatementPage'
 import { ImportPage }         from '@/pages/import/ImportPage'
 import { ExpensesPage }       from '@/pages/expenses/ExpensesPage'
 import { AttendancePage }     from '@/pages/attendance/AttendancePage'
+import { PermissionsPage }    from '@/pages/permissions/PermissionsPage'
 import { QuickScanModal } from '@/pages/dashboard/QuickScanModal'
 import { DeviceFlashCard } from '@/components/shared/DeviceFlashCard'
 import { AppErrorBoundary, PageErrorBoundary } from '@/components/shared/ErrorBoundary'
@@ -121,6 +122,7 @@ function Guard() {
           <Route path="/ledger/:type/:id"          element={<PageErrorBoundary><PartyStatementPage /></PageErrorBoundary>} />
           <Route path="/expenses"   element={<PageErrorBoundary><ExpensesPage /></PageErrorBoundary>} />
           <Route path="/attendance"  element={<PageErrorBoundary><AttendancePage /></PageErrorBoundary>} />
+          <Route path="/permissions" element={<PageErrorBoundary><PermissionsPage /></PageErrorBoundary>} />
           <Route path="/import"     element={<PageErrorBoundary><ImportPage /></PageErrorBoundary>} />
           <Route path="/settings"   element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
           <Route path="*"           element={<PageErrorBoundary><Navigate to="/" replace /></PageErrorBoundary>} />
