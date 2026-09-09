@@ -40,7 +40,7 @@ const STATUS_META: Record<AttendanceStatus, { label: string; icon: React.ReactNo
   late:     { label: 'متأخر',  icon: <AlertCircle size={14} />, variant: 'warning' },
   absent:   { label: 'غياب',   icon: <XCircle     size={14} />, variant: 'danger'  },
   half_day: { label: 'نص يوم', icon: <Coffee      size={14} />, variant: 'info'    },
-  holiday:  { label: 'إجازة',  icon: <Umbrella    size={14} />, variant: 'default' },
+  holiday:  { label: 'إجازة',  icon: <Umbrella    size={14} />, variant: 'neutral' },
 }
 
 type Tab = 'daily' | 'employees' | 'summary'
@@ -161,10 +161,10 @@ export function AttendancePage() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard title="حضور"     value={presentCount}         icon={CheckCircle} color="green" />
-            <StatCard title="غياب"     value={absentCount}          icon={XCircle}     color="red"   />
-            <StatCard title="متأخرين"  value={lateCount}            icon={AlertCircle} color="amber" />
-            <StatCard title="غير مسجل" value={missingEmps.length}   icon={ClipboardList} color="gray" />
+            <StatCard label="حضور"     value={presentCount}         icon={CheckCircle} color="green" />
+            <StatCard label="غياب"     value={absentCount}          icon={XCircle}     color="red"   />
+            <StatCard label="متأخرين"  value={lateCount}            icon={AlertCircle} color="amber" />
+            <StatCard label="غير مسجل" value={missingEmps.length}   icon={ClipboardList} color="gray" />
           </div>
 
           {/* Table */}
@@ -195,7 +195,7 @@ export function AttendancePage() {
                         <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{rec.employee_name}</td>
                         <td className="px-4 py-3 text-[var(--text-muted)] hidden sm:table-cell">{rec.job_title ?? '—'}</td>
                         <td className="px-4 py-3">
-                          <Badge variant={meta.variant as 'success'|'warning'|'danger'|'info'|'default'}>
+                          <Badge variant={meta.variant as 'success'|'warning'|'danger'|'info'|'neutral'}>
                             <span className="flex items-center gap-1">{meta.icon}{meta.label}</span>
                           </Badge>
                         </td>
@@ -248,7 +248,7 @@ export function AttendancePage() {
                       <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{emp.name}</td>
                       <td className="px-4 py-3 text-[var(--text-muted)] hidden sm:table-cell">{emp.job_title ?? '—'}</td>
                       <td className="px-4 py-3">
-                        <Badge variant="default"><span className="flex items-center gap-1"><ClipboardList size={12} />غير مسجل</span></Badge>
+                        <Badge variant="neutral"><span className="flex items-center gap-1"><ClipboardList size={12} />غير مسجل</span></Badge>
                       </td>
                       <td colSpan={4} className="hidden md:table-cell" />
                       <td className="px-4 py-3">
