@@ -7,7 +7,7 @@ import { useTheme } from '@/lib/theme'
 import { UserCheck, 
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
-  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp, Receipt, Bell, RefreshCw,
+  Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, ShieldCheck, BookOpen, FileUp, Receipt, Bell, RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
@@ -30,7 +30,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/audit',      icon: Shield,          label: 'سجل العمليات',                resource: 'audit'       },
   { to: '/import',     icon: FileUp,          label: 'استيراد البيانات',            resource: 'import'      },
   { to: '/settings',   icon: Settings,        label: 'الإعدادات',                   resource: 'settings'    },
-  { to: '/permissions',icon: LockIcon,            label: 'الصلاحيات',                   resource: 'permissions' },
+  { to: '/permissions',icon: ShieldCheck,         label: 'الصلاحيات',                   resource: 'permissions' },
 ]
 
 export function AppShell() {
