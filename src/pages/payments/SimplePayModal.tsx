@@ -5,7 +5,7 @@ import { DollarSign } from 'lucide-react'
 import { useCreatePayment } from '@/hooks/usePayments'
 import { useAuth } from '@/lib/auth'
 import { useQueryClient } from '@tanstack/react-query'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import type { PaymentType, PartyType } from '@/types/database'
 
 interface Props {
