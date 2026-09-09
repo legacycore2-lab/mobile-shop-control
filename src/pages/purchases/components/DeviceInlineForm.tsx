@@ -18,6 +18,7 @@ import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
+import { validate } from '@/lib/validate'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 // ── New Device Form (inline inside modal) ─────────────────────────────────────
@@ -116,11 +117,14 @@ export function AddDeviceInlineForm({
 
   async function handleAdd() {
     setError('')
-    if (!form.brand_id)      return setError('اختر الماركة')
-    if (!form.model_id)      return setError('اختر الموديل')
-    if (!form.imei1.trim())  return setError('IMEI مطلوب')
-    if (!form.cost_price)    return setError('سعر الشراء مطلوب')
-    if (!supplierId)         return setError('اختر المورد أولاً')
+    const err = validate.first(
+      validate.required(form.brand_id,   'الماركة'),
+      validate.required(form.model_id,   'الموديل'),
+      validate.imei(form.imei1),
+      validate.positive(form.cost_price, 'سعر الشراء'),
+      !supplierId ? 'اختر المورد أولاً' : null,
+    )
+    if (err) return setError(err)
 
     setSaving(true)
     try {
