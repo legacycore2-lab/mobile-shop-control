@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/ExpensesReportTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
@@ -38,7 +38,7 @@ export function ExpensesReportTabContent(props: Record<string, any>) {
       cur.count++
       map.set(cat, cur)
     }
-    return [...map.values()].sort((a, b) => b.total - a.total)
+    return [...map.values()].sort((a: any, b: any) => b.total - a.total)
   }, [expenses])
 
   // KPIs
