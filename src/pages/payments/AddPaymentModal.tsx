@@ -5,7 +5,7 @@ import { useCreatePayment } from '@/hooks/usePayments'
 import { useSupplierLedgerById, useCustomerLedgerById } from '@/hooks/usePayments'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import type { PaymentType, PartyType } from '@/types/database'
 
 const METHODS = [
