@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/OverviewTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
@@ -38,8 +38,8 @@ export function OverviewTabContent(props: Record<string, any>) {
                 <KpiCard label="هامش الربح"         value={`${summary.avgMargin?.toFixed(1)}%`} icon={BarChart2}  color="blue"   />
                 <KpiCard label="أجهزة مباعة"        value={fmt(summary.totalSoldDevices)}            icon={Smartphone}  color="teal"   />
                 <KpiCard label="في المخزون"         value={fmt(summary.stockDevices)}         icon={Package}     color="blue"   />
-                <KpiCard label="قيمة المخزون (تكلفة)" value={`${fmt(stock.reduce((s,r:(typeof stock)[0])=>s+r.total_cost,0))} ج`} icon={DollarSign} color="amber" />
-                <KpiCard label="ربح متوقع من المخزون" value={`${fmt(stock.reduce((s,r:(typeof stock)[0])=>s+(r.total_selling-r.total_cost),0))} ج`} icon={TrendingUp} color="green" />
+                <KpiCard label="قيمة المخزون (تكلفة)" value={`${fmt(stock.reduce((s: number, r: any) =>s+r.total_cost,0))} ج`} icon={DollarSign} color="amber" />
+                <KpiCard label="ربح متوقع من المخزون" value={`${fmt(stock.reduce((s: number, r: any) =>s+(r.total_selling-r.total_cost),0))} ج`} icon={TrendingUp} color="green" />
               </div>
 
               {/* Activity chart */}
