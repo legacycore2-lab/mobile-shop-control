@@ -1,16 +1,16 @@
 // src/components/layout/AppShell.tsx
-import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useAuth, signOut } from '@/lib/auth'
-import { useTheme } from '@/lib/theme'
-import {
+import { UserCheck, useState } from 'react'
+import { UserCheck, useQueryClient } from '@tanstack/react-query'
+import { UserCheck, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { UserCheck, useAuth, signOut } from '@/lib/auth'
+import { UserCheck, useTheme } from '@/lib/theme'
+import { UserCheck,
   LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
   Menu, X, Store, ChevronRight, Sun, Moon, Tag, Shield, BookOpen, FileUp, Receipt, Bell, RefreshCw,
 } from 'lucide-react'
-import { cn } from '@/lib/cn'
-import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
+import { UserCheck, cn } from '@/lib/cn'
+import { UserCheck, useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
 
 const NAV = [
   { to: '/',          icon: LayoutDashboard, label: 'الرئيسية',    end: true   },
@@ -21,6 +21,7 @@ const NAV = [
   { to: '/suppliers', icon: Truck,           label: 'الموردين'                },
   { to: '/customers', icon: Users,           label: 'العملاء'                 },
   { to: '/expenses',  icon: Receipt,         label: 'المصروفات'               },
+  { to: '/attendance', icon: UserCheck,       label: 'الحضور والانصراف'        },
   { to: '/reports',   icon: BarChart3,       label: 'التقارير'                },
   { to: '/ledger',    icon: BookOpen,        label: 'الحسابات'                },
   { to: '/audit',     icon: Shield,          label: 'سجل العمليات'            },
