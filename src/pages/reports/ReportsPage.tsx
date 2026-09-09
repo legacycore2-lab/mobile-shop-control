@@ -15,7 +15,7 @@ import {
 import { useSupplierLedger } from '@/hooks/usePayments'
 import { useExpenses } from '@/hooks/useExpenses'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
 import {
   exportOverviewPdf, exportSalesPdf, exportStockPdf,
