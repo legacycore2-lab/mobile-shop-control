@@ -44,20 +44,6 @@ export const INVOICE_STATUS_MAP: Record<InvoiceStatus, {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Format a number with Arabic thousands separator.
- * Uses Western digits with Arabic comma separator for maximum compatibility.
- * Supabase numeric columns may return strings — always cast with Number() first.
- */
-export function fmt(n: number | string | null | undefined): string {
-  const num = Number(n ?? 0)
-  const safe = isNaN(num) ? 0 : num
-  // Use en-US for digit rendering but keep thousands separator
-  // This avoids Arabic zero (٠) rendering as bullet (•) in some environments
-  return safe.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-}
+// Re-export fmt from canonical source — use @/lib/fmt in new code
+export { fmt } from '@/lib/fmt'
 
-/** Format number as currency with ج suffix */
-export function fmtEGP(n: number | string | null | undefined): string {
-  return `${fmt(n)} ج`
-}
