@@ -303,8 +303,6 @@ export function DevicesPage() {
           onClose={() => setScanner(false)}
         />
       )}
-    </div>
-
       {confirmDel && (
         <ConfirmModal
           title="حذف الجهاز"
@@ -315,5 +313,6 @@ export function DevicesPage() {
           onCancel={() => setConfirmDel(null)}
         />
       )}
+    </div>
   )
 }
