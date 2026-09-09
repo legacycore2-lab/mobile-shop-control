@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/MovementTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
@@ -60,7 +60,7 @@ export function MovementTabContent(props: Record<string, any>) {
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">حركة المنتجات — SOH</h3>
                 <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>القيمة الإجمالية: <strong className="text-amber-600">{fmt(prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج</strong></span>
+                  <span>القيمة الإجمالية: <strong className="text-amber-600">{fmt(prodMovement.reduce((s: number, r: any) => s + Number(r.stock_value),0))} ج</strong></span>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -75,7 +75,7 @@ export function MovementTabContent(props: Record<string, any>) {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {prodMovLoad ? <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
                     : prodMovement.length===0 ? <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-gray-400">لا توجد بيانات</td></tr>
-                    : prodMovement.map((r,i)=>(
+                    : prodMovement.map((r: any, i: number) =>(
                       <tr key={i} className={cn('hover:bg-gray-50 dark:hover:bg-gray-800/30',r.needs_reorder&&'bg-red-50/20 dark:bg-red-900/5')}>
                         <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                         <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">
@@ -97,11 +97,11 @@ export function MovementTabContent(props: Record<string, any>) {
                   {prodMovement.length>0&&<tfoot>
                     <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
                       <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={4}>الإجمالي</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s,r)=>s+r.opening_stock,0)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">+{prodMovement.reduce((s,r)=>s+r.purchased,0)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-green-600">-{prodMovement.reduce((s,r)=>s+r.sold,0)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s,r)=>s+r.current_stock,0)}</td>
-                      <td className="px-3 py-2.5 font-bold text-amber-600">{fmt(prodMovement.reduce((s,r)=>s+r.stock_value,0))} ج</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s: number, r: any) => s + Number(r.opening_stock),0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">+{prodMovement.reduce((s: number, r: any) => s + Number(r.purchased),0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-green-600">-{prodMovement.reduce((s: number, r: any) => s + Number(r.sold),0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{prodMovement.reduce((s: number, r: any) => s + Number(r.current_stock),0)}</td>
+                      <td className="px-3 py-2.5 font-bold text-amber-600">{fmt(prodMovement.reduce((s: number, r: any) => s + Number(r.stock_value),0))} ج</td>
                       <td/>
                     </tr>
                   </tfoot>}
@@ -128,7 +128,7 @@ export function MovementTabContent(props: Record<string, any>) {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {devMovLoad ? <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
                     : devMovement.length===0 ? <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">لا توجد بيانات</td></tr>
-                    : devMovement.map((r,i)=>(
+                    : devMovement.map((r: any, i: number) =>(
                       <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                         <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                         <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.brand_name}</td>
@@ -147,12 +147,12 @@ export function MovementTabContent(props: Record<string, any>) {
                   {devMovement.length>0&&<tfoot>
                     <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
                       <td className="px-3 py-2.5 text-xs font-bold text-blue-700 dark:text-blue-400" colSpan={3}>الإجمالي</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{devMovement.reduce((s,r)=>s+r.total,0)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">{devMovement.reduce((s,r)=>s+r.in_stock,0)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">+{devMovement.reduce((s,r)=>s+r.purchased_in_period,0)}</td>
-                      <td className="px-3 py-2.5 text-center font-bold text-green-600">-{devMovement.reduce((s,r)=>s+r.sold_in_period,0)}</td>
-                      <td className="px-3 py-2.5 font-bold text-green-600">{fmt(devMovement.reduce((s,r)=>s+r.total_revenue,0))} ج</td>
-                      <td className="px-3 py-2.5 font-bold text-green-600">{fmt(devMovement.reduce((s,r)=>s+r.total_profit,0))} ج</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{devMovement.reduce((s: number, r: any) => s + Number(r.total),0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">{devMovement.reduce((s: number, r: any) => s + Number(r.in_stock),0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-blue-600">+{devMovement.reduce((s: number, r: any) => s + Number(r.purchased_in_period),0)}</td>
+                      <td className="px-3 py-2.5 text-center font-bold text-green-600">-{devMovement.reduce((s: number, r: any) => s + Number(r.sold_in_period),0)}</td>
+                      <td className="px-3 py-2.5 font-bold text-green-600">{fmt(devMovement.reduce((s: number, r: any) => s + Number(r.total_revenue),0))} ج</td>
+                      <td className="px-3 py-2.5 font-bold text-green-600">{fmt(devMovement.reduce((s: number, r: any) => s + Number(r.total_profit),0))} ج</td>
                     </tr>
                   </tfoot>}
                 </table>
