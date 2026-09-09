@@ -485,27 +485,27 @@ export function EditPurchaseModal({
         } as never)
         .eq('id', invoiceId)
 
-      // لو المدير عدّل الدفعة الأولى → حدّث payment الأولى في payments table
+      // لو المدير عدّل الدفعة الأولى → حدّث payments + paid_amount على الفاتورة مباشرة
       if (paidUnlocked) {
         const newPaid = Number(paidAmount) || 0
-        // ابحث عن الـ payment الأولى للفاتورة دي
-        const { data: firstPayRaw } = await supabase
+
+        // 1. جيب كل payments الفاتورة دي
+        const { data: allPayments } = await supabase
           .from('payments')
-          .select('id')
+          .select('id, amount')
           .eq('invoice_id', invoiceId)
           .eq('payment_type', 'purchase')
           .order('payment_date', { ascending: true })
-          .limit(1)
-          .single()
-        const firstPay = firstPayRaw as { id: string } | null
 
-        if (firstPay) {
-          // حدّث الدفعة الأولى
+        const payments = (allPayments ?? []) as { id: string; amount: number }[]
+
+        if (payments.length > 0) {
+          // حدّث الدفعة الأولى بالمبلغ الجديد
           await supabase.from('payments')
             .update({ amount: newPaid } as never)
-            .eq('id', firstPay.id)
+            .eq('id', payments[0].id)
         } else if (newPaid > 0) {
-          // مفيش payments قديمة — أنشئ واحدة
+          // مفيش payments — أنشئ واحدة
           const { data: inv } = await supabase
             .from('purchase_invoices')
             .select('supplier_id, invoice_date, invoice_number')
@@ -526,6 +526,12 @@ export function EditPurchaseModal({
             } as never)
           }
         }
+
+        // 2. حدّث paid_amount على الفاتورة مباشرة (مش بس payments table)
+        //    عشان الـ trigger ممكن يكون متأخر أو مش موجود
+        await supabase.from('purchase_invoices')
+          .update({ paid_amount: newPaid } as never)
+          .eq('id', invoiceId)
       }
 
       // 10. Invalidate queries — full sync across all affected screens
