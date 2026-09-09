@@ -415,8 +415,8 @@ export function SuppliersPage() {
           title="حذف المورد"
           message="هل أنت متأكد من حذف هذا المورد؟"
           confirmText="حذف"
-          loading={deleteSupplier.isPending}
-          onConfirm={async () => { await deleteSupplier.mutateAsync(confirmDel); setConfirmDel(null) }}
+          loading={deleteMutation.isPending}
+          onConfirm={async () => { await deleteMutation.mutateAsync(confirmDel); setConfirmDel(null) }}
           onCancel={() => setConfirmDel(null)}
         />
       )}
