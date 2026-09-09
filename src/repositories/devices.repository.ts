@@ -21,6 +21,7 @@ export const devicesRepository = {
       .from('mobile_devices_view')
       .select('*')
       .order('created_at', { ascending: false })
+      .limit(2000)
     if (error) throw error
     return (data ?? []) as unknown as MobileDeviceView[]
   },
