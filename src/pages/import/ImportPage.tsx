@@ -10,7 +10,7 @@ import { importService } from '@/services/import.service'
 import type { ParseResult, ParsedRow } from '@/services/import.service'
 import type { ImportProductRow, ImportDeviceRow, ImportResult } from '@/repositories/import.repository'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 
 // ── Template download ─────────────────────────────────────────────────────────
 // We host the template in /public
