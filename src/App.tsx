@@ -6,6 +6,9 @@ import { startRealtime, stopRealtime } from '@/lib/realtime'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
 import { AppShell } from '@/components/layout/AppShell'
+import { usePermissions } from '@/hooks/usePermissions'
+import type { Resource } from '@/lib/permissions'
+import { ShieldOff } from 'lucide-react'
 // ── Lazy-loaded pages — each page gets its own chunk ─────────────────────────
 const LoginPage          = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 const DashboardPage      = lazy(() => import('@/pages/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })))
@@ -82,6 +85,35 @@ function GlobalUsbScanner({ onScan }: { onScan: (code: string) => void }) {
   return null
 }
 
+
+// ── Permission-aware Route Guard ──────────────────────────────────────────────
+// Renders 403 if user lacks 'view' permission for the resource
+function ProtectedRoute({
+  resource,
+  children,
+}: {
+  resource: Resource
+  children: React.ReactNode
+}) {
+  const perm = usePermissions()
+
+  // While permissions are loading (isReady=false), show spinner
+  if (!perm.isReady) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  if (!perm.canView(resource)) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400 dark:text-gray-600">
+      <ShieldOff size={40} className="opacity-40" />
+      <p className="text-sm font-semibold">ليس لديك صلاحية الوصول لهذه الصفحة</p>
+    </div>
+  )
+
+  return <>{children}</>
+}
+
 // ── Guard ─────────────────────────────────────────────────────────────────────
 function Guard() {
   const { session, profile, loading } = useAuth()
@@ -111,22 +143,22 @@ function Guard() {
       <Routes>
         <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}>
         <Route element={<AppShell />}>
-          <Route path="/"           element={<PageErrorBoundary><DashboardPage /></PageErrorBoundary>} />
-          <Route path="/devices"    element={<PageErrorBoundary><DevicesPage /></PageErrorBoundary>} />
-          <Route path="/pos"        element={<PageErrorBoundary><PosPage /></PageErrorBoundary>} />
-          <Route path="/purchases"  element={<PageErrorBoundary><PurchasesPage /></PageErrorBoundary>} />
-          <Route path="/suppliers"  element={<PageErrorBoundary><SuppliersPage /></PageErrorBoundary>} />
-          <Route path="/customers"  element={<PageErrorBoundary><CustomersPage /></PageErrorBoundary>} />
-          <Route path="/products"   element={<PageErrorBoundary><ProductsPage /></PageErrorBoundary>} />
-          <Route path="/reports"    element={<PageErrorBoundary><ReportsPage /></PageErrorBoundary>} />
-          <Route path="/audit"      element={<PageErrorBoundary><AuditLogsPage /></PageErrorBoundary>} />
-          <Route path="/ledger"                    element={<PageErrorBoundary><LedgerPage /></PageErrorBoundary>} />
-          <Route path="/ledger/:type/:id"          element={<PageErrorBoundary><PartyStatementPage /></PageErrorBoundary>} />
-          <Route path="/expenses"   element={<PageErrorBoundary><ExpensesPage /></PageErrorBoundary>} />
-          <Route path="/attendance"  element={<PageErrorBoundary><AttendancePage /></PageErrorBoundary>} />
-          <Route path="/permissions" element={<PageErrorBoundary><PermissionsPage /></PageErrorBoundary>} />
-          <Route path="/import"     element={<PageErrorBoundary><ImportPage /></PageErrorBoundary>} />
-          <Route path="/settings"   element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
+          <Route path="/"           element={<PageErrorBoundary><ProtectedRoute resource="dashboard"><DashboardPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/devices"    element={<PageErrorBoundary><ProtectedRoute resource="devices"><DevicesPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/pos"        element={<PageErrorBoundary><ProtectedRoute resource="pos"><PosPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/purchases"  element={<PageErrorBoundary><ProtectedRoute resource="purchases"><PurchasesPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/suppliers"  element={<PageErrorBoundary><ProtectedRoute resource="suppliers"><SuppliersPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/customers"  element={<PageErrorBoundary><ProtectedRoute resource="customers"><CustomersPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/products"   element={<PageErrorBoundary><ProtectedRoute resource="products"><ProductsPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/reports"    element={<PageErrorBoundary><ProtectedRoute resource="reports"><ReportsPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/audit"      element={<PageErrorBoundary><ProtectedRoute resource="audit"><AuditLogsPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/ledger"                    element={<PageErrorBoundary><ProtectedRoute resource="ledger"><LedgerPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/ledger/:type/:id"          element={<PageErrorBoundary><ProtectedRoute resource="ledger"><PartyStatementPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/expenses"   element={<PageErrorBoundary><ProtectedRoute resource="expenses"><ExpensesPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/attendance"  element={<PageErrorBoundary><ProtectedRoute resource="attendance"><AttendancePage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/permissions" element={<PageErrorBoundary><ProtectedRoute resource="permissions"><PermissionsPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/import"     element={<PageErrorBoundary><ProtectedRoute resource="import"><ImportPage /></ProtectedRoute></PageErrorBoundary>} />
+          <Route path="/settings"   element={<PageErrorBoundary><ProtectedRoute resource="settings"><SettingsPage /></ProtectedRoute></PageErrorBoundary>} />
           <Route path="*"           element={<PageErrorBoundary><Navigate to="/" replace /></PageErrorBoundary>} />
         </Route>
         </Suspense>
