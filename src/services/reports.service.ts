@@ -1,5 +1,6 @@
 // src/services/reports.service.ts
 import { reportsRepository, cashierReportRepository } from '@/repositories/reports.repository'
+import { expensesRepository } from '@/repositories/expenses.repository'
 import type {
   DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
   DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
@@ -16,8 +17,11 @@ export interface ReportSummary {
   totalSoldDevices:  number
   totalRevenue:      number
   totalCostSold:     number
-  totalProfit:       number
+  totalProfit:       number      // إيراد − تكلفة المباع
+  totalExpenses:     number      // إجمالي المصروفات
+  netProfit:         number      // إيراد − تكلفة المباع − مصروفات
   avgMargin:         number
+  netMargin:         number      // هامش الربح الصافي
   stockDevices:      number
   stockCostValue:    number
   stockSellingValue: number
@@ -40,27 +44,33 @@ export const reportsService = {
     reportsRepository.getDeviceMovement(from, to),
 
   getSummary: async (): Promise<ReportSummary> => {
-    const [sales, stock, lowStock, invoiceRevenue] = await Promise.all([
+    const [sales, stock, lowStock, invoiceRevenue, expenseStats] = await Promise.all([
       reportsRepository.getDeviceSalesSummary(undefined, undefined),
       reportsRepository.getStockValue(),
       reportsRepository.getLowStockDetailed(),
       reportsRepository.getConfirmedInvoicesRevenue(),
+      expensesRepository.getStats(),
     ])
-    // الإيراد الإجمالي من total_amount بعد الخصم
-    const totalRevenue   = invoiceRevenue
-    const totalCostSold  = sales.reduce((s, r) => s + r.total_cost,    0)
-    const totalProfit    = totalRevenue - totalCostSold
-    const totalUnits     = sales.reduce((s, r) => s + r.total_units,   0)
-    const stockDevices   = stock.reduce((s, r) => s + r.count,         0)
-    const stockCostValue = stock.reduce((s, r) => s + r.total_cost,    0)
-    const stockSellValue = stock.reduce((s, r) => s + r.total_selling, 0)
+    const totalRevenue    = invoiceRevenue
+    const totalCostSold   = sales.reduce((s, r) => s + r.total_cost,    0)
+    const totalProfit     = totalRevenue - totalCostSold
+    const totalExpenses   = expenseStats.total
+    const netProfit       = totalProfit - totalExpenses
+    const totalUnits      = sales.reduce((s, r) => s + r.total_units,   0)
+    const stockDevices    = stock.reduce((s, r) => s + r.count,         0)
+    const stockCostValue  = stock.reduce((s, r) => s + r.total_cost,    0)
+    const stockSellValue  = stock.reduce((s, r) => s + r.total_selling, 0)
     return {
       totalSoldDevices:  totalUnits,
       totalRevenue,
       totalCostSold,
       totalProfit,
+      totalExpenses,
+      netProfit,
       avgMargin: totalCostSold > 0
         ? parseFloat(((totalProfit / totalCostSold) * 100).toFixed(1)) : 0,
+      netMargin: totalRevenue > 0
+        ? parseFloat(((netProfit / totalRevenue) * 100).toFixed(1)) : 0,
       stockDevices,
       stockCostValue,
       stockSellingValue: stockSellValue,
