@@ -6,6 +6,7 @@ import {
 } from '@/repositories/purchases.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
 import { supabase } from '@/lib/supabase'
+import { logAction } from '@/lib/audit'
 import type { PurchaseInvoice, PurchaseInvoiceView, PurchaseInvoiceDetail } from '@/types/database'
 
 export type { InvoiceDeviceLine, InvoiceProductLine, PurchaseInvoiceDetail }
@@ -27,8 +28,8 @@ export interface PurchaseStats {
 }
 
 function parseRpcError(msg: string): string {
-  if (msg.includes('INVOICE_NOT_FOUND'))        return 'الفاتورة غير موجودة'
-  if (msg.includes('INVOICE_NOT_DRAFT'))        return 'يمكن تأكيد الفواتير المسودة فقط'
+  if (msg.includes('INVOICE_NOT_FOUND'))         return 'الفاتورة غير موجودة'
+  if (msg.includes('INVOICE_NOT_DRAFT'))         return 'يمكن تأكيد الفواتير المسودة فقط'
   if (msg.includes('INVOICE_ALREADY_CANCELLED')) return 'الفاتورة ملغاة بالفعل'
   return msg
 }
@@ -84,34 +85,43 @@ export const purchasesService = {
       })
     }
 
+    void logAction({
+      userId:   form.created_by,
+      action:   'create',
+      table:    'purchase_invoices',
+      recordId: invoice.id,
+      newData:  { invoice_number: invoiceNumber, total_amount: totalAmount, supplier_id: form.supplier_id, devices: form.device_lines.length, products: form.product_lines.length },
+    })
+
     return invoice
   },
 
-  updatePayment: async (id: string, paidAmount: number, discount: number): Promise<PurchaseInvoice> => {
+  updatePayment: async (id: string, paidAmount: number, discount: number, userId?: string): Promise<PurchaseInvoice> => {
     if (paidAmount < 0) throw new Error('المبلغ المدفوع لا يمكن أن يكون سالباً')
-    return purchasesRepository.update(id, { paid_amount: paidAmount, discount })
+    const result = await purchasesRepository.update(id, { paid_amount: paidAmount, discount })
+    if (userId) {
+      void logAction({ userId, action: 'pay', table: 'purchase_invoices', recordId: id, newData: { paid_amount: paidAmount, discount } })
+    }
+    return result
   },
 
-  // ── atomic DB transaction via RPC ─────────────────────────────────────────
-  confirm: async (id: string): Promise<void> => {
-    const { error } = await supabase.rpc('confirm_purchase_invoice', {
-      p_invoice_id: id,
-    } as never)
+  confirm: async (id: string, userId?: string): Promise<void> => {
+    const { error } = await supabase.rpc('confirm_purchase_invoice', { p_invoice_id: id } as never)
     if (error) throw new Error(parseRpcError(error.message))
+    if (userId) void logAction({ userId, action: 'confirm', table: 'purchase_invoices', recordId: id })
   },
 
-  // ── يلغي الفاتورة عبر RPC — الـ DB function بتتحقق من الـ status ─────────
-  cancel: async (id: string): Promise<void> => {
-    const { error } = await supabase.rpc('cancel_purchase_invoice', {
-      p_invoice_id: id,
-    } as never)
+  cancel: async (id: string, userId?: string): Promise<void> => {
+    const { error } = await supabase.rpc('cancel_purchase_invoice', { p_invoice_id: id } as never)
     if (error) throw new Error(parseRpcError(error.message))
+    if (userId) void logAction({ userId, action: 'cancel', table: 'purchase_invoices', recordId: id })
   },
 
-  remove: async (id: string): Promise<void> => {
+  remove: async (id: string, userId?: string): Promise<void> => {
     const detail = await purchasesRepository.getById(id)
     if (!detail)                               throw new Error('الفاتورة غير موجودة')
     if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن حذف فاتورة مؤكدة')
+    if (userId) void logAction({ userId, action: 'delete', table: 'purchase_invoices', recordId: id, oldData: { invoice_number: detail.invoice.invoice_number } })
     await purchasesRepository.remove(id)
   },
 }

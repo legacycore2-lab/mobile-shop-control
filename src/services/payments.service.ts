@@ -1,5 +1,6 @@
 // src/services/payments.service.ts
 import { paymentsRepository, type PaymentInsert, type PaymentUpdate } from '@/repositories/payments.repository'
+import { logAction } from '@/lib/audit'
 import type { Payment, SupplierLedger, CustomerLedger, PaymentType, PartyType } from '@/types/database'
 
 export type { PaymentInsert, PaymentUpdate }
@@ -27,11 +28,11 @@ export interface PaymentUpdateFormData {
 export const paymentsService = {
 
   create: async (form: PaymentFormData): Promise<Payment> => {
-    if (!form.invoice_id)   throw new Error('الفاتورة مطلوبة')
-    if (!form.party_id)     throw new Error('الطرف مطلوب')
-    if (form.amount <= 0)   throw new Error('المبلغ يجب أن يكون أكبر من صفر')
+    if (!form.invoice_id) throw new Error('الفاتورة مطلوبة')
+    if (!form.party_id)   throw new Error('الطرف مطلوب')
+    if (form.amount <= 0) throw new Error('المبلغ يجب أن يكون أكبر من صفر')
 
-    return paymentsRepository.create({
+    const result = await paymentsRepository.create({
       payment_type:   form.payment_type,
       invoice_id:     form.invoice_id,
       invoice_number: form.invoice_number,
@@ -43,53 +44,48 @@ export const paymentsService = {
       notes:          form.notes?.trim() || null,
       created_by:     form.created_by || null,
     })
+
+    if (form.created_by) void logAction({
+      userId:   form.created_by,
+      action:   'pay',
+      table:    'payments',
+      recordId: result.id,
+      newData:  { amount: form.amount, payment_method: form.payment_method, invoice_number: form.invoice_number, party_type: form.party_type },
+    })
+
+    return result
   },
 
-  update: async (id: string, form: PaymentUpdateFormData): Promise<Payment> => {
-    if (!id)             throw new Error('معرف الدفعة مطلوب')
+  update: async (id: string, form: PaymentUpdateFormData, userId?: string): Promise<Payment> => {
+    if (!id)              throw new Error('معرف الدفعة مطلوب')
     if (form.amount <= 0) throw new Error('المبلغ يجب أن يكون أكبر من صفر')
 
-    return paymentsRepository.update(id, {
+    const result = await paymentsRepository.update(id, {
       amount:         form.amount,
       payment_method: form.payment_method || 'cash',
       payment_date:   form.payment_date || new Date().toISOString().split('T')[0],
       notes:          form.notes?.trim() || null,
     })
+
+    if (userId) void logAction({ userId, action: 'update', table: 'payments', recordId: id, newData: { amount: form.amount, payment_method: form.payment_method } })
+
+    return result
   },
 
-  getByInvoice: (invoiceId: string): Promise<Payment[]> =>
-    paymentsRepository.getByInvoice(invoiceId),
+  remove: async (id: string, userId?: string): Promise<void> => {
+    if (userId) void logAction({ userId, action: 'delete', table: 'payments', recordId: id })
+    return paymentsRepository.remove(id)
+  },
 
-  getByParty: (partyId: string): Promise<Payment[]> =>
-    paymentsRepository.getByParty(partyId),
-
-  remove: (id: string): Promise<void> =>
-    paymentsRepository.remove(id),
-
-  getSupplierLedger: (): Promise<SupplierLedger[]> =>
-    paymentsRepository.getSupplierLedger(),
-
-  getSupplierLedgerById: (id: string): Promise<SupplierLedger | null> =>
-    paymentsRepository.getSupplierLedgerById(id),
-
-  getCustomerLedger: (): Promise<CustomerLedger[]> =>
-    paymentsRepository.getCustomerLedger(),
-
-  getCustomerLedgerById: (id: string): Promise<CustomerLedger | null> =>
-    paymentsRepository.getCustomerLedgerById(id),
-
-  getStats: () => paymentsRepository.getStats(),
-
-  getPurchaseInvoicesBySupplier: (supplierId: string) =>
-    paymentsRepository.getPurchaseInvoicesBySupplier(supplierId),
-
-  getSaleInvoicesByCustomer: (customerId: string) =>
-    paymentsRepository.getSaleInvoicesByCustomer(customerId),
-
-  getPurchaseInvoiceLinesBySupplier: (supplierId: string) =>
-    paymentsRepository.getPurchaseInvoiceLinesBySupplier(supplierId),
-
-  getSaleInvoiceLinesByCustomer: (customerId: string) =>
-    paymentsRepository.getSaleInvoiceLinesByCustomer(customerId),
-
+  getByInvoice:   (invoiceId: string): Promise<Payment[]>           => paymentsRepository.getByInvoice(invoiceId),
+  getByParty:     (partyId: string):   Promise<Payment[]>           => paymentsRepository.getByParty(partyId),
+  getStats:       ()                                                 => paymentsRepository.getStats(),
+  getSupplierLedger:         ()                                      => paymentsRepository.getSupplierLedger(),
+  getSupplierLedgerById:     (id: string)                           => paymentsRepository.getSupplierLedgerById(id),
+  getCustomerLedger:         ()                                      => paymentsRepository.getCustomerLedger(),
+  getCustomerLedgerById:     (id: string)                           => paymentsRepository.getCustomerLedgerById(id),
+  getPurchaseInvoicesBySupplier:          (id: string)              => paymentsRepository.getPurchaseInvoicesBySupplier(id),
+  getSaleInvoicesByCustomer:              (id: string)              => paymentsRepository.getSaleInvoicesByCustomer(id),
+  getPurchaseInvoiceLinesBySupplier:      (id: string)              => paymentsRepository.getPurchaseInvoiceLinesBySupplier(id),
+  getSaleInvoiceLinesByCustomer:          (id: string)              => paymentsRepository.getSaleInvoiceLinesByCustomer(id),
 }

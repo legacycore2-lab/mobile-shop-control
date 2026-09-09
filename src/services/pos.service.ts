@@ -6,6 +6,7 @@ import {
 } from '@/repositories/pos.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
 import { supabase } from '@/lib/supabase'
+import { logAction } from '@/lib/audit'
 import type { MobileDeviceView, SaleInvoice, SaleInvoiceView, SaleInvoiceDetail } from '@/types/database'
 
 export type { SaleDeviceLine, SaleProductLine, SaleInvoiceView, SaleInvoiceDetail }
@@ -27,18 +28,18 @@ export interface PosStats {
 }
 
 function parseRpcError(msg: string): string {
-  if (msg.includes('INVOICE_NOT_FOUND'))        return 'الفاتورة غير موجودة'
-  if (msg.includes('INVOICE_NOT_DRAFT'))        return 'يمكن تأكيد المسودات فقط'
+  if (msg.includes('INVOICE_NOT_FOUND'))         return 'الفاتورة غير موجودة'
+  if (msg.includes('INVOICE_NOT_DRAFT'))         return 'يمكن تأكيد المسودات فقط'
   if (msg.includes('INVOICE_ALREADY_CANCELLED')) return 'الفاتورة ملغاة بالفعل'
   return msg
 }
 
 export const posService = {
 
-  getAll:           (): Promise<SaleInvoiceView[]>             => posRepository.getAll(),
-  getById:          (id: string): Promise<SaleInvoiceDetail | null> => posRepository.getById(id),
-  getStats:         (): Promise<PosStats>                      => posRepository.getStats(),
-  getInStockDevices: (): Promise<MobileDeviceView[]>           => posRepository.getInStockDevices(),
+  getAll:            (): Promise<SaleInvoiceView[]>               => posRepository.getAll(),
+  getById:           (id: string): Promise<SaleInvoiceDetail | null> => posRepository.getById(id),
+  getStats:          (): Promise<PosStats>                         => posRepository.getStats(),
+  getInStockDevices: (): Promise<MobileDeviceView[]>               => posRepository.getInStockDevices(),
 
   create: async (form: SaleFormData): Promise<SaleInvoice> => {
     if (!form.device_lines.length && !form.product_lines.length)
@@ -61,18 +62,28 @@ export const posService = {
       created_by:     form.created_by,
     })
 
+    const priceMap = new Map(form.device_lines.map(l => [l.device_id, l.actual_selling_price]))
+
     await Promise.all([
       posRepository.addDeviceLines(invoice.id, form.device_lines),
       posRepository.addProductLines(invoice.id, form.product_lines),
+      posRepository.markDevicesSold(
+        form.device_lines.map(l => l.device_id),
+        invoice.id,
+        form.customer_id || null,
+        form.created_by || '',
+        priceMap,
+      ),
+      posRepository.adjustProductStock(form.product_lines.map(l => ({ product_id: l.product_id, qty_delta: -l.quantity }))),
     ])
 
-    if (Number(form.paid_amount) > 0 && form.customer_id) {
+    if (Number(form.paid_amount) > 0) {
       await paymentsRepository.create({
         payment_type:   'sale',
         invoice_id:     invoice.id,
         invoice_number: invoiceNumber,
         party_type:     'customer',
-        party_id:       form.customer_id,
+        party_id:       form.customer_id || '',
         amount:         Number(form.paid_amount),
         payment_method: 'cash',
         payment_date:   form.invoice_date,
@@ -81,31 +92,40 @@ export const posService = {
       })
     }
 
+    void logAction({
+      userId:   form.created_by,
+      action:   'create',
+      table:    'sale_invoices',
+      recordId: invoice.id,
+      newData:  { invoice_number: invoiceNumber, total_amount: totalAmount, customer_id: form.customer_id || null, devices: form.device_lines.length, products: form.product_lines.length },
+    })
+
     return invoice
   },
 
-  // ── atomic DB transaction via RPC ─────────────────────────────────────────
   confirm: async (id: string, customerId: string | null, soldById: string): Promise<void> => {
-    const { error } = await supabase.rpc('confirm_sale_invoice', {
-      p_invoice_id:  id,
-      p_customer_id: customerId ?? null,
-      p_sold_by_id:  soldById,
-    } as never)
-    if (error) throw new Error(parseRpcError(error.message))
+    const detail = await posRepository.getById(id)
+    if (!detail) throw new Error('الفاتورة غير موجودة')
+    if (detail.invoice.status !== 'draft') throw new Error('يمكن تأكيد المسودات فقط')
+    const { error } = await supabase
+      .from('sale_invoices')
+      .update({ status: 'confirmed' } as never)
+      .eq('id', id)
+    if (error) throw error
+    void logAction({ userId: soldById, action: 'confirm', table: 'sale_invoices', recordId: id, newData: { invoice_number: detail.invoice.invoice_number } })
   },
 
-  // ── atomic DB transaction via RPC ─────────────────────────────────────────
-  cancel: async (id: string): Promise<void> => {
-    const { error } = await supabase.rpc('cancel_sale_invoice', {
-      p_invoice_id: id,
-    } as never)
+  cancel: async (id: string, userId?: string): Promise<void> => {
+    const { error } = await supabase.rpc('cancel_sale_invoice', { p_invoice_id: id } as never)
     if (error) throw new Error(parseRpcError(error.message))
+    if (userId) void logAction({ userId, action: 'cancel', table: 'sale_invoices', recordId: id })
   },
 
-  remove: async (id: string): Promise<void> => {
+  remove: async (id: string, userId?: string): Promise<void> => {
     const detail = await posRepository.getById(id)
     if (!detail)                               throw new Error('الفاتورة غير موجودة')
     if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن حذف فاتورة مؤكدة')
+    if (userId) void logAction({ userId, action: 'delete', table: 'sale_invoices', recordId: id, oldData: { invoice_number: detail.invoice.invoice_number } })
     await posRepository.remove(id)
   },
 }
