@@ -17,9 +17,9 @@ import {
   requestPermission, getPermission, notificationsSupported,
 } from '@/lib/notifications'
 import { cn } from '@/lib/cn'
+import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 
-function fmt(n: number) { return n.toLocaleString('en-US') }
 
 const ROLE_MAP: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'neutral' }> = {
   owner:     { label: 'المالك',   variant: 'info'    },
