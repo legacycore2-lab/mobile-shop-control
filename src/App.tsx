@@ -1,29 +1,30 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { startRealtime, stopRealtime } from '@/lib/realtime'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
 import { AppShell } from '@/components/layout/AppShell'
-import { LoginPage } from '@/pages/auth/LoginPage'
-import { DashboardPage } from '@/pages/dashboard/DashboardPage'
-import { DevicesPage } from '@/pages/devices/DevicesPage'
-import { PosPage } from '@/pages/pos/PosPage'
-import { PurchasesPage } from '@/pages/purchases/PurchasesPage'
-import { SuppliersPage } from '@/pages/suppliers/SuppliersPage'
-import { CustomersPage } from '@/pages/customers/CustomersPage'
-import { ProductsPage } from '@/pages/products/ProductsPage'
-import { ReportsPage } from '@/pages/reports/ReportsPage'
-import { SettingsPage } from '@/pages/settings/SettingsPage'
-import { AuditLogsPage } from '@/pages/audit/AuditLogsPage'
-import { LedgerPage }         from '@/pages/payments/LedgerPage'
-import { PartyStatementPage } from '@/pages/payments/PartyStatementPage'
-import { ImportPage }         from '@/pages/import/ImportPage'
-import { ExpensesPage }       from '@/pages/expenses/ExpensesPage'
-import { AttendancePage }     from '@/pages/attendance/AttendancePage'
-import { PermissionsPage }    from '@/pages/permissions/PermissionsPage'
-import { QuickScanModal } from '@/pages/dashboard/QuickScanModal'
+// ── Lazy-loaded pages — each page gets its own chunk ─────────────────────────
+const LoginPage          = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ default: m.LoginPage })))
+const DashboardPage      = lazy(() => import('@/pages/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })))
+const QuickScanModal     = lazy(() => import('@/pages/dashboard/QuickScanModal').then(m => ({ default: m.QuickScanModal })))
+const DevicesPage        = lazy(() => import('@/pages/devices/DevicesPage').then(m => ({ default: m.DevicesPage })))
+const PosPage            = lazy(() => import('@/pages/pos/PosPage').then(m => ({ default: m.PosPage })))
+const PurchasesPage      = lazy(() => import('@/pages/purchases/PurchasesPage').then(m => ({ default: m.PurchasesPage })))
+const SuppliersPage      = lazy(() => import('@/pages/suppliers/SuppliersPage').then(m => ({ default: m.SuppliersPage })))
+const CustomersPage      = lazy(() => import('@/pages/customers/CustomersPage').then(m => ({ default: m.CustomersPage })))
+const ProductsPage       = lazy(() => import('@/pages/products/ProductsPage').then(m => ({ default: m.ProductsPage })))
+const ReportsPage        = lazy(() => import('@/pages/reports/ReportsPage').then(m => ({ default: m.ReportsPage })))
+const SettingsPage       = lazy(() => import('@/pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const AuditLogsPage      = lazy(() => import('@/pages/audit/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })))
+const LedgerPage         = lazy(() => import('@/pages/payments/LedgerPage').then(m => ({ default: m.LedgerPage })))
+const PartyStatementPage = lazy(() => import('@/pages/payments/PartyStatementPage').then(m => ({ default: m.PartyStatementPage })))
+const ImportPage         = lazy(() => import('@/pages/import/ImportPage').then(m => ({ default: m.ImportPage })))
+const ExpensesPage       = lazy(() => import('@/pages/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
+const AttendancePage     = lazy(() => import('@/pages/attendance/AttendancePage').then(m => ({ default: m.AttendancePage })))
+const PermissionsPage    = lazy(() => import('@/pages/permissions/PermissionsPage').then(m => ({ default: m.PermissionsPage })))
 import { DeviceFlashCard } from '@/components/shared/DeviceFlashCard'
 import { AppErrorBoundary, PageErrorBoundary } from '@/components/shared/ErrorBoundary'
 
@@ -98,7 +99,7 @@ function Guard() {
     </div>
   )
 
-  if (!session && !profile) return <LoginPage />
+  if (!session && !profile) return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}><LoginPage /></Suspense>
 
   return (
     <AppErrorBoundary>
@@ -108,6 +109,7 @@ function Guard() {
       {!scanModal && <GlobalUsbScanner onScan={handleGlobalScan} />}
 
       <Routes>
+        <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}>
         <Route element={<AppShell />}>
           <Route path="/"           element={<PageErrorBoundary><DashboardPage /></PageErrorBoundary>} />
           <Route path="/devices"    element={<PageErrorBoundary><DevicesPage /></PageErrorBoundary>} />
@@ -127,6 +129,7 @@ function Guard() {
           <Route path="/settings"   element={<PageErrorBoundary><SettingsPage /></PageErrorBoundary>} />
           <Route path="*"           element={<PageErrorBoundary><Navigate to="/" replace /></PageErrorBoundary>} />
         </Route>
+        </Suspense>
       </Routes>
 
       {/* Flash Card — بتظهر تلقائي لما يجي سكان */}
