@@ -4,17 +4,16 @@ import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard } from '../components/ReportWidgets'
 import { TrendingUp, DollarSign, Package, Award, Receipt } from 'lucide-react'
-import type { DeviceSalesSummary } from '@/services/reports.service'
-import type { ReportSummary } from '@/services/reports.service'
+import type { DeviceSalesSummary, ReportSummary } from '@/services/reports.service'
 
-interface ProfitTabProps {
-  sales:    DeviceSalesSummary[]
-  summary?: ReportSummary
-  saleLoad: boolean
-  sumLoad:  boolean
-}
-
-export function ProfitTabContent({ sales = [], summary, saleLoad, sumLoad }: ProfitTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function ProfitTabContent(props: Record<string, any>) {
+  const { sales = [], summary, saleLoad, sumLoad } = props as {
+    sales:    DeviceSalesSummary[]
+    summary?: ReportSummary
+    saleLoad: boolean
+    sumLoad:  boolean
+  }
 
   // \u062d\u0633\u0627\u0628 \u0625\u062c\u0645\u0627\u0644\u064a\u0627\u062a \u0645\u0646 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a
   const totalUnits  = sales.reduce((s, r) => s + r.total_units,   0)
