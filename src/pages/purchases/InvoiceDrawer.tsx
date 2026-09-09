@@ -1,6 +1,7 @@
 // src/pages/purchases/InvoiceDrawer.tsx
 import { useState } from 'react'
 import { Smartphone, Tag, AlertCircle, CheckCircle, CreditCard, X, Printer } from 'lucide-react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { usePurchase, useConfirmPurchase, useCancelPurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
