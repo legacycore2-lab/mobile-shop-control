@@ -1,5 +1,4 @@
 // src/pages/payments/components/QuickPaySupplierModal.tsx
-// @ts-nocheck
 import { useState, useEffect } from 'react'
 import { Banknote } from 'lucide-react'
 import { cn } from '@/lib/cn'
