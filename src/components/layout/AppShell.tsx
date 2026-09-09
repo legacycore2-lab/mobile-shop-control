@@ -21,7 +21,7 @@ const NAV = [
   { to: '/suppliers', icon: Truck,           label: 'الموردين'                },
   { to: '/customers', icon: Users,           label: 'العملاء'                 },
   { to: '/expenses',  icon: Receipt,         label: 'المصروفات'               },
-  { to: '/attendance', icon:       label: 'الحضور والانصراف'        },
+  { to: '/attendance', icon: UserCheck,       label: 'الحضور والانصراف'        },
   { to: '/reports',   icon: BarChart3,       label: 'التقارير'                },
   { to: '/ledger',    icon: BookOpen,        label: 'الحسابات'                },
   { to: '/audit',     icon: Shield,          label: 'سجل العمليات'            },
