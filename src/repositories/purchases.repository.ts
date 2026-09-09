@@ -71,8 +71,8 @@ export const purchasesRepository = {
       .select(`
         *,
         mobile_devices!device_id (
-          imei1, imei2, storage, color, condition,
-          selling_price, warranty_months,
+          imei1, imei2, storage, color, condition, status,
+          selling_price, warranty_months, sale_invoice_id,
           mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
         )
       `)
@@ -98,6 +98,8 @@ export const purchasesRepository = {
         color:           dev?.['color']   ? String(dev['color'])   : null,
         condition:       String(dev?.['condition']     ?? 'new'),
         selling_price:   n(dev?.['selling_price']),
+        status:          String(dev?.['status'] ?? 'in_stock'),
+        sale_invoice_id: dev?.['sale_invoice_id'] ? String(dev['sale_invoice_id']) : null,
         warranty_months: n(dev?.['warranty_months']),
       }
     })
