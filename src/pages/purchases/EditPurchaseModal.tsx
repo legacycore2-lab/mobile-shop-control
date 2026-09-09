@@ -375,7 +375,7 @@ export function EditPurchaseModal({
   const productTotal = productLines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
   const grandTotal   = deviceTotal + productTotal
   const afterDisc    = Math.max(0, grandTotal - (Number(discount) || 0))
-  const actualPaid   = detail?.invoice.paid_amount ?? Number(paidAmount) ?? 0
+  const actualPaid   = paidUnlocked ? (Number(paidAmount) || 0) : (detail?.invoice.paid_amount ?? Number(paidAmount) ?? 0)
   const remaining    = Math.max(0, afterDisc - actualPaid)
 
   // ── Save ──────────────────────────────────────────────────────────────────
