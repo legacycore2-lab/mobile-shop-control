@@ -1,12 +1,18 @@
 // src/pages/purchases/components/ProductInlineForm.tsx
 // Inline form to add a new product within a purchase invoice
-// @ts-nocheck
 import { useState } from 'react'
 import { X, Plus, AlertCircle } from 'lucide-react'
 import { useProductCategories, useCreateProduct, useCreateCategory } from '@/hooks/useProducts'
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
-import type { InvoiceProductLine } from '@/repositories/purchases.repository'
+import type { InvoiceProductLine, InvoiceDeviceLine } from '@/repositories/purchases.repository'
+
+interface NewProductForm {
+  category_id: string; name: string; sku: string; barcode: string
+  cost_price: string; selling_price: string
+  stock_qty: string; reorder_level: string; unit: string; notes: string
+}
+
 
 const BLANK_PRODUCT: NewProductForm = {
   category_id: '', name: '', sku: '', barcode: '',
@@ -47,7 +53,7 @@ export function AddProductInlineForm({
   }
 
   function set(field: keyof NewProductForm, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm((prev: NewProductForm) => ({ ...prev, [field]: value }))
   }
 
   async function handleAdd() {
