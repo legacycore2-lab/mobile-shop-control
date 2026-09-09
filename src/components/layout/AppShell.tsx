@@ -30,7 +30,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/audit',      icon: Shield,          label: 'سجل العمليات',                resource: 'audit'       },
   { to: '/import',     icon: FileUp,          label: 'استيراد البيانات',            resource: 'import'      },
   { to: '/settings',   icon: Settings,        label: 'الإعدادات',                   resource: 'settings'    },
-  { to: '/permissions',icon: Lock,            label: 'الصلاحيات',                   resource: 'permissions' },
+  { to: '/permissions',icon: LockKeyhole,            label: 'الصلاحيات',                   resource: 'permissions' },
 ]
 
 export function AppShell() {
