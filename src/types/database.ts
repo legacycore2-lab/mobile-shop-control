@@ -117,6 +117,8 @@ export interface PurchaseInvoiceDetailDevice extends PurchaseInvoiceDevice {
   imei1: string; imei2: string | null
   storage: string | null; color: string | null; condition: string
   selling_price: number; warranty_months: number
+  status: string
+  sale_invoice_id: string | null
 }
 
 export interface PurchaseInvoiceDetailProduct extends PurchaseInvoiceProduct {
