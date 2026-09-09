@@ -27,6 +27,7 @@ interface AddedDevice extends InvoiceDeviceLine {
   label:          string
   selling_price?: number
   isExisting?:    boolean // already in DB — not newly added
+  isSold?:        boolean // already sold — cannot be removed
 }
 
 interface NewDeviceForm {
@@ -302,6 +303,7 @@ export function EditPurchaseModal({
         selling_price: d.selling_price ?? 0,
         label:         `${d.brand_name} ${d.model_name} — ${d.imei1}`,
         isExisting:    true,
+        isSold:        d.status === 'sold',
       })))
       setProductLines(detail.products.map(p => ({
         product_id: p.product_id,
@@ -392,8 +394,9 @@ export function EditPurchaseModal({
       const oldDeviceIds  = oldDetail.devices.map(d => d.device_id)
       const newDeviceIds  = deviceLines.map(l => l.device_id)
 
-      // 1. Rollback removed devices → in_stock
-      const removedDeviceIds = oldDeviceIds.filter(id => !newDeviceIds.includes(id))
+      // 1. Rollback removed devices → in_stock (skip sold devices)
+      const soldDeviceIds    = detail!.devices.filter(d => d.status === 'sold').map(d => d.device_id)
+      const removedDeviceIds = oldDeviceIds.filter(id => !newDeviceIds.includes(id) && !soldDeviceIds.includes(id))
       if (removedDeviceIds.length > 0) {
         await supabase.from('mobile_devices')
           .update({ status: 'in_stock', purchase_invoice_id: null } as never)
@@ -689,7 +692,9 @@ export function EditPurchaseModal({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{line.label}</p>
-                          {line.isExisting && <p className="text-xs text-blue-500 dark:text-blue-400">موجود</p>}
+                          {line.isSold
+                            ? <p className="text-xs text-red-500 dark:text-red-400 font-semibold">✓ مباع</p>
+                            : line.isExisting && <p className="text-xs text-blue-500 dark:text-blue-400">موجود</p>}
                         </div>
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-[10px] text-gray-400">شراء</span>
@@ -704,8 +709,11 @@ export function EditPurchaseModal({
                             className="w-24 h-8 border border-green-300 dark:border-green-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 text-center" />
                         </div>
                         <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">ج</span>
-                        <button type="button" onClick={() => removeDevice(line.device_id)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
+                        <button type="button"
+                          onClick={() => !line.isSold && removeDevice(line.device_id)}
+                          disabled={line.isSold}
+                          title={line.isSold ? 'الجهاز مباع — لا يمكن حذفه' : 'حذف'}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
                           <X size={13} />
                         </button>
                       </div>
