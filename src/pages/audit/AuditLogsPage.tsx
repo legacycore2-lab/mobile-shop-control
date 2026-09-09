@@ -28,6 +28,7 @@ const ACTION_MAP: Record<string, { label: string; variant: 'success' | 'danger' 
 }
 
 const ENTITY_MAP: Record<string, string> = {
+  // مفرد
   mobile_device:    'جهاز',
   product:          'منتج',
   customer:         'عميل',
@@ -38,6 +39,29 @@ const ENTITY_MAP: Record<string, string> = {
   payment:          'دفعة',
   expense:          'مصروف',
   employee:         'موظف',
+  brand:            'ماركة',
+  model:            'موديل',
+  // جمع — القيم الفعلية في الـ DB
+  mobile_devices:           'جهاز',
+  products:                 'منتج',
+  customers:                'عميل',
+  suppliers:                'مورد',
+  purchase_invoices:        'فاتورة شراء',
+  sale_invoices:            'فاتورة بيع',
+  profiles:                 'مستخدم',
+  payments:                 'دفعة',
+  expenses:                 'مصروف',
+  employees:                'موظف',
+  mobile_brands:            'ماركة',
+  mobile_models:            'موديل',
+  purchase_invoice_devices: 'جهاز في فاتورة شراء',
+  purchase_invoice_products:'منتج في فاتورة شراء',
+  sale_invoice_devices:     'جهاز في فاتورة بيع',
+  sale_invoice_products:    'منتج في فاتورة بيع',
+  product_categories:       'فئة منتجات',
+  expense_categories:       'فئة مصروفات',
+  attendance_records:       'سجل حضور',
+  role_permissions:         'صلاحيات',
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -479,7 +503,7 @@ export function AuditLogsPage() {
               ) : paginated.map(log => {
                 const action = ACTION_MAP[log.action] ?? { label: log.action, variant: 'neutral' as const }
                 const entity = ENTITY_MAP[log.entity_type ?? ''] ?? log.entity_type ?? '—'
-                const hasDetails = !!(log.old_data || log.new_data || log.description)
+                const hasDetails = !!(log.old_data || log.new_data || log.description) || log.action === 'update' || log.action === 'delete'
                 return (
                   <tr
                     key={log.id}
