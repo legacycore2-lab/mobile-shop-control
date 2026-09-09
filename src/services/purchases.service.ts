@@ -27,18 +27,19 @@ export interface PurchaseStats {
 }
 
 function parseRpcError(msg: string): string {
-  if (msg.includes('INVOICE_NOT_FOUND')) return 'الفاتورة غير موجودة'
-  if (msg.includes('INVOICE_NOT_DRAFT')) return 'يمكن تأكيد الفواتير المسودة فقط'
+  if (msg.includes('INVOICE_NOT_FOUND'))        return 'الفاتورة غير موجودة'
+  if (msg.includes('INVOICE_NOT_DRAFT'))        return 'يمكن تأكيد الفواتير المسودة فقط'
+  if (msg.includes('INVOICE_ALREADY_CANCELLED')) return 'الفاتورة ملغاة بالفعل'
   return msg
 }
 
 export const purchasesService = {
 
-  getAll:    (): Promise<PurchaseInvoiceView[]>             => purchasesRepository.getAll(),
+  getAll:    (): Promise<PurchaseInvoiceView[]>                  => purchasesRepository.getAll(),
   getById:   (id: string): Promise<PurchaseInvoiceDetail | null> => purchasesRepository.getById(id),
-  getStats:  (): Promise<PurchaseStats>                     => purchasesRepository.getStats(),
-  nextInvoiceNumber: (): Promise<string>                    => purchasesRepository.nextInvoiceNumber(),
-  getUnlinkedDevicesBySupplier: (supplierId: string)        => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
+  getStats:  (): Promise<PurchaseStats>                          => purchasesRepository.getStats(),
+  nextInvoiceNumber: (): Promise<string>                         => purchasesRepository.nextInvoiceNumber(),
+  getUnlinkedDevicesBySupplier: (supplierId: string)             => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
 
   create: async (form: PurchaseFormData): Promise<PurchaseInvoice> => {
     if (!form.supplier_id)  throw new Error('المورد مطلوب')
@@ -99,11 +100,12 @@ export const purchasesService = {
     if (error) throw new Error(parseRpcError(error.message))
   },
 
+  // ── يلغي الفاتورة عبر RPC — الـ DB function بتتحقق من الـ status ─────────
   cancel: async (id: string): Promise<void> => {
-    const detail = await purchasesRepository.getById(id)
-    if (!detail)                               throw new Error('الفاتورة غير موجودة')
-    if (detail.invoice.status === 'confirmed') throw new Error('لا يمكن إلغاء فاتورة مؤكدة')
-    await purchasesRepository.updateStatus(id, 'cancelled')
+    const { error } = await supabase.rpc('cancel_purchase_invoice', {
+      p_invoice_id: id,
+    } as never)
+    if (error) throw new Error(parseRpcError(error.message))
   },
 
   remove: async (id: string): Promise<void> => {
