@@ -92,14 +92,22 @@ export const posService = {
       })
     }
 
-    void logAction({
-      userId:      form.created_by,
-      action:      'create',
-      table:       'sale_invoices',
-      recordId:    invoice.id,
-      description: `فاتورة بيع جديدة ${invoiceNumber} — ${form.device_lines.length} جهاز، إجمالي ${totalAmount} ج`,
-      newData:     { invoice_number: invoiceNumber, total_amount: totalAmount, customer_id: form.customer_id || null, devices: form.device_lines.length, products: form.product_lines.length },
-    })
+    void (async () => {
+      try {
+        const detail       = await posRepository.getById(invoice.id)
+        const customerName = detail?.invoice.customer_name ?? 'بدون عميل'
+        const deviceNames  = detail?.devices.map(d => `${d.brand_name} ${d.model_name}`).join('، ') ?? '—'
+        const description  = `إنشاء فاتورة بيع ${invoiceNumber} | العميل: ${customerName} | الأجهزة: ${deviceNames || `${form.device_lines.length} جهاز`} | الإجمالي: ${totalAmount} ج`
+        await logAction({
+          userId:      form.created_by,
+          action:      'create',
+          table:       'sale_invoices',
+          recordId:    invoice.id,
+          description,
+          newData:     { invoice_number: invoiceNumber, total_amount: totalAmount, customer: customerName, devices: deviceNames },
+        })
+      } catch { /* silent */ }
+    })()
 
     return invoice
   },
@@ -119,7 +127,15 @@ export const posService = {
   cancel: async (id: string, userId?: string): Promise<void> => {
     const { error } = await supabase.rpc('cancel_sale_invoice', { p_invoice_id: id } as never)
     if (error) throw new Error(parseRpcError(error.message))
-    if (userId) void logAction({ userId, action: 'cancel', table: 'sale_invoices', recordId: id, description: 'إلغاء فاتورة البيع وإعادة الأجهزة للمخزون' })
+    if (userId) {
+      void (async () => {
+        const det = await posRepository.getById(id).catch(() => null)
+        const num = det?.invoice.invoice_number ?? id.slice(0,8)
+        const cus = det?.invoice.customer_name ?? 'بدون عميل'
+        await logAction({ userId, action: 'cancel', table: 'sale_invoices', recordId: id,
+          description: `إلغاء فاتورة البيع ${num} | العميل: ${cus} — تمت إعادة الأجهزة للمخزون` })
+      })()
+    }
   },
 
   remove: async (id: string, userId?: string): Promise<void> => {
