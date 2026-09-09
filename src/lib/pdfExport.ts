@@ -1,14 +1,10 @@
 // src/lib/pdfExport.ts
+import { fmt } from '@/lib/fmt'
 // PDF export using jsPDF — generates real downloadable PDFs
 
 import { jsPDF } from 'jspdf'
 
 export type PdfOutput = 'download' | 'preview'
-
-function fmt(n: number | string | null | undefined): string {
-  const num = Number(n ?? 0)
-  return isNaN(num) ? '0' : num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-}
 
 // ── Core PDF builder ──────────────────────────────────────────────────────────
 
