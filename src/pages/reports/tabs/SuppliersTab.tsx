@@ -2,7 +2,7 @@
 // src/pages/reports/tabs/SuppliersTab.tsx
 import { printSuppliers } from '../print/printEngine'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard, BarChart } from '../components/ReportWidgets'
 import {
