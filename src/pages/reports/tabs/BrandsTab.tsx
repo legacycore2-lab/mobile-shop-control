@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/BrandsTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
@@ -22,7 +22,7 @@ export function BrandsTabContent(props: Record<string, any>) {
       e.profit  += r.profit
       map.set(r.brand_name, e)
     }
-    return [...map.values()].sort((a, b) => b.units - a.units)
+    return [...map.values()].sort((a: any, b: any) => b.units - a.units)
   }, [sales])
 
   // تجميع مخزون حسب البراند
@@ -35,13 +35,13 @@ export function BrandsTabContent(props: Record<string, any>) {
       e.sell_value += r.total_selling
       map.set(r.brand_name, e)
     }
-    return [...map.values()].sort((a, b) => b.count - a.count)
+    return [...map.values()].sort((a: any, b: any) => b.count - a.count)
   }, [stock])
 
-  const totalUnitsSold  = brandSales.reduce((s, r) => s + r.units,   0)
-  const totalRevenue    = brandSales.reduce((s, r) => s + r.revenue,  0)
-  const totalProfit     = brandSales.reduce((s, r) => s + r.profit,   0)
-  const totalStockUnits = brandStock.reduce((s, r) => s + r.count,    0)
+  const totalUnitsSold  = brandSales.reduce((s: number, r: any) => s + Number(r.units),   0)
+  const totalRevenue    = brandSales.reduce((s: number, r: any) => s + Number(r.revenue),  0)
+  const totalProfit     = brandSales.reduce((s: number, r: any) => s + Number(r.profit),   0)
+  const totalStockUnits = brandStock.reduce((s: number, r: any) => s + Number(r.count),    0)
 
   const loading = saleLoad || stckLoad
 
