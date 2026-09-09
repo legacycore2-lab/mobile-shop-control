@@ -1,6 +1,5 @@
 // src/pages/purchases/components/DeviceInlineForm.tsx
 // Inline form to add a new device within a purchase invoice
-// @ts-nocheck
 // src/pages/purchases/CreatePurchaseModal.tsx
 import { useState, useCallback, useRef } from 'react'
 import {
@@ -8,7 +7,7 @@ import {
   Search, ScanLine, Zap, ChevronDown, ChevronUp, Camera,
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
-import { LabelPrintModal, type LabelData } from './LabelPrintModal'
+import { LabelPrintModal, type LabelData } from '../LabelPrintModal'
 import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
