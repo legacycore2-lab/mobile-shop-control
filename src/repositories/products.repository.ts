@@ -1,4 +1,5 @@
 // src/repositories/products.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase'
 import type { Product, ProductCategory, ProductType } from '@/types/database'
 
