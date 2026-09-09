@@ -2,7 +2,7 @@
 // src/pages/reports/tabs/BrandsTab.tsx
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard, BarChart } from '../components/ReportWidgets'
 import { Smartphone, TrendingUp, DollarSign, Award, Package } from 'lucide-react'
