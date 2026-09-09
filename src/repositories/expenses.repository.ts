@@ -57,6 +57,7 @@ export const expensesRepository = {
       `)
       .order('expense_date', { ascending: false })
       .order('created_at',   { ascending: false })
+      .limit(2000)
     if (error) throw error
 
     return ((data ?? []) as unknown[]).map(row => {
