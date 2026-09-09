@@ -20,7 +20,7 @@ import { AddDeviceInlineForm } from './components/DeviceInlineForm'
 import { AddProductInlineForm } from './components/ProductInlineForm'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 type AddedDevice = InvoiceDeviceLine & { label: string }
