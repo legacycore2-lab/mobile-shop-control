@@ -308,8 +308,8 @@ export function DevicesPage() {
           title="حذف الجهاز"
           message="هل أنت متأكد من حذف هذا الجهاز؟"
           confirmText="حذف"
-          loading={deleteDevice.isPending}
-          onConfirm={async () => { await deleteDevice.mutateAsync(confirmDel); setConfirmDel(null) }}
+          loading={deleteMutation.isPending}
+          onConfirm={async () => { await deleteMutation.mutateAsync(confirmDel); setConfirmDel(null) }}
           onCancel={() => setConfirmDel(null)}
         />
       )}
