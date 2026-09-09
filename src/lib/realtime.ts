@@ -45,7 +45,6 @@ export function startRealtime(qc: QueryClient) {
 
   channel.subscribe((status: string) => {
     if (status === 'SUBSCRIBED') {
-      console.log('[Realtime] Connected — listening to all tables')
     }
   })
 }
