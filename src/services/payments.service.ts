@@ -1,8 +1,8 @@
 // src/services/payments.service.ts
-import { paymentsRepository, type PaymentInsert } from '@/repositories/payments.repository'
+import { paymentsRepository, type PaymentInsert, type PaymentUpdate } from '@/repositories/payments.repository'
 import type { Payment, SupplierLedger, CustomerLedger, PaymentType, PartyType } from '@/types/database'
 
-export type { PaymentInsert }
+export type { PaymentInsert, PaymentUpdate }
 
 export interface PaymentFormData {
   payment_type:   PaymentType
@@ -15,6 +15,13 @@ export interface PaymentFormData {
   payment_date:   string
   notes:          string
   created_by:     string
+}
+
+export interface PaymentUpdateFormData {
+  amount:         number
+  payment_method: string
+  payment_date:   string
+  notes:          string
 }
 
 export const paymentsService = {
@@ -35,6 +42,18 @@ export const paymentsService = {
       payment_date:   form.payment_date || new Date().toISOString().split('T')[0],
       notes:          form.notes?.trim() || null,
       created_by:     form.created_by || null,
+    })
+  },
+
+  update: async (id: string, form: PaymentUpdateFormData): Promise<Payment> => {
+    if (!id)             throw new Error('معرف الدفعة مطلوب')
+    if (form.amount <= 0) throw new Error('المبلغ يجب أن يكون أكبر من صفر')
+
+    return paymentsRepository.update(id, {
+      amount:         form.amount,
+      payment_method: form.payment_method || 'cash',
+      payment_date:   form.payment_date || new Date().toISOString().split('T')[0],
+      notes:          form.notes?.trim() || null,
     })
   },
 
@@ -66,6 +85,7 @@ export const paymentsService = {
 
   getSaleInvoicesByCustomer: (customerId: string) =>
     paymentsRepository.getSaleInvoicesByCustomer(customerId),
+
   getPurchaseInvoiceLinesBySupplier: (supplierId: string) =>
     paymentsRepository.getPurchaseInvoiceLinesBySupplier(supplierId),
 
