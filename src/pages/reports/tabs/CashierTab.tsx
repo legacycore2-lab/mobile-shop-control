@@ -1,7 +1,7 @@
 // @ts-nocheck
 // src/pages/reports/tabs/CashierTab.tsx
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard } from '../components/ReportWidgets'
 import { Users, TrendingUp, DollarSign, Award, Smartphone, Package } from 'lucide-react'
