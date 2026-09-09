@@ -1,4 +1,5 @@
 // src/repositories/expenses.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase'
 import type { ExpenseCategory, ExpenseView } from '@/types/database'
 
