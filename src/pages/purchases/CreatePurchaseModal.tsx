@@ -1,5 +1,4 @@
 // src/pages/purchases/CreatePurchaseModal.tsx
-// @ts-nocheck
 // src/pages/purchases/CreatePurchaseModal.tsx
 import { useState, useCallback, useRef } from 'react'
 import {
