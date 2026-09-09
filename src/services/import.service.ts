@@ -5,7 +5,7 @@
 
 function parseCsvText(text: string): string[][] {
   // Handle BOM
-  const clean = text.replace(/^\uFEFF/, '')
+  const clean = text.replace(/^﻿/, '')
   const lines  = clean.split(/\r?\n/).filter(l => l.trim())
   return lines.map(line => {
     const cells: string[] = []

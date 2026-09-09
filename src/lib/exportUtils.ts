@@ -146,7 +146,7 @@ function exportToCsvDirect(
   )
 
   // Add BOM for Arabic text in Excel
-  const bom     = '\uFEFF'
+  const bom     = '﻿'
   const content = bom + [headerRow, ...dataRows].join('\n')
   const blob    = new Blob([content], { type: 'text/csv;charset=utf-8' })
 
