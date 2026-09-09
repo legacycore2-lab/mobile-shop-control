@@ -1,7 +1,7 @@
 // @ts-nocheck
 // src/pages/reports/tabs/ProfitTab.tsx
 import { cn } from '@/lib/cn'
-import { fmt } from '@/constants/statusMaps'
+import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard } from '../components/ReportWidgets'
 import { TrendingUp, DollarSign, Package, Award } from 'lucide-react'
