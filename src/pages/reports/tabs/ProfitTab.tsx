@@ -1,5 +1,5 @@
-// @ts-nocheck
 // src/pages/reports/tabs/ProfitTab.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
