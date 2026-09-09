@@ -1,4 +1,5 @@
 // src/repositories/attendance.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Note: Supabase client cannot auto-infer types for attendance/employee tables
 // because they were added after the initial schema. Explicit casts are used below.
 
