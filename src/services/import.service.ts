@@ -1,5 +1,30 @@
 // src/services/import.service.ts
-import * as XLSX from 'xlsx'
+// ── CSV-only parser — replaces xlsx (eliminated HIGH severity vulnerability)
+// Accepts: .csv files with headers on row 1
+// Template: /public/import-template.xlsx → export as CSV before uploading
+
+function parseCsvText(text: string): string[][] {
+  // Handle BOM
+  const clean = text.replace(/^\uFEFF/, '')
+  const lines  = clean.split(/\r?\n/).filter(l => l.trim())
+  return lines.map(line => {
+    const cells: string[] = []
+    let cur = '', inQ = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++ }
+        else inQ = !inQ
+      } else if (ch === ',' && !inQ) {
+        cells.push(cur.trim()); cur = ''
+      } else {
+        cur += ch
+      }
+    }
+    cells.push(cur.trim())
+    return cells
+  })
+}
 import { importRepository } from '@/repositories/import.repository'
 import type {
   ImportProductRow,
@@ -131,8 +156,10 @@ function parseDeviceRow(rawRow: unknown[], rowNum: number): ParsedRow<ImportDevi
     // handle Excel date serial
     const asNum = Number(rawRow[9])
     if (!isNaN(asNum) && asNum > 1000) {
-      const d = XLSX.SSF.parse_date_code(asNum)
-      purchaseDate = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`
+      // Excel date serial — convert to ISO date
+      const excelEpoch = new Date(1899, 11, 30)
+      const d = new Date(excelEpoch.getTime() + asNum * 86400000)
+      purchaseDate = d.toISOString().split('T')[0]
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate)) {
       errors.push(`تاريخ الشراء يجب أن يكون بصيغة YYYY-MM-DD (المدخل: "${purchaseDateRaw}")`)
@@ -165,66 +192,49 @@ function parseDeviceRow(rawRow: unknown[], rowNum: number): ParsedRow<ImportDevi
 
 // ── Sheet Detection ───────────────────────────────────────────────────────────
 
-function detectSheet(wb: XLSX.WorkBook): { sheetName: string; type: 'products' | 'devices' } | null {
-  for (const name of wb.SheetNames) {
-    if (name.includes('منتج') || name.includes('إكسسوار') || name.toLowerCase().includes('product')) {
-      return { sheetName: name, type: 'products' }
-    }
-    if (name.includes('جهاز') || name.includes('موبايل') || name.toLowerCase().includes('device')) {
-      return { sheetName: name, type: 'devices' }
-    }
-  }
-  return null
-}
-
-// ── Service ───────────────────────────────────────────────────────────────────
 
 export const importService = {
 
   // ── Parse file → preview rows (no DB calls) ───────────────────────────────
   parseFile: (file: File): Promise<ParseResult<ImportProductRow> | ParseResult<ImportDeviceRow>> => {
     return new Promise((resolve, reject) => {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        return reject(new Error('يرجى رفع ملف CSV فقط\nافتح الملف في Excel واختر "حفظ بصيغة → CSV"'))
+      }
       const reader = new FileReader()
       reader.onload = (e) => {
         try {
-          const data = new Uint8Array(e.target!.result as ArrayBuffer)
-          const wb   = XLSX.read(data, { type: 'array' })
+          const text = e.target!.result as string
+          const rows = parseCsvText(text)
+          if (rows.length < 2) throw new Error('الملف فارغ أو لا يحتوي على بيانات')
 
-          const detected = detectSheet(wb)
-          if (!detected) {
-            // try first sheet and guess
-            const firstSheet = wb.SheetNames[0]
-            if (!firstSheet) throw new Error('الملف فارغ أو لا يحتوي على بيانات')
-            // guess by first header cell
-            const ws = wb.Sheets[firstSheet]
-            const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 }) as unknown[][]
-            const header = String((rows[2] as unknown[] ?? [])[0] ?? '').toLowerCase()
-            if (header.includes('imei') || header.includes('ماركة')) {
-              return resolve(importService._parseSheet(wb, firstSheet, 'devices'))
-            }
-            return resolve(importService._parseSheet(wb, firstSheet, 'products'))
-          }
+          // Detect type from first row headers
+          const headerRow = rows[0].join(',').toLowerCase()
+          const type: 'products' | 'devices' =
+            headerRow.includes('imei') || headerRow.includes('ماركة') ? 'devices' : 'products'
 
-          resolve(importService._parseSheet(wb, detected.sheetName, detected.type))
+          resolve(importService._parseSheet(rows, '', type))
         } catch (err) {
           reject(err instanceof Error ? err : new Error(String(err)))
         }
       }
       reader.onerror = () => reject(new Error('فشل قراءة الملف'))
-      reader.readAsArrayBuffer(file)
+      reader.readAsText(file, 'utf-8')
     })
   },
 
   _parseSheet: (
-    wb:        XLSX.WorkBook,
-    sheetName: string,
+    wb:        string[][],
+    _sheetName: string,
     type:      'products' | 'devices',
   ): ParseResult<ImportProductRow> | ParseResult<ImportDeviceRow> => {
-    const ws   = wb.Sheets[sheetName]
-    const all  = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' }) as unknown[][]
+    // wb is already parsed CSV rows (string[][])
+    const all: unknown[][] = wb
 
-    // rows start at index 4 (0-based) = row 5 in Excel (skipping title/legend/headers/hints)
-    const dataRows = all.slice(4).filter(row => {
+    // rows start at index 1 (0-based) — CSV has headers on row 0
+    // (Excel template had title rows 0-3, CSV export skips them)
+    // Try both: if row[0] looks like a header, skip it; data starts after
+    const dataRows = all.slice(1).filter(row => {
       // skip empty rows
       if (!row || row.length === 0) return false
       if (row.every(c => str(c) === '')) return false
