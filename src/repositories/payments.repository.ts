@@ -1,4 +1,5 @@
 // src/repositories/payments.repository.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase'
 import type { Payment, SupplierLedger, CustomerLedger, PaymentType, PartyType } from '@/types/database'
 
