@@ -101,6 +101,7 @@ export function useCreateBrand() {
   return useMutation({
     mutationFn: (name: string) => devicesService.createBrand(name),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.brands }),
+    onError: (e: Error) => console.error('[useDevices]', e.message),
   })
 }
 
