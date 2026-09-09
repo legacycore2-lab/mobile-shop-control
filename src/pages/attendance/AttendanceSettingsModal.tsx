@@ -1,6 +1,6 @@
 // src/pages/attendance/AttendanceSettingsModal.tsx
-// @ts-nocheck
 import { useState, useEffect, useRef } from 'react'
+import type L from 'leaflet'
 import { X, MapPin, Navigation, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAttendanceSettings, useSaveAttendanceSettings } from '@/hooks/useAttendance'
@@ -19,10 +19,10 @@ export function AttendanceSettingsModal({ onClose }: Props) {
   const [locating, setLocating] = useState(false)
   const [mapReady, setMapReady] = useState(false)
 
-  const mapRef      = useRef(null)
-  const leafletMap  = useRef(null)
-  const markerRef   = useRef(null)
-  const circleRef   = useRef(null)
+  const mapRef      = useRef<HTMLDivElement | null>(null)
+  const leafletMap  = useRef<L.Map | null>(null)
+  const markerRef   = useRef<L.Marker | null>(null)
+  const circleRef   = useRef<L.Circle | null>(null)
 
   // populate from DB
   useEffect(() => {
@@ -41,7 +41,7 @@ export function AttendanceSettingsModal({ onClose }: Props) {
       await import('leaflet/dist/leaflet.css')
 
       // fix default icon path in vite
-      delete L.Icon.Default.prototype._getIconUrl
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
       L.Icon.Default.mergeOptions({
         iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         iconRetinaUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
