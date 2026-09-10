@@ -260,7 +260,7 @@ export const purchasesRepository = {
       cancelled:  rows.filter(r => r.status === 'cancelled').length,
       totalSpent: confirmed.reduce((s, r) => s + n(r.total_amount), 0),
       totalPaid:  confirmed.reduce((s, r) => s + n(r.paid_amount),  0),
-      totalDue:   confirmed.reduce((s, r) => s + Math.max(0, n(r.total_amount) - n(r.paid_amount) - n(r.discount)), 0),
+      totalDue:   confirmed.reduce((s, r) => s + Math.max(0, n(r.total_amount) - n(r.paid_amount)), 0),
     }
   },
 }
