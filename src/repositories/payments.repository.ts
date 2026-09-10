@@ -188,7 +188,7 @@ export const paymentsRepository = {
         total_amount:   total,
         paid_amount:    paid,
         discount:       discount,
-        remaining:      total - paid - discount,
+        remaining:      Math.max(0, total - paid),   // total_amount already net of discount
       }
     })
   },
@@ -216,7 +216,7 @@ export const paymentsRepository = {
         total_amount:   total,
         paid_amount:    paid,
         discount:       discount,
-        remaining:      total - paid - discount,
+        remaining:      Math.max(0, total - paid),   // total_amount already net of discount
       }
     })
   },
@@ -263,7 +263,7 @@ export const paymentsRepository = {
         total_amount:   total,
         paid_amount:    paid,
         discount:       discount,
-        remaining:      total - paid - discount,
+        remaining:      Math.max(0, total - paid),   // total_amount already net of discount
       }
     })
 
@@ -357,7 +357,7 @@ export const paymentsRepository = {
         total_amount:   total,
         paid_amount:    paid,
         discount:       discount,
-        remaining:      total - paid - discount,
+        remaining:      Math.max(0, total - paid),   // total_amount already net of discount
       }
     })
 
