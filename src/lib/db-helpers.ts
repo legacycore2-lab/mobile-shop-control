@@ -15,6 +15,12 @@ export function n(v: unknown): number {
 }
 
 // ── Invoice view builders ─────────────────────────────────────────────────────
+//
+// IMPORTANT — discount model:
+//   total_amount is stored AFTER discount has already been subtracted.
+//   i.e.  total_amount = lines_total - discount
+//   Therefore:  remaining = total_amount - paid_amount
+//   Do NOT subtract discount again — that would double-count it.
 
 export function buildSaleInvoiceView(r: Record<string, unknown>): SaleInvoiceView {
   const cust = r['customers']    as Record<string, unknown> | null
@@ -29,7 +35,7 @@ export function buildSaleInvoiceView(r: Record<string, unknown>): SaleInvoiceVie
     total_amount:    total,
     paid_amount:     paid,
     discount:        discount,
-    remaining:       Math.max(0, total - paid - discount),
+    remaining:       Math.max(0, total - paid),   // total_amount already net of discount
     customer_name:   (cust?.['name']  as string | null) ?? null,
     customer_phone:  (cust?.['phone'] as string | null) ?? null,
     created_by_name: String(cby?.['full_name'] ?? '—'),
@@ -51,7 +57,7 @@ export function buildPurchaseInvoiceView(r: Record<string, unknown>): PurchaseIn
     total_amount:    total,
     paid_amount:     paid,
     discount:        discount,
-    remaining:       total - paid - discount,
+    remaining:       Math.max(0, total - paid),   // total_amount already net of discount
     supplier_name:   String(sup?.['name']      ?? '—'),
     created_by_name: String(cby?.['full_name'] ?? '—'),
     devices_count:   (dev  ?? []).length,
