@@ -15,7 +15,7 @@ import type { MobileDeviceView } from '@/types/database'
 interface FormState {
   imei1: string; imei2: string; serial_number: string
   brand_id: string; model_id: string
-  storage: string; color: string; condition: string
+  storage: string; color: string; condition: string; battery_health: string
   supplier_id: string; purchase_date: string
   cost_price: string; selling_price: string
   warranty_months: string; location: string; notes: string
@@ -24,7 +24,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   imei1: '', imei2: '', serial_number: '',
   brand_id: '', model_id: '',
-  storage: '', color: '', condition: 'new',
+  storage: '', color: '', condition: 'new', battery_health: '',
   supplier_id: '', purchase_date: new Date().toISOString().split('T')[0],
   cost_price: '', selling_price: '',
   warranty_months: '12', location: '', notes: '',
@@ -55,6 +55,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
           storage:         device.storage         ?? '',
           color:           device.color           ?? '',
           condition:       device.condition,
+          battery_health:  device.battery_health != null ? String(device.battery_health) : '',
           supplier_id:     device.supplier_id,
           purchase_date:   device.purchase_date,
           cost_price:      String(device.cost_price),
@@ -136,6 +137,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
             cost_price:      Number(form.cost_price),
             selling_price:   Number(form.selling_price) || 0,
             warranty_months: Number(form.warranty_months) || 0,
+            battery_health:  form.battery_health ? Number(form.battery_health) : null,
           },
         })
         onClose()
@@ -145,6 +147,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
           cost_price:      Number(form.cost_price),
           selling_price:   Number(form.selling_price) || 0,
           warranty_months: Number(form.warranty_months) || 0,
+          battery_health:  form.battery_health ? Number(form.battery_health) : null,
           added_by:        profile?.id ?? '',
         })
         // Find brand & model names for label
