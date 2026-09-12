@@ -11,6 +11,7 @@ export interface DeviceFormData {
   storage:         string
   color:           string
   condition:       string
+  battery_health:  number | null
   supplier_id:     string
   purchase_date:   string
   cost_price:      number
@@ -115,6 +116,7 @@ export const devicesService = {
       model_id:            form.model_id,
       storage:             form.storage?.trim()       || null,
       color:               form.color?.trim()         || null,
+      battery_health:      form.battery_health != null ? Number(form.battery_health) : null,
       condition:           VALID_CONDITIONS.includes(form.condition as Condition) ? form.condition : 'new',
       supplier_id:         form.supplier_id,
       purchase_invoice_id: null,
@@ -148,7 +150,8 @@ export const devicesService = {
     if (form.serial_number !== undefined) payload.serial_number = form.serial_number?.trim() || null
     if (form.model_id      !== undefined) payload.model_id      = form.model_id
     if (form.storage       !== undefined) payload.storage       = form.storage?.trim()       || null
-    if (form.color         !== undefined) payload.color         = form.color?.trim()         || null
+    if (form.color          !== undefined) payload.color          = form.color?.trim()         || null
+    if (form.battery_health !== undefined) payload.battery_health = form.battery_health != null ? Number(form.battery_health) : null
     if (form.condition     !== undefined) payload.condition     = form.condition
     if (form.supplier_id   !== undefined) payload.supplier_id   = form.supplier_id
     if (form.purchase_date !== undefined) payload.purchase_date = form.purchase_date
