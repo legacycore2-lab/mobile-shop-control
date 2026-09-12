@@ -108,7 +108,7 @@ function AddDeviceInlineForm({
         imei1: form.imei1.trim(), imei2: form.imei2.trim(), serial_number: '',
         brand_id: form.brand_id, model_id: form.model_id,
         storage: form.storage, color: form.color.trim(),
-        condition: form.condition, supplier_id: supplierId,
+        condition: form.condition, battery_health: null, supplier_id: supplierId,
         purchase_date: new Date().toISOString().split('T')[0],
         cost_price: Number(form.cost_price),
         selling_price: form.selling_price ? Number(form.selling_price) : 0,
