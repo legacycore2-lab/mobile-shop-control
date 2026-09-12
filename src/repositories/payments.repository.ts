@@ -8,7 +8,7 @@ export interface PaymentInsert {
   invoice_id:     string
   invoice_number: string
   party_type:     PartyType
-  party_id:       string
+  party_id:       string | null
   amount:         number
   payment_method: string
   payment_date:   string

@@ -83,7 +83,7 @@ export const posService = {
         invoice_id:     invoice.id,
         invoice_number: invoiceNumber,
         party_type:     'customer',
-        party_id:       form.customer_id || '',
+        party_id:       form.customer_id || null,
         amount:         Number(form.paid_amount),
         payment_method: 'cash',
         payment_date:   form.invoice_date,
