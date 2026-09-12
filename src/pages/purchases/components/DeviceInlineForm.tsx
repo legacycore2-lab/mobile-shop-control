@@ -84,7 +84,8 @@ export function AddDeviceInlineForm({
     // نستنى React تحدث الـ state الأول قبل ما نفتح الـ modal
     setTimeout(() => setShowImeiScanner(true), 0)
   }
-  const imeiInputRef = useRef<HTMLInputElement>(null)
+  const imeiInputRef  = useRef<HTMLInputElement>(null)
+  const imei2Ref      = useRef<HTMLInputElement>(null)
 
   async function handleAddBrand() {
     if (!newBrandName.trim()) return
@@ -243,11 +244,16 @@ export function AddDeviceInlineForm({
             value={form.imei1}
             onChange={e => {
               const strip = (s: string) => s.replace(/^0\d\//, '').trim()
-              set('imei1', strip(e.target.value))
+              const clean = strip(e.target.value)
+              set('imei1', clean)
+              // انتقل لـ IMEI 2 تلقائياً بس لما IMEI 1 يكتمل (15 رقم)
+              if (clean.length >= 15) {
+                setTimeout(() => imei2Ref.current?.focus(), 50)
+              }
             }}
             placeholder="سكان IMEI 1..."
             className={inp}
-            maxLength={20}
+            maxLength={15}
           />
           <button
             type="button"
@@ -262,6 +268,7 @@ export function AddDeviceInlineForm({
         {form.imei1 && (
           <div className="flex gap-2">
             <input
+              ref={imei2Ref}
               value={form.imei2}
               onChange={e => {
                 const strip = (s: string) => s.replace(/^0\d\//, '').trim()
@@ -269,8 +276,7 @@ export function AddDeviceInlineForm({
               }}
               placeholder="سكان IMEI 2... (اختياري)"
               className={inp}
-              maxLength={20}
-              autoFocus
+              maxLength={15}
             />
             <button
               type="button"
@@ -294,11 +300,13 @@ export function AddDeviceInlineForm({
             const clean = strip(code)
             if (imeiTarget === 1) {
               set('imei1', clean)
+              setShowImeiScanner(false)
+              setTimeout(() => imei2Ref.current?.focus(), 100)
             } else {
               set('imei2', clean)
+              setShowImeiScanner(false)
+              setTimeout(() => imeiInputRef.current?.focus(), 100)
             }
-            setShowImeiScanner(false)
-            setTimeout(() => imeiInputRef.current?.focus(), 100)
           }}
           onClose={() => {
             setShowImeiScanner(false)
