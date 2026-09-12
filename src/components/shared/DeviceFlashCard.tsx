@@ -7,16 +7,17 @@ import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/fmt'
 
 interface DeviceInfo {
-  id:            string
-  imei1:         string
-  imei2:         string | null
-  brand_name:    string
-  model_name:    string
-  color:         string | null
-  storage:       string | null
-  status:        string
-  selling_price: number
-  cost_price:    number
+  id:             string
+  imei1:          string
+  imei2:          string | null
+  brand_name:     string
+  model_name:     string
+  color:          string | null
+  storage:        string | null
+  battery_health: number | null
+  status:         string
+  selling_price:  number
+  cost_price:     number
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
@@ -30,7 +31,7 @@ async function lookup(code: string): Promise<DeviceInfo | null> {
   const { data } = await supabase
     .from('mobile_devices')
     .select(`
-      id, imei1, imei2, color, storage, status, selling_price, actual_selling_price, cost_price,
+      id, imei1, imei2, color, storage, battery_health, status, selling_price, actual_selling_price, cost_price,
       mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
     `)
     .or(`imei1.eq.${searchImei},imei2.eq.${searchImei}`)
@@ -45,9 +46,10 @@ async function lookup(code: string): Promise<DeviceInfo | null> {
     imei2:         d['imei2'] as string | null,
     brand_name:    String(brand?.['name'] ?? '—'),
     model_name:    String(model?.['name'] ?? '—'),
-    color:         d['color'] as string | null,
-    storage:       d['storage'] as string | null,
-    status:        String(d['status']),
+    color:          d['color'] as string | null,
+    storage:        d['storage'] as string | null,
+    battery_health: d['battery_health'] != null ? Number(d['battery_health']) : null,
+    status:         String(d['status']),
     selling_price: Number(d['actual_selling_price'] || d['selling_price'] || 0),
     cost_price:    Number(d['cost_price'] || 0),
   }
@@ -134,6 +136,25 @@ export function DeviceFlashCard({ code, onClose }: Props) {
                       <Icon size={11} /> {st?.label}
                     </span>
                   </div>
+                  {device.battery_health != null && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            device.battery_health >= 80 ? 'bg-green-500' :
+                            device.battery_health >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${device.battery_health}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-bold tabular-nums ${
+                        device.battery_health >= 80 ? 'text-green-600 dark:text-green-400' :
+                        device.battery_health >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
+                      }`}>
+                        🔋 {device.battery_health}%
+                      </span>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-1">{device.imei1}</p>
                 </div>
                 <div className="text-left flex-shrink-0">
