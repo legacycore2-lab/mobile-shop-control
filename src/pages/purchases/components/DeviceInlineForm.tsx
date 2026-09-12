@@ -24,22 +24,23 @@ import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purch
 // ── New Device Form (inline inside modal) ─────────────────────────────────────
 
 interface NewDeviceForm {
-  brand_id:       string
-  model_id:       string
-  imei1:          string
-  imei2:          string
-  storage:        string
-  color:          string
-  condition:      string
-  cost_price:     string
-  selling_price:  string
+  brand_id:        string
+  model_id:        string
+  imei1:           string
+  imei2:           string
+  storage:         string
+  color:           string
+  condition:       string
+  battery_health:  string
+  cost_price:      string
+  selling_price:   string
   warranty_months: string
-  notes:          string
+  notes:           string
 }
 
 const BLANK_DEVICE: NewDeviceForm = {
   brand_id: '', model_id: '', imei1: '', imei2: '',
-  storage: '', color: '', condition: 'new',
+  storage: '', color: '', condition: 'new', battery_health: '',
   cost_price: '', selling_price: '', warranty_months: '12', notes: '',
 }
 
@@ -138,6 +139,7 @@ export function AddDeviceInlineForm({
         storage:         form.storage,
         color:           form.color.trim(),
         condition:       form.condition,
+        battery_health:  form.battery_health ? Number(form.battery_health) : null,
         supplier_id:     supplierId,
         purchase_date:   new Date().toISOString().split('T')[0],
         cost_price:      Number(form.cost_price),
@@ -333,6 +335,46 @@ export function AddDeviceInlineForm({
           <select value={form.condition} onChange={e => set('condition', e.target.value)} className={inp + ' cursor-pointer'}>
             {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
+        </div>
+      </div>
+
+      {/* Battery Health */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+          البطارية (%) <span className="text-gray-400 font-normal">اختياري</span>
+        </label>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={form.battery_health}
+            onChange={e => {
+              const v = e.target.value
+              if (v === '' || (Number(v) >= 0 && Number(v) <= 100)) set('battery_health', v)
+            }}
+            placeholder="مثال: 85"
+            className={inp + ' w-28'}
+          />
+          {form.battery_health && (
+            <div className="flex items-center gap-2 flex-1">
+              <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    Number(form.battery_health) >= 80 ? 'bg-green-500' :
+                    Number(form.battery_health) >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${form.battery_health}%` }}
+                />
+              </div>
+              <span className={`text-xs font-bold ${
+                Number(form.battery_health) >= 80 ? 'text-green-600 dark:text-green-400' :
+                Number(form.battery_health) >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
+              }`}>
+                {form.battery_health}%
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
