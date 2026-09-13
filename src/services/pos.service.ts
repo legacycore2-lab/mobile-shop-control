@@ -77,13 +77,14 @@ export const posService = {
       posRepository.adjustProductStock(form.product_lines.map(l => ({ product_id: l.product_id, qty_delta: -l.quantity }))),
     ])
 
-    if (Number(form.paid_amount) > 0) {
+    // سجّل payment فقط لو في عميل مسجّل — المبيعات النقدية بدون عميل بيتسجل paid_amount على الفاتورة مباشرة
+    if (Number(form.paid_amount) > 0 && form.customer_id) {
       await paymentsRepository.create({
         payment_type:   'sale',
         invoice_id:     invoice.id,
         invoice_number: invoiceNumber,
         party_type:     'customer',
-        party_id:       form.customer_id || null,
+        party_id:       form.customer_id,
         amount:         Number(form.paid_amount),
         payment_method: 'cash',
         payment_date:   form.invoice_date,
