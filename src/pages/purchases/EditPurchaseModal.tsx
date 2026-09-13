@@ -748,7 +748,7 @@ export function EditPurchaseModal({
                 ['منتجات',       `${fmt(productTotal)} ج`],
                 ['الإجمالي',     `${fmt(grandTotal)} ج`],
                 ['بعد الخصم',    `${fmt(afterDisc)} ج`],
-                ['الدفعة الأولى',`${fmt(actualPaid)} ج`],
+                ['إجمالي المدفوع',`${fmt(actualPaid)} ج`],
                 ['المتبقي',      `${fmt(remaining)} ج`],
               ].map(([l, v]) => (
                 <div key={l} className="flex items-center justify-between">
