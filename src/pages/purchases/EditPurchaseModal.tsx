@@ -504,7 +504,7 @@ export function EditPurchaseModal({
           .eq('payment_type', 'purchase')
           .order('created_at', { ascending: true })
           .limit(1)
-          .single()
+          .maybeSingle()
 
         const firstPay = firstPayRaw as { id: string } | null
 
