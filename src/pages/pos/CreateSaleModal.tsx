@@ -148,13 +148,26 @@ function NotFoundCard({ code, onDismiss }: { code: string; onDismiss: () => void
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
-export function CreateSaleModal({ onClose }: { onClose: () => void }) {
+export function CreateSaleModal({ onClose, initialDeviceId }: { onClose: () => void; initialDeviceId?: string }) {
   const { profile }               = useAuth()
   const { data: customers  = [] } = useCustomers()
   const { data: products   = [] } = useProducts()
   const { data: inStock    = [] } = useInStockDevices()
   const createMutation  = useCreateSale()
   const confirmMutation = useConfirmSale()
+
+  // Auto-add device from IMEI scan (جاي من DeviceFlashCard)
+  const initialDeviceAdded = useRef(false)
+
+  useEffect(() => {
+    if (!initialDeviceId || initialDeviceAdded.current || inStock.length === 0) return
+    const device = inStock.find(d => d.id === initialDeviceId)
+    if (device) {
+      toggleDevice(device)
+      initialDeviceAdded.current = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDeviceId, inStock])
 
   const [customerId,    setCustomerId]    = useState('')
   const [invoiceDate,   setInvoiceDate]   = useState(new Date().toISOString().split('T')[0])
