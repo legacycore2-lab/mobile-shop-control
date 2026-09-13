@@ -16,8 +16,7 @@ import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
-import { PasswordConfirmModal } from '@/components/ui/PasswordConfirmModal'
-import { Unlock } from 'lucide-react'
+
 import { fmt } from '@/lib/fmt'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
@@ -270,7 +269,6 @@ export function EditPurchaseModal({
   // Form state — seeded from detail once loaded
   const [supplierId,   setSupplierId]   = useState('')
   const [invoiceDate,  setInvoiceDate]  = useState('')
-  const [paidAmount,   setPaidAmount]   = useState('')
   const [discount,     setDiscount]     = useState('0')
   const [notes,        setNotes]        = useState('')
   const [deviceLines,  setDeviceLines]  = useState<AddedDevice[]>([])
@@ -281,9 +279,7 @@ export function EditPurchaseModal({
   const [productSearch, setProductSearch] = useState('')
   const [scanProduct,   setScanProduct]   = useState(false)
   const [showAddDevice, setShowAddDevice] = useState(false)
-  const [paidUnlocked,  setPaidUnlocked]  = useState(false)
-  const [editedPaid,    setEditedPaid]    = useState<number | null>(null) // القيمة المعدّلة بعد الفتح
-  const [showPwdModal,  setShowPwdModal]  = useState(false)
+
   const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seeded = useRef(false)
@@ -295,7 +291,6 @@ export function EditPurchaseModal({
       const inv = detail.invoice
       setSupplierId(inv.supplier_id ?? '')
       setInvoiceDate(inv.invoice_date)
-      setPaidAmount(String(inv.paid_amount))
       setDiscount(String(inv.discount))
       setNotes(inv.notes ?? '')
       setDeviceLines(detail.devices.map(d => ({
@@ -378,7 +373,7 @@ export function EditPurchaseModal({
   const productTotal = productLines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
   const grandTotal   = deviceTotal + productTotal
   const afterDisc    = Math.max(0, grandTotal - (Number(discount) || 0))
-  const actualPaid   = editedPaid !== null ? editedPaid : (detail?.invoice.paid_amount ?? Number(paidAmount) ?? 0)
+  const actualPaid   = Number(detail?.invoice.paid_amount ?? 0)
   const remaining    = Math.max(0, afterDisc - actualPaid)
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -492,51 +487,7 @@ export function EditPurchaseModal({
         } as never)
         .eq('id', invoiceId)
 
-      // لو المدير عدّل الدفعة الأولى → عدّل أول payment موجودة بس (مش تضيف جديدة)
-      if (editedPaid !== null) {
-        const newPaid = editedPaid
-
-        // جيب أول payment على الفاتورة دي (الدفعة الأولى)
-        const { data: firstPayRaw } = await supabase
-          .from('payments')
-          .select('id')
-          .eq('invoice_id', invoiceId)
-          .eq('payment_type', 'purchase')
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle()
-
-        const firstPay = firstPayRaw as { id: string } | null
-
-        if (firstPay) {
-          // عدّل الدفعة الأولى فقط — الـ trigger هيحدث paid_amount تلقائي
-          await supabase.from('payments')
-            .update({ amount: newPaid } as never)
-            .eq('id', firstPay.id)
-        } else if (newPaid > 0) {
-          // مفيش دفعة أولى أصلاً — أنشئ واحدة
-          const { data: inv } = await supabase
-            .from('purchase_invoices')
-            .select('supplier_id, invoice_date, invoice_number')
-            .eq('id', invoiceId)
-            .single()
-          if (inv) {
-            await supabase.from('payments').insert({
-              payment_type:   'purchase',
-              invoice_id:     invoiceId,
-              invoice_number: (inv as Record<string,string>)['invoice_number'],
-              party_type:     'supplier',
-              party_id:       (inv as Record<string,string>)['supplier_id'],
-              amount:         newPaid,
-              payment_method: 'cash',
-              payment_date:   (inv as Record<string,string>)['invoice_date'],
-              notes:          'دفعة أولى',
-              created_by:     profile?.id ?? null,
-            } as never)
-          }
-        }
-        // الـ trigger بيحدث paid_amount تلقائي — مش محتاج نعمله manually
-      }
+      // الدفعات لا تُعدَّل من هنا — تتعدل من صفحة الحسابات فقط
 
       // 10. Invalidate queries — full sync across all affected screens
       await qc.invalidateQueries({ queryKey: ['purchases'] })
@@ -623,34 +574,11 @@ export function EditPurchaseModal({
                 <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>الدفعة الأولى (ج.م)</label>
-                {paidUnlocked ? (
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="number" min="0" step="0.01"
-                      value={paidAmount}
-                      onChange={e => { setPaidAmount(e.target.value); setEditedPaid(Number(e.target.value) || 0) }}
-                      autoFocus
-                      className={inputCls + ' border-orange-400 focus:border-orange-500 focus:ring-orange-500/10'}
-                    />
-                    <button type="button" onClick={() => setPaidUnlocked(false)}
-                      className="h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap transition-colors">
-                      قفل
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1 h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center gap-2 cursor-not-allowed select-none">
-                      <span>{fmt(editedPaid !== null ? editedPaid : Number(paidAmount))} ج</span>
-                      <span className="text-xs mr-auto">{editedPaid !== null ? <span className="text-orange-500 font-semibold">معدّل ✓</span> : <span className="text-gray-400 dark:text-gray-500">مقفول</span>}</span>
-                    </div>
-                    <button type="button" onClick={() => setShowPwdModal(true)}
-                      title="تعديل بصلاحية المدير"
-                      className="h-10 w-10 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors flex-shrink-0">
-                      <Unlock size={15} />
-                    </button>
-                  </div>
-                )}
+                <label className={labelCls}>إجمالي المدفوع</label>
+                <div className="h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center justify-between select-none">
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{fmt(actualPaid)} ج</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">من صفحة الحسابات</span>
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelCls}>الخصم (ج.م)</label>
@@ -854,14 +782,7 @@ export function EditPurchaseModal({
           </button>
         </div>
 
-        {showPwdModal && (
-        <PasswordConfirmModal
-          title="تعديل الدفعة الأولى"
-          description="هذه العملية تتطلب صلاحية المدير"
-          onConfirm={() => { setPaidUnlocked(true); setShowPwdModal(false) }}
-          onClose={() => setShowPwdModal(false)}
-        />
-      )}
+
       {scanProduct && (
           <BarcodeScanner title="مسح باركود المنتج" placeholder="باركود أو SKU..."
             onScan={handleProductScan} onClose={() => setScanProduct(false)} />
