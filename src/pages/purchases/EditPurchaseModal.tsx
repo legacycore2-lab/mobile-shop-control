@@ -282,6 +282,7 @@ export function EditPurchaseModal({
   const [scanProduct,   setScanProduct]   = useState(false)
   const [showAddDevice, setShowAddDevice] = useState(false)
   const [paidUnlocked,  setPaidUnlocked]  = useState(false)
+  const [editedPaid,    setEditedPaid]    = useState<number | null>(null) // القيمة المعدّلة بعد الفتح
   const [showPwdModal,  setShowPwdModal]  = useState(false)
   const [scanFeedback,  setScanFeedback]  = useState<{ msg: string; ok: boolean } | null>(null)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -377,7 +378,7 @@ export function EditPurchaseModal({
   const productTotal = productLines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
   const grandTotal   = deviceTotal + productTotal
   const afterDisc    = Math.max(0, grandTotal - (Number(discount) || 0))
-  const actualPaid   = paidUnlocked ? (Number(paidAmount) || 0) : (detail?.invoice.paid_amount ?? Number(paidAmount) ?? 0)
+  const actualPaid   = editedPaid !== null ? editedPaid : (detail?.invoice.paid_amount ?? Number(paidAmount) ?? 0)
   const remaining    = Math.max(0, afterDisc - actualPaid)
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -492,8 +493,8 @@ export function EditPurchaseModal({
         .eq('id', invoiceId)
 
       // لو المدير عدّل الدفعة الأولى → عدّل أول payment موجودة بس (مش تضيف جديدة)
-      if (paidUnlocked) {
-        const newPaid = Number(paidAmount) || 0
+      if (editedPaid !== null) {
+        const newPaid = editedPaid
 
         // جيب أول payment على الفاتورة دي (الدفعة الأولى)
         const { data: firstPayRaw } = await supabase
@@ -628,7 +629,7 @@ export function EditPurchaseModal({
                     <input
                       type="number" min="0" step="0.01"
                       value={paidAmount}
-                      onChange={e => setPaidAmount(e.target.value)}
+                      onChange={e => { setPaidAmount(e.target.value); setEditedPaid(Number(e.target.value) || 0) }}
                       autoFocus
                       className={inputCls + ' border-orange-400 focus:border-orange-500 focus:ring-orange-500/10'}
                     />
@@ -640,8 +641,8 @@ export function EditPurchaseModal({
                 ) : (
                   <div className="flex gap-2 items-center">
                     <div className="flex-1 h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center gap-2 cursor-not-allowed select-none">
-                      <span>{fmt(Number(paidAmount))} ج</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">مقفول</span>
+                      <span>{fmt(editedPaid !== null ? editedPaid : Number(paidAmount))} ج</span>
+                      <span className="text-xs mr-auto">{editedPaid !== null ? <span className="text-orange-500 font-semibold">معدّل ✓</span> : <span className="text-gray-400 dark:text-gray-500">مقفول</span>}</span>
                     </div>
                     <button type="button" onClick={() => setShowPwdModal(true)}
                       title="تعديل بصلاحية المدير"
