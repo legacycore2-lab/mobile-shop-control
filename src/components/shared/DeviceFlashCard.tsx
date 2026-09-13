@@ -296,7 +296,7 @@ export function DeviceFlashCard({ code, onClose }: Props) {
               {/* CTA */}
               {device.status === 'in_stock' && (
                 <button
-                  onClick={() => { handleClose(); navigate('/pos') }}
+                  onClick={() => { handleClose(); navigate('/pos', { state: { autoDeviceId: device.id } }) }}
                   className="mt-3 w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/25"
                 >
                   <ShoppingCart size={15} />
