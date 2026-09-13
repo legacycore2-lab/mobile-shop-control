@@ -1,5 +1,5 @@
 // src/pages/pos/PosPage.tsx
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Search, Plus, ShoppingCart, DollarSign,
   CheckCircle, Clock, XCircle, TrendingUp, Users,
@@ -13,6 +13,7 @@ import { Badge }          from '@/components/ui/Badge'
 import { StatCard }       from '@/components/shared/StatCard'
 import { ConfirmModal }   from '@/components/ui/ConfirmModal'
 import { cn }             from '@/lib/cn'
+import { useLocation }    from 'react-router-dom'
 import { SaleDrawer }     from './SaleDrawer'
 import { CreateSaleModal } from './CreateSaleModal'
 import { STATUS_MAP, PAGE_SIZE, type FilterStatus } from './constants'
@@ -30,6 +31,19 @@ export function PosPage() {
   const [filter,       setFilter]      = useState<FilterStatus>('all')
   const [page,         setPage]        = useState(1)
   const [showCreate,   setShowCreate]  = useState(false)
+  const [autoDeviceId, setAutoDeviceId] = useState<string | null>(null)
+  const location = useLocation()
+
+  // لو جاي من DeviceFlashCard بعد مسح IMEI — افتح الفاتورة مباشرة بالجهاز
+  useEffect(() => {
+    const state = location.state as { autoDeviceId?: string } | null
+    if (state?.autoDeviceId) {
+      setAutoDeviceId(state.autoDeviceId)
+      setShowCreate(true)
+      // امسح الـ state علشان لو رجع للصفحة متفتحش تاني
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
   const [detailId,     setDetailId]    = useState<string | null>(null)
   const [payInvoice,   setPayInvoice]  = useState<SaleInvoiceView | null>(null)
   const [confirmCancel, setConfirmCancel] = useState<SaleInvoiceView | null>(null)
@@ -240,7 +254,12 @@ export function PosPage() {
         </div>
       </div>
 
-      {showCreate && <CreateSaleModal onClose={() => setShowCreate(false)} />}
+      {showCreate && (
+        <CreateSaleModal
+          initialDeviceId={autoDeviceId ?? undefined}
+          onClose={() => { setShowCreate(false); setAutoDeviceId(null) }}
+        />
+      )}
       {detailId   && <SaleDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
       {payInvoice && (
         <AddPaymentModal
