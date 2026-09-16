@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react'
 import {
   Search, Plus, Package, Truck, DollarSign, CheckCircle, Clock, XCircle,
-  ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag, Banknote, Pencil,
+  ChevronLeft, ChevronRight, Trash2, Eye, FileText, CreditCard, Smartphone, Tag, Banknote, Pencil, UserCheck,
 } from 'lucide-react'
 import {
   usePurchases, usePurchaseStats, useConfirmPurchase, useCancelPurchase, useDeletePurchase,
@@ -38,7 +38,8 @@ export function PurchasesPage() {
     return invoices.filter(inv => {
       const matchSearch = !q ||
         inv.invoice_number.toLowerCase().includes(q) ||
-        inv.supplier_name.toLowerCase().includes(q)
+        inv.supplier_name.toLowerCase().includes(q) ||
+        inv.created_by_name.toLowerCase().includes(q)
       const matchFilter = filter === 'all' || inv.status === filter
       return matchSearch && matchFilter
     })
@@ -89,7 +90,7 @@ export function PurchasesPage() {
         <div className="relative flex-1 min-w-48">
           <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-            placeholder="بحث برقم الفاتورة أو المورد..."
+            placeholder="بحث برقم الفاتورة أو المورد أو المستلم..."
             className="w-full h-9 pr-9 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all" />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -110,7 +111,7 @@ export function PurchasesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                {['رقم الفاتورة', 'المورد', 'التاريخ', 'الأجهزة', 'المنتجات', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', ''].map((h, i) => (
+                {['رقم الفاتورة', 'المورد (البائع)', 'المستلم (المشتري)', 'التاريخ', 'الأجهزة', 'المنتجات', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', ''].map((h, i) => (
                   <th key={i} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap text-right', i >= 3 && 'text-center')}>
                     {h}
                   </th>
@@ -121,14 +122,14 @@ export function PurchasesPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                    {Array.from({ length: 10 }).map((_, j) => (
+                    {Array.from({ length: 11 }).map((_, j) => (
                       <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" /></td>
                     ))}
                   </tr>
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-16 text-center text-gray-400 dark:text-gray-600">
+                  <td colSpan={11} className="px-4 py-16 text-center text-gray-400 dark:text-gray-600">
                     <Package size={32} className="mx-auto mb-2 opacity-30" />
                     <p className="text-sm">لا توجد فواتير</p>
                     <button onClick={() => setShowCreate(true)} className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline">
@@ -140,17 +141,26 @@ export function PurchasesPage() {
                 const st = STATUS_MAP[inv.status]
                 return (
                   <tr key={inv.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    {/* رقم الفاتورة */}
                     <td className="px-4 py-3">
                       <p className="font-mono text-sm font-bold text-gray-900 dark:text-white">{inv.invoice_number}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{inv.created_by_name}</p>
                     </td>
+                    {/* المورد (البائع) */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <Truck size={12} className="text-gray-400 dark:text-gray-600 flex-shrink-0" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">{inv.supplier_name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    {/* المستلم (المشتري من المورد) */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck size={12} className="text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{inv.created_by_name}</span>
+                      </div>
+                    </td>
+                    {/* التاريخ */}
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-center">
                       {new Date(inv.invoice_date).toLocaleDateString('ar-EG')}
                     </td>
                     <td className="px-4 py-3 text-center">
