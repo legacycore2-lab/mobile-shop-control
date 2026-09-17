@@ -60,9 +60,10 @@ export const purchasesService = {
       total_amount:   totalAmount,
       paid_amount:    Number(form.paid_amount) || 0,
       discount:       Number(form.discount)    || 0,
-      notes:          form.notes?.trim()       || null,
-      status:         'draft',
-      created_by:     form.created_by,
+      notes:                form.notes?.trim()       || null,
+      status:               'draft',
+      created_by:           form.created_by,
+      cancellation_reason:  null,
     })
 
     await Promise.all([
@@ -127,15 +128,24 @@ export const purchasesService = {
     }
   },
 
-  cancel: async (id: string, userId?: string): Promise<void> => {
-    const { error } = await supabase.rpc('cancel_purchase_invoice', { p_invoice_id: id } as never)
-    if (error) throw new Error(parseRpcError(error.message))
+  cancel: async (id: string, reason: string, userId?: string): Promise<void> => {
+    try {
+      await purchasesRepository.cancelWithReason(id, reason)
+    } catch (e) {
+      throw new Error(parseRpcError(e instanceof Error ? e.message : String(e)))
+    }
     if (userId) {
       void (async () => {
         const det = await purchasesRepository.getById(id).catch(() => null)
-        const num = det?.invoice.invoice_number ?? id.slice(0,8)
-        await logAction({ userId, action: 'cancel', table: 'purchase_invoices', recordId: id,
-          description: `إلغاء فاتورة الشراء ${num}` })
+        const num = det?.invoice.invoice_number ?? id.slice(0, 8)
+        await logAction({
+          userId,
+          action:      'cancel',
+          table:       'purchase_invoices',
+          recordId:    id,
+          description: `إلغاء فاتورة الشراء ${num}`,
+          newData:     { cancellation_reason: reason },
+        })
       })()
     }
   },
