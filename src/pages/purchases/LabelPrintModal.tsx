@@ -111,7 +111,7 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     body { background:#f5f5f5; direction:rtl; }
     .labels-wrap { display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:flex-start; }
     .label {
-      width:38mm; height:25mm;
+      width:25mm; height:38mm;
       background:#fff; border:1px solid #ccc;
       padding:2mm 2mm 1mm 2mm;
       page-break-inside:avoid;
@@ -124,7 +124,7 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     .imei-value { font-size:6.5px; font-weight:700; color:#111; font-family:monospace!important; letter-spacing:-0.3px; }
     .barcode-section { display:flex; align-items:center; justify-content:center; flex:1; min-height:0; }
     .barcode-section svg { width:100%; height:auto; max-height:14mm; }
-    @page { size:38mm 25mm; margin:0; }
+    @page { size:25mm 38mm landscape; margin:0; }
     @media print {
       body { background:#fff; }
       .labels-wrap { padding:0; gap:0; }
