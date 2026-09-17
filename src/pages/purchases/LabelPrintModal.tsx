@@ -1,7 +1,7 @@
 // src/pages/purchases/LabelPrintModal.tsx
 import { useEffect, useRef, useState } from 'react'
 import { X, Printer, Tag, Smartphone, Package, CheckSquare, Square, ChevronDown, ChevronUp } from 'lucide-react'
-import JsBarcode from 'jsbarcode'
+import QRCode from 'qrcode'
 import { fmt } from '@/lib/fmt'
 import type { PurchaseInvoiceDetailDevice as InvoiceDetailDevice, PurchaseInvoiceDetailProduct as InvoiceDetailProduct } from '@/types/database'
 
@@ -53,24 +53,17 @@ function getLabelTitle(data: LabelData): string {
 
 // ── Barcode SVG ───────────────────────────────────────────────────────────────
 
-function BarcodeDisplay({ code, width = 200 }: { code: string; width?: number }) {
-  const ref = useRef<SVGSVGElement>(null)
+function QrDisplay({ code, size = 80 }: { code: string; size?: number }) {
+  const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     if (!ref.current) return
-    try {
-      JsBarcode(ref.current, code, {
-        format:      'CODE128',
-        width:       1,
-        height:      28,
-        displayValue: true,
-        fontSize:    7,
-        margin:      2,
-        background:  '#ffffff',
-        lineColor:   '#000000',
-      })
-    } catch { /* ignore */ }
-  }, [code])
-  return <svg ref={ref} style={{ width, maxWidth: '100%' }} />
+    QRCode.toCanvas(ref.current, code, {
+      width:          size,
+      margin:         1,
+      color: { dark: '#000000', light: '#ffffff' },
+    }).catch(() => { /* ignore */ })
+  }, [code, size])
+  return <canvas ref={ref} width={size} height={size} style={{ display:'block' }} />
 }
 
 // ── Print engine ──────────────────────────────────────────────────────────────
@@ -84,11 +77,11 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     const code = getLabelCode(data)
     const title = getLabelTitle(data)
 
-    const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    let qrDataUrl = ''
     try {
-      JsBarcode(svgEl, code, { format: 'CODE128', width: 1, height: 28, displayValue: true, fontSize: 7, margin: 2 })
+      qrDataUrl = await QRCode.toDataURL(code, { width: 120, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
     } catch { /* ignore */ }
-    const barcodeStr = svgEl.outerHTML
+    const barcodeStr = qrDataUrl ? `<img src="${qrDataUrl}" width="60" height="60" style="display:block" />` : ''
 
     const imeiLine = data.type === 'device'
       ? `<div class="imei-row"><span class="imei-label">IMEI 1</span><span class="imei-value">${data.imei1}</span></div>${data.imei2 ? `<div class="imei-row"><span class="imei-label">IMEI 2</span><span class="imei-value">${data.imei2}</span></div>` : ''}`
@@ -111,7 +104,7 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     body { background:#f5f5f5; direction:rtl; }
     .labels-wrap { display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:flex-start; }
     .label {
-      width:25mm; height:38mm;
+      width:38mm; height:25mm;
       background:#fff; border:1px solid #ccc;
       padding:2mm 2mm 1mm 2mm;
       page-break-inside:avoid;
@@ -123,8 +116,8 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     .imei-label { font-size:6px; color:#9ca3af; white-space:nowrap; margin-left:2px; }
     .imei-value { font-size:6.5px; font-weight:700; color:#111; font-family:monospace!important; letter-spacing:-0.3px; }
     .barcode-section { display:flex; align-items:center; justify-content:center; flex:1; min-height:0; }
-    .barcode-section svg { width:100%; height:auto; max-height:14mm; }
-    @page { size:25mm 38mm landscape; margin:0; }
+    .barcode-section img { display:block; }
+    @page { size:38mm 25mm landscape; margin:0; }
     @media print {
       body { background:#fff; }
       .labels-wrap { padding:0; gap:0; }
@@ -191,7 +184,7 @@ export function LabelPrintModal({ data, onClose }: { data: LabelData; onClose: (
               معاينة الباركود
             </p>
             <div className="flex items-center justify-center">
-              <BarcodeDisplay code={code} width={260} />
+              <QrDisplay code={code} size={120} />
             </div>
           </div>
 
