@@ -186,6 +186,14 @@ export const purchasesRepository = {
     if (error) throw error
   },
 
+  cancelWithReason: async (id: string, reason: string): Promise<void> => {
+    const { error } = await supabase.rpc('cancel_purchase_invoice', {
+      p_invoice_id: id,
+      p_reason:     reason || null,
+    } as never)
+    if (error) throw error
+  },
+
   getDeviceLinesByInvoice: async (invoiceId: string) => {
     const { data, error } = await supabase
       .from('purchase_invoice_devices')
