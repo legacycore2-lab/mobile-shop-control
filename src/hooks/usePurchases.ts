@@ -71,8 +71,9 @@ export function useConfirmPurchase() {
 export function useCancelPurchase() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => purchasesService.cancel(id),
-    onSuccess: (_d, id) => invalidatePurchaseRelated(qc, id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      purchasesService.cancel(id, reason),
+    onSuccess: (_d, { id }) => invalidatePurchaseRelated(qc, id),
   })
 }
 
