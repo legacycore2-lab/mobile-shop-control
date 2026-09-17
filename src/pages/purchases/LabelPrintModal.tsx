@@ -79,9 +79,9 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
 
     let qrDataUrl = ''
     try {
-      qrDataUrl = await QRCode.toDataURL(code, { width: 120, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+      qrDataUrl = await QRCode.toDataURL(code, { width: 200, margin: 0, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
     } catch { /* ignore */ }
-    const barcodeStr = qrDataUrl ? `<img src="${qrDataUrl}" width="60" height="60" style="display:block" />` : ''
+    const barcodeStr = qrDataUrl ? `<img src="${qrDataUrl}" />` : ''
 
     const imeiLine = data.type === 'device'
       ? `<div class="imei-row"><span class="imei-label">IMEI 1</span><span class="imei-value">${data.imei1}</span></div>${data.imei2 ? `<div class="imei-row"><span class="imei-label">IMEI 2</span><span class="imei-value">${data.imei2}</span></div>` : ''}`
@@ -102,25 +102,26 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important }
     body { background:#f5f5f5; direction:rtl; }
-    .labels-wrap { display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:flex-start; }
+    .labels-wrap { display:flex; flex-direction:column; align-items:flex-start; gap:0; }
     .label {
       width:38mm; height:25mm;
-      background:#fff; border:1px solid #ccc;
-      padding:2mm 2mm 1mm 2mm;
+      background:#fff;
+      padding:1mm;
+      page-break-after:always;
       page-break-inside:avoid;
-      display:flex; flex-direction:column; justify-content:space-between;
+      display:flex; flex-direction:row-reverse; align-items:center; gap:1mm;
       overflow:hidden;
     }
-    .imei-block { flex-shrink:0; }
-    .imei-row { display:flex; justify-content:space-between; align-items:center; padding:0.5px 0; }
-    .imei-label { font-size:6px; color:#9ca3af; white-space:nowrap; margin-left:2px; }
-    .imei-value { font-size:6.5px; font-weight:700; color:#111; font-family:monospace!important; letter-spacing:-0.3px; }
-    .barcode-section { display:flex; align-items:center; justify-content:center; flex:1; min-height:0; }
-    .barcode-section img { display:block; }
-    @page { size:38mm 25mm landscape; margin:0; }
+    .imei-block { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:0.3mm; }
+    .imei-row { display:flex; flex-direction:column; align-items:flex-start; }
+    .imei-label { font-size:5px; color:#666; line-height:1; }
+    .imei-value { font-size:6px; font-weight:700; color:#000; font-family:monospace!important; letter-spacing:-0.2px; line-height:1.2; }
+    .barcode-section { flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .barcode-section img { display:block; width:17mm; height:17mm; }
+    @page { size:38mm 25mm; margin:0; }
     @media print {
       body { background:#fff; }
-      .labels-wrap { padding:0; gap:0; }
+      .labels-wrap { gap:0; }
       .label { border:none; }
     }
   </style>
