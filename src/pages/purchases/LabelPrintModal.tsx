@@ -90,44 +90,14 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
     } catch { /* ignore */ }
     const barcodeStr = svgEl.outerHTML
 
+    const imeiLine = data.type === 'device'
+      ? `<div class="imei-row"><span class="imei-label">IMEI 1</span><span class="imei-value">${data.imei1}</span></div>${data.imei2 ? `<div class="imei-row"><span class="imei-label">IMEI 2</span><span class="imei-value">${data.imei2}</span></div>` : ''}`
+      : `<div class="imei-row"><span class="imei-label">${data.sku ? 'SKU' : 'المنتج'}</span><span class="imei-value">${data.sku ?? data.name}</span></div>`
+
     const labelHtml = `
       <div class="label">
-        <div class="label-header">
-          <span class="shop-name">${shopName}</span>
-          <span class="date">${today}</span>
-        </div>
-        <div class="title">${title}</div>
-        ${data.type === 'device' ? `
-          <div class="info-grid">
-            <div class="info-row"><span class="info-label">IMEI 1</span><span class="info-value">${data.imei1}</span></div>
-            ${data.imei2 ? `<div class="info-row"><span class="info-label">IMEI 2</span><span class="info-value">${data.imei2}</span></div>` : ''}
-            ${data.storage ? `<div class="info-row"><span class="info-label">التخزين</span><span class="info-value">${data.storage}</span></div>` : ''}
-            ${data.color ? `<div class="info-row"><span class="info-label">اللون</span><span class="info-value">${data.color}</span></div>` : ''}
-            <div class="info-row"><span class="info-label">الحالة</span><span class="info-value">${data.condition === 'new' ? 'جديد' : data.condition === 'used' ? 'مستعمل' : 'مجدد'}</span></div>
-            ${data.warranty_months ? `<div class="info-row"><span class="info-label">الضمان</span><span class="info-value">${data.warranty_months} شهر</span></div>` : ''}
-            ${data.supplier_name ? `<div class="info-row"><span class="info-label">المورد</span><span class="info-value">${data.supplier_name}</span></div>` : ''}
-            ${data.invoice_number ? `<div class="info-row"><span class="info-label">الفاتورة</span><span class="info-value">${data.invoice_number}</span></div>` : ''}
-          </div>
-        ` : `
-          <div class="info-grid">
-            ${data.category ? `<div class="info-row"><span class="info-label">الفئة</span><span class="info-value">${data.category}</span></div>` : ''}
-            ${data.sku ? `<div class="info-row"><span class="info-label">SKU</span><span class="info-value">${data.sku}</span></div>` : ''}
-            ${data.quantity ? `<div class="info-row"><span class="info-label">الكمية</span><span class="info-value">${data.quantity} ${data.unit ?? 'قطعة'}</span></div>` : ''}
-          </div>
-        `}
-        <div class="prices">
-          <div class="price-box cost">
-            <div class="price-label">سعر الشراء</div>
-            <div class="price-value">${fmt(data.cost_price)} ج</div>
-          </div>
-          <div class="price-box sell">
-            <div class="price-label">سعر البيع</div>
-            <div class="price-value">${fmt(data.selling_price)} ج</div>
-          </div>
-        </div>
-        <div class="codes">
-          <div class="barcode-section">${barcodeStr}</div>
-        </div>
+        <div class="imei-block">${imeiLine}</div>
+        <div class="barcode-section">${barcodeStr}</div>
       </div>
     `
     for (let i = 0; i < copies; i++) labelBlocks.push(labelHtml)
@@ -137,28 +107,17 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
   <meta charset="UTF-8"><title>طباعة ليبلات</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap'); *{font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important} body{background:#f5f5f5;direction:rtl;}
-    .labels-wrap { display:flex; flex-wrap:wrap; gap:8px; padding:10px; justify-content:center; }
-    .label { width:85mm; background:#fff; border:1px solid #ddd; border-radius:6px; padding:8px; page-break-inside:avoid; }
-    .label-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #eee; }
-    .shop-name { font-size:9px; font-weight:800; color:#1d4ed8; }
-    .date { font-size:8px; color:#9ca3af; }
-    .title { font-size:13px; font-weight:800; color:#111; margin-bottom:6px; text-align:center; }
-    .info-grid { margin-bottom:6px; border:1px solid #f0f0f0; border-radius:4px; overflow:hidden; }
-    .info-row { display:flex; justify-content:space-between; padding:3px 6px; border-bottom:1px solid #f5f5f5; }
-    .info-row:last-child { border-bottom:none; }
-    .info-label { font-size:9px; color:#6b7280; }
-    .info-value { font-size:9px; font-weight:600; color:#111; }
-    .prices { display:flex; gap:4px; margin-bottom:6px; }
-    .price-box { flex:1; padding:4px 6px; border-radius:4px; text-align:center; }
-    .price-box.cost { background:#fff7ed; border:1px solid #fed7aa; }
-    .price-box.sell { background:#f0fdf4; border:1px solid #bbf7d0; }
-    .price-label { font-size:8px; color:#6b7280; }
-    .price-value { font-size:12px; font-weight:800; }
-    .cost .price-value { color:#c2410c; }
-    .sell .price-value { color:#15803d; }
-    .codes { border-top:1px solid #eee; padding-top:6px; }
-    .barcode-section { display:flex; align-items:center; justify-content:center; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+    * { font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important }
+    body { background:#f5f5f5; direction:rtl; }
+    .labels-wrap { display:flex; flex-wrap:wrap; gap:6px; padding:10px; justify-content:center; }
+    .label { width:62mm; background:#fff; border:1px solid #ddd; border-radius:4px; padding:6px; page-break-inside:avoid; }
+    .imei-block { margin-bottom:4px; }
+    .imei-row { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #f0f0f0; }
+    .imei-row:last-child { border-bottom:none; }
+    .imei-label { font-size:8px; color:#9ca3af; }
+    .imei-value { font-size:9px; font-weight:700; color:#111; font-family:monospace!important; }
+    .barcode-section { display:flex; align-items:center; justify-content:center; margin-top:2px; }
     .barcode-section svg { width:100%; height:auto; }
     @media print {
       body { background:#fff; }
