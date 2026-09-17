@@ -93,7 +93,8 @@ interface BaseInvoice {
 // ── Purchase Invoices ─────────────────────────────────────────────────────────
 
 export interface PurchaseInvoice extends BaseInvoice {
-  supplier_id: string
+  supplier_id:          string
+  cancellation_reason:  string | null
 }
 
 export interface PurchaseInvoiceView extends PurchaseInvoice {
