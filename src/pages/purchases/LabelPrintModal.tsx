@@ -60,11 +60,11 @@ function BarcodeDisplay({ code, width = 200 }: { code: string; width?: number })
     try {
       JsBarcode(ref.current, code, {
         format:      'CODE128',
-        width:       1.5,
-        height:      50,
+        width:       1,
+        height:      28,
         displayValue: true,
-        fontSize:    11,
-        margin:      6,
+        fontSize:    7,
+        margin:      2,
         background:  '#ffffff',
         lineColor:   '#000000',
       })
@@ -86,7 +86,7 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     try {
-      JsBarcode(svgEl, code, { format: 'CODE128', width: 1.5, height: 45, displayValue: true, fontSize: 10, margin: 4 })
+      JsBarcode(svgEl, code, { format: 'CODE128', width: 1, height: 28, displayValue: true, fontSize: 7, margin: 2 })
     } catch { /* ignore */ }
     const barcodeStr = svgEl.outerHTML
 
@@ -106,23 +106,29 @@ async function printLabels(items: { data: LabelData; copies: number }[], shopNam
   const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
   <meta charset="UTF-8"><title>طباعة ليبلات</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-    * { font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important }
     body { background:#f5f5f5; direction:rtl; }
-    .labels-wrap { display:flex; flex-wrap:wrap; gap:6px; padding:10px; justify-content:center; }
-    .label { width:62mm; background:#fff; border:1px solid #ddd; border-radius:4px; padding:6px; page-break-inside:avoid; }
-    .imei-block { margin-bottom:4px; }
-    .imei-row { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #f0f0f0; }
-    .imei-row:last-child { border-bottom:none; }
-    .imei-label { font-size:8px; color:#9ca3af; }
-    .imei-value { font-size:9px; font-weight:700; color:#111; font-family:monospace!important; }
-    .barcode-section { display:flex; align-items:center; justify-content:center; margin-top:2px; }
-    .barcode-section svg { width:100%; height:auto; }
+    .labels-wrap { display:flex; flex-wrap:wrap; gap:4px; padding:8px; justify-content:flex-start; }
+    .label {
+      width:38mm; height:25mm;
+      background:#fff; border:1px solid #ccc;
+      padding:2mm 2mm 1mm 2mm;
+      page-break-inside:avoid;
+      display:flex; flex-direction:column; justify-content:space-between;
+      overflow:hidden;
+    }
+    .imei-block { flex-shrink:0; }
+    .imei-row { display:flex; justify-content:space-between; align-items:center; padding:0.5px 0; }
+    .imei-label { font-size:6px; color:#9ca3af; white-space:nowrap; margin-left:2px; }
+    .imei-value { font-size:6.5px; font-weight:700; color:#111; font-family:monospace!important; letter-spacing:-0.3px; }
+    .barcode-section { display:flex; align-items:center; justify-content:center; flex:1; min-height:0; }
+    .barcode-section svg { width:100%; height:auto; max-height:14mm; }
+    @page { size:38mm 25mm; margin:0; }
     @media print {
       body { background:#fff; }
-      .labels-wrap { padding:0; gap:4px; }
-      .label { border:1px solid #ccc; }
+      .labels-wrap { padding:0; gap:0; }
+      .label { border:none; }
     }
   </style>
 </head><body>
