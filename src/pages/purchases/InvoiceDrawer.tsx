@@ -1,7 +1,6 @@
 // src/pages/purchases/InvoiceDrawer.tsx
 import { useState } from 'react'
-import { Smartphone, Tag, AlertCircle, CheckCircle, CreditCard, X, Printer } from 'lucide-react'
-import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { Smartphone, Tag, AlertCircle, CheckCircle, CreditCard, X, Printer, XCircle } from 'lucide-react'
 import { usePurchase, useConfirmPurchase, useCancelPurchase } from '@/hooks/usePurchases'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
@@ -9,7 +8,7 @@ import { STATUS_MAP } from './constants'
 import { fmt } from '@/lib/fmt'
 import { SimplePayModal } from '@/pages/payments/SimplePayModal'
 import { BulkLabelPrintModal } from './LabelPrintModal'
-import type { PurchaseInvoiceDetail as InvoiceDetail } from '@/types/database'
+import { CancelReasonModal } from './CancelReasonModal'
 
 export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
   const { data: detail, isLoading } = usePurchase(invoiceId)
@@ -18,33 +17,37 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
 
   const [showPay,       setShowPay]       = useState(false)
   const [showBulkLabel, setShowBulkLabel] = useState(false)
+  const [showCancel,    setShowCancel]    = useState(false)
   const [error,         setError]         = useState('')
-  const [confirmCancel, setConfirmCancel] = useState(false)
 
-  // بعد التأكيد نفتح modal الطباعة مباشرة
   async function handleConfirm() {
     setError('')
     try {
       await confirmMutation.mutateAsync(invoiceId)
-      // البيانات اتحدثت بعد الـ mutation — نفتح الـ bulk modal
       setShowBulkLabel(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'خطأ')
     }
   }
 
-  async function handleCancel() {
+  async function handleCancel(reason: string) {
     setError('')
-    try { await cancelMutation.mutateAsync(invoiceId) }
-    catch (e) { setError(e instanceof Error ? e.message : 'خطأ') }
-    finally { setConfirmCancel(false) }
+    try {
+      await cancelMutation.mutateAsync({ id: invoiceId, reason })
+      setShowCancel(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'خطأ')
+      setShowCancel(false)
+    }
   }
 
   const inv = detail?.invoice
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-end"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-end"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
       <div className="bg-white dark:bg-gray-900 h-full w-full max-w-md shadow-2xl flex flex-col overflow-hidden">
 
         {/* Header */}
@@ -57,8 +60,10 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
           </div>
           <div className="flex items-center gap-2">
             {inv && <Badge variant={STATUS_MAP[inv.status].variant}>{STATUS_MAP[inv.status].label}</Badge>}
-            <button onClick={onClose}
-              className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
               <X size={16} />
             </button>
           </div>
@@ -117,6 +122,16 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                 )}
               </div>
 
+              {/* Cancellation Reason */}
+              {inv.status === 'cancelled' && inv.cancellation_reason && (
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900 rounded-xl p-4">
+                  <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <XCircle size={12} /> سبب الإلغاء
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-400">{inv.cancellation_reason}</p>
+                </div>
+              )}
+
               {/* Devices */}
               {detail.devices.length > 0 && (
                 <div>
@@ -130,7 +145,12 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.brand_name} {d.model_name}</p>
                           <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">{d.imei1}</p>
                         </div>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.cost_price)} ج</span>
+                        <div className="text-right">
+                          <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.cost_price)} ج</span>
+                          {inv.status === 'cancelled' && (
+                            <p className="text-xs text-red-400 mt-0.5">ملغي</p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -150,7 +170,12 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.product_name}</p>
                           <p className="text-xs text-gray-400 dark:text-gray-600">{p.quantity} {p.unit} × {fmt(p.unit_price)} ج</p>
                         </div>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(p.subtotal)} ج</span>
+                        <div className="text-right">
+                          <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(p.subtotal)} ج</span>
+                          {inv.status === 'cancelled' && (
+                            <p className="text-xs text-red-400 mt-0.5">عُكس المخزون</p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -180,15 +205,21 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
           <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 p-4 flex flex-wrap gap-2">
             {inv.status === 'draft' && (
               <>
-                <button onClick={handleConfirm} disabled={confirmMutation.isPending}
-                  className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <button
+                  onClick={handleConfirm}
+                  disabled={confirmMutation.isPending}
+                  className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
                   {confirmMutation.isPending
                     ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     : <CheckCircle size={14} />}
                   تأكيد وطباعة الليبلات
                 </button>
-                <button onClick={() => setConfirmCancel(true)} disabled={cancelMutation.isPending}
-                  className="h-9 px-3 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
+                <button
+                  onClick={() => setShowCancel(true)}
+                  disabled={cancelMutation.isPending}
+                  className="h-9 px-3 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                >
                   إلغاء
                 </button>
               </>
@@ -196,15 +227,25 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
             {inv.status === 'confirmed' && (
               <div className="flex gap-2 w-full">
                 {inv.remaining > 0 && (
-                  <button onClick={() => setShowPay(true)}
-                    className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setShowPay(true)}
+                    className="flex-1 h-9 text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2"
+                  >
                     <CreditCard size={14} /> تسجيل دفعة
                   </button>
                 )}
-                {/* زر طباعة الليبلات متاح دايماً للفواتير المؤكدة */}
-                <button onClick={() => setShowBulkLabel(true)}
-                  className="h-9 px-3 text-sm font-medium rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2">
+                <button
+                  onClick={() => setShowBulkLabel(true)}
+                  className="h-9 px-3 text-sm font-medium rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2"
+                >
                   <Printer size={14} /> ليبلات
+                </button>
+                <button
+                  onClick={() => setShowCancel(true)}
+                  disabled={cancelMutation.isPending}
+                  className="h-9 px-3 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                >
+                  <XCircle size={14} />
                 </button>
               </div>
             )}
@@ -236,15 +277,14 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
           onClose={() => setShowBulkLabel(false)}
         />
       )}
-      {confirmCancel && (
-        <ConfirmModal
-          title="إلغاء الفاتورة"
-          message="هل أنت متأكد من إلغاء هذه الفاتورة؟"
-          confirmText="إلغاء الفاتورة"
-          variant="warning"
+
+      {/* Cancel Reason Modal */}
+      {showCancel && inv && (
+        <CancelReasonModal
+          invoiceNumber={inv.invoice_number}
           loading={cancelMutation.isPending}
-          onConfirm={() => void handleCancel()}
-          onCancel={() => setConfirmCancel(false)}
+          onConfirm={reason => void handleCancel(reason)}
+          onCancel={() => setShowCancel(false)}
         />
       )}
     </div>
