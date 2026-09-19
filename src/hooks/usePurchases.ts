@@ -68,6 +68,22 @@ export function useConfirmPurchase() {
   })
 }
 
+export function useCreatePurchaseShell() {
+  return useMutation({
+    mutationFn: ({ supplierId, invoiceDate, createdBy }: { supplierId: string; invoiceDate: string; createdBy: string }) =>
+      purchasesService.createShell(supplierId, invoiceDate, createdBy),
+  })
+}
+
+export function useFinalizePurchaseShell() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ invoiceId, form }: { invoiceId: string; form: Parameters<typeof purchasesService.finalizeShell>[1] }) =>
+      purchasesService.finalizeShell(invoiceId, form),
+    onSuccess: (_d, { invoiceId }) => invalidatePurchaseRelated(qc, invoiceId),
+  })
+}
+
 export function useCancelPurchase() {
   const qc = useQueryClient()
   return useMutation({
