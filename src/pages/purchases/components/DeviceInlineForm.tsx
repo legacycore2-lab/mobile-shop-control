@@ -161,7 +161,12 @@ export function AddDeviceInlineForm({
 
       onAdded({ device_id: device.id, cost_price: Number(form.cost_price), label })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ')
+      const msg = err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : JSON.stringify(err)
+      setError(msg || 'حدث خطأ')
     } finally {
       setSaving(false)
     }
