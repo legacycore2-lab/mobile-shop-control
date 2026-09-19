@@ -349,24 +349,25 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">بيانات الشراء</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelCls}>المورد <span className="text-red-500">*</span></label>
-                  <select value={form.supplier_id} onChange={e => set('supplier_id', e.target.value)}
-                    required className={selectCls}>
-                    <option value="">اختر المورد</option>
-                    {suppliers.filter(s => s.is_active).map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <label className={labelCls}>المورد</label>
+                  <div className="h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    {suppliers.find(s => s.id === form.supplier_id)?.name ?? '—'}
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-600">يُحدَّد من فاتورة الشراء</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelCls}>تاريخ الشراء <span className="text-red-500">*</span></label>
-                  <input type="date" value={form.purchase_date} onChange={e => set('purchase_date', e.target.value)}
-                    required className={inputCls} />
+                  <label className={labelCls}>تاريخ الشراء</label>
+                  <div className="h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    {form.purchase_date || '—'}
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-600">يُحدَّد من فاتورة الشراء</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelCls}>سعر الشراء (ج.م) <span className="text-red-500">*</span></label>
-                  <input type="number" min="0" step="0.01" value={form.cost_price}
-                    onChange={e => set('cost_price', e.target.value)} placeholder="0.00" required className={inputCls} />
+                  <label className={labelCls}>سعر الشراء (ج.م)</label>
+                  <div className="h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    {form.cost_price || '—'}
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-600">يُحدَّد من فاتورة الشراء</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>سعر البيع المقترح (ج.م)</label>
