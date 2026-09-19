@@ -1,13 +1,12 @@
 // src/pages/devices/DevicesPage.tsx
 import { useState, useMemo } from 'react'
-import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import {
   Search, Download, Smartphone,
   Package, CheckCircle, Wrench, AlertTriangle,
-  Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
+  Eye, Pencil, ChevronLeft, ChevronRight,
   TrendingUp, DollarSign, ScanLine, Printer,
 } from 'lucide-react'
-import { useDevices, useDeviceStats, useDeleteDevice } from '@/hooks/useDevices'
+import { useDevices, useDeviceStats } from '@/hooks/useDevices'
 import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/shared/StatCard'
 import { cn } from '@/lib/cn'
@@ -23,7 +22,6 @@ import type { MobileDeviceView } from '@/types/database'
 export function DevicesPage() {
   const { data: devices = [], isLoading } = useDevices()
   const { data: stats }                   = useDeviceStats()
-  const deleteMutation                    = useDeleteDevice()
 
   const [search,   setSearch]   = useState('')
   const [filter,   setFilter]   = useState<FilterStatus>('all')
@@ -31,7 +29,6 @@ export function DevicesPage() {
   const [selected, setSelected] = useState<MobileDeviceView | null>(null)
   const [modal,    setModal]    = useState<'edit' | null>(null)
   const [drawer,   setDrawer]   = useState<MobileDeviceView | null>(null)
-  const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [scanner,  setScanner]  = useState(false)
   const [printLabel, setPrintLabel] = useState<BarcodeLabel | null>(null)
 
@@ -55,11 +52,6 @@ export function DevicesPage() {
 
   function openEdit(d: MobileDeviceView) { setSelected(d); setModal('edit') }
   function closeModal() { setModal(null); setSelected(null) }
-
-  async function handleDelete(id: string) {
-    if (!confirm('هل أنت متأكد من حذف هذا الجهاز؟')) return
-    await deleteMutation.mutateAsync(id)
-  }
 
   const STATS_CONFIG = [
     { label: 'في المخزون',  value: stats?.inStock  ?? 0, icon: Package,       colorClass: 'text-blue-600 dark:text-blue-400',   bgClass: 'bg-blue-50 dark:bg-blue-900/20'   },
@@ -239,11 +231,6 @@ export function DevicesPage() {
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
                         <Pencil size={13} />
                       </button>
-                      <button title="حذف" onClick={() => void handleDelete(d.id)}
-                        disabled={deleteMutation.isPending}
-                        className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-colors disabled:opacity-50">
-                        <Trash2 size={13} />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -301,16 +288,6 @@ export function DevicesPage() {
             setSearch(code)
           }}
           onClose={() => setScanner(false)}
-        />
-      )}
-      {confirmDel && (
-        <ConfirmModal
-          title="حذف الجهاز"
-          message="هل أنت متأكد من حذف هذا الجهاز؟"
-          confirmText="حذف"
-          loading={deleteMutation.isPending}
-          onConfirm={async () => { await deleteMutation.mutateAsync(confirmDel); setConfirmDel(null) }}
-          onCancel={() => setConfirmDel(null)}
         />
       )}
     </div>
