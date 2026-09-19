@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import { LabelPrintModal, type LabelData } from './LabelPrintModal'
-import { useCreatePurchase, useConfirmPurchase } from '@/hooks/usePurchases'
+import { useCreatePurchase, useConfirmPurchase, useCreatePurchaseShell, useFinalizePurchaseShell } from '@/hooks/usePurchases'
 import { useSuppliers, useCreateSupplier } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
 import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel } from '@/hooks/useDevices'
@@ -29,6 +29,9 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
   const { data: suppliers = [] } = useSuppliers()
   const { data: products  = [] } = useProducts()
   const createMutation   = useCreatePurchase()
+  const shellMutation    = useCreatePurchaseShell()
+  const finalizeMutation = useFinalizePurchaseShell()
+  const [shellId, setShellId] = useState<string | null>(null)
   const confirmMutation  = useConfirmPurchase()
 
   const [supplierId,    setSupplierId]    = useState('')
@@ -81,6 +84,19 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     } catch (e) {
       setSupError(e instanceof Error ? e.message : 'حدث خطأ')
     } finally { setSupSaving(false) }
+  }
+
+  /** ينشئ فاتورة المسودة أول مرة فقط، ويعيد رقمها */
+  async function ensureInvoiceId(): Promise<string> {
+    if (shellId) return shellId
+    if (!supplierId) throw new Error('اختر المورد أولاً')
+    const inv = await shellMutation.mutateAsync({
+      supplierId,
+      invoiceDate: invoiceDate,
+      createdBy:   profile?.id ?? '',
+    })
+    setShellId(inv.id)
+    return inv.id
   }
 
   function handleDeviceAdded(line: AddedDevice) {
@@ -162,7 +178,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     setError('')
     try {
-      await createMutation.mutateAsync({
+      const payload = {
         supplier_id:   supplierId,
         invoice_date:  invoiceDate,
         paid_amount:   Number(paidAmount)  || 0,
@@ -171,7 +187,9 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
         created_by:    profile?.id         ?? '',
         device_lines:  deviceLines.map(({ device_id, cost_price }) => ({ device_id, cost_price })),
         product_lines: productLines,
-      })
+      }
+      if (shellId) await finalizeMutation.mutateAsync({ invoiceId: shellId, form: payload })
+      else         await createMutation.mutateAsync(payload)
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ')
@@ -182,7 +200,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     setError('')
     try {
-      const inv = await createMutation.mutateAsync({
+      const payload = {
         supplier_id:   supplierId,
         invoice_date:  invoiceDate,
         paid_amount:   Number(paidAmount)  || 0,
@@ -191,7 +209,10 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
         created_by:    profile?.id         ?? '',
         device_lines:  deviceLines.map(({ device_id, cost_price }) => ({ device_id, cost_price })),
         product_lines: productLines,
-      })
+      }
+      const inv = shellId
+        ? await finalizeMutation.mutateAsync({ invoiceId: shellId, form: payload })
+        : await createMutation.mutateAsync(payload)
       if (inv?.id) {
         await confirmMutation.mutateAsync(inv.id)
       }
@@ -411,6 +432,7 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                         <AddDeviceInlineForm
                           supplierId={supplierId}
                           userId={profile?.id ?? ''}
+                          ensureInvoiceId={ensureInvoiceId}
                           onAdded={handleDeviceAdded}
                           onCancel={() => setShowAddDevice(false)}
                         />
