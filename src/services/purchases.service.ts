@@ -42,6 +42,75 @@ export const purchasesService = {
   nextInvoiceNumber: (): Promise<string>                         => purchasesRepository.nextInvoiceNumber(),
   getUnlinkedDevicesBySupplier: (supplierId: string)             => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
 
+  /** ينشئ فاتورة مسودة فارغة ليُربط بها الأجهزة قبل الحفظ النهائي */
+  createShell: async (supplierId: string, invoiceDate: string, createdBy: string): Promise<PurchaseInvoice> => {
+    if (!supplierId)  throw new Error('المورد مطلوب')
+    if (!invoiceDate) throw new Error('تاريخ الفاتورة مطلوب')
+
+    const invoiceNumber = await purchasesRepository.nextInvoiceNumber()
+    return purchasesRepository.create({
+      invoice_number:      invoiceNumber,
+      supplier_id:         supplierId,
+      invoice_date:        invoiceDate,
+      total_amount:        0,
+      paid_amount:         0,
+      discount:            0,
+      notes:               null,
+      status:              'draft',
+      created_by:          createdBy,
+      cancellation_reason: null,
+    })
+  },
+
+  /** يكمل فاتورة المسودة: الأسطر والإجماليات والدفعة الأولى */
+  finalizeShell: async (invoiceId: string, form: PurchaseFormData): Promise<PurchaseInvoice> => {
+    if (!form.device_lines.length && !form.product_lines.length)
+      throw new Error('يجب إضافة جهاز أو منتج واحد على الأقل')
+
+    const deviceTotal  = form.device_lines .reduce((s, l) => s + l.cost_price,             0)
+    const productTotal = form.product_lines.reduce((s, l) => s + l.unit_price * l.quantity, 0)
+    const totalAmount  = Math.max(0, deviceTotal + productTotal - (form.discount ?? 0))
+
+    await Promise.all([
+      purchasesRepository.addDeviceLines(invoiceId, form.device_lines),
+      purchasesRepository.addProductLines(invoiceId, form.product_lines),
+    ])
+
+    const invoice = await purchasesRepository.update(invoiceId, {
+      supplier_id:  form.supplier_id,
+      invoice_date: form.invoice_date,
+      total_amount: totalAmount,
+      paid_amount:  Number(form.paid_amount) || 0,
+      discount:     Number(form.discount)    || 0,
+      notes:        form.notes?.trim() || null,
+    })
+
+    if (Number(form.paid_amount) > 0) {
+      await paymentsRepository.create({
+        payment_type:   'purchase',
+        invoice_id:     invoiceId,
+        invoice_number: invoice.invoice_number,
+        party_type:     'supplier',
+        party_id:       form.supplier_id,
+        amount:         Number(form.paid_amount),
+        payment_method: 'cash',
+        payment_date:   form.invoice_date,
+        notes:          'دفعة أولى عند إنشاء الفاتورة',
+        created_by:     form.created_by || null,
+      })
+    }
+
+    void logAction({
+      userId:      form.created_by,
+      action:      'create',
+      table:       'purchase_invoices',
+      recordId:    invoiceId,
+      description: `إنشاء فاتورة شراء ${invoice.invoice_number}`,
+    })
+
+    return invoice
+  },
+
   create: async (form: PurchaseFormData): Promise<PurchaseInvoice> => {
     if (!form.supplier_id)  throw new Error('المورد مطلوب')
     if (!form.invoice_date) throw new Error('تاريخ الفاتورة مطلوب')
