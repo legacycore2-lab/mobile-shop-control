@@ -218,19 +218,65 @@ export const importRepository = {
   },
 
   // ── Import Devices ────────────────────────────────────────────────────────
+  // ينشئ فاتورة شراء تلقائياً للدفعة المستوردة — لا يُسمح بجهاز بدون فاتورة
   importDevices: async (
     rows:   ImportDeviceRow[],
     userId: string,
     onProgress?: (done: number, total: number) => void,
   ): Promise<ImportResult> => {
     const result: ImportResult = { success: 0, failed: 0, errors: [] }
+    if (!rows.length) return result
+
     const brandCache = new Map<string, string>()
     const modelCache = new Map<string, string>()
 
+    // 1) المورد الافتراضي للاستيراد
+    const { data: sup } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('name', 'بدون')
+      .maybeSingle()
+
+    let supplierId = (sup as { id: string } | null)?.id
+    if (!supplierId) {
+      const { data: created, error: supErr } = await supabase
+        .from('suppliers')
+        .insert({ name: 'بدون', notes: 'مورد افتراضي للأجهزة المستوردة' } as never)
+        .select('id')
+        .single()
+      if (supErr) throw new Error(`تعذر إنشاء المورد: ${supErr.message}`)
+      supplierId = (created as { id: string }).id
+    }
+
+    // 2) فاتورة شراء واحدة للدفعة كلها
+    const totalCost = rows.reduce((s, r) => s + Number(r.cost_price || 0), 0)
+
+    const { data: numData, error: numErr } = await supabase.rpc('next_purchase_invoice_number')
+    if (numErr) throw new Error(`تعذر توليد رقم الفاتورة: ${numErr.message}`)
+
+    const { data: invData, error: invErr } = await supabase
+      .from('purchase_invoices')
+      .insert({
+        invoice_number: numData as string,
+        supplier_id:    supplierId,
+        invoice_date:   new Date().toISOString().split('T')[0],
+        total_amount:   totalCost,
+        paid_amount:    totalCost,
+        discount:       0,
+        notes:          `فاتورة استيراد — ${rows.length} جهاز`,
+        status:         'confirmed',
+        created_by:     userId,
+        cancellation_reason: null,
+      } as never)
+      .select('id')
+      .single()
+    if (invErr) throw new Error(`تعذر إنشاء فاتورة الاستيراد: ${invErr.message}`)
+    const invoiceId = (invData as { id: string }).id
+
+    // 3) إدراج الأجهزة مربوطة بالفاتورة
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       try {
-        // check IMEI not already in DB
         const { data: dup } = await supabase
           .from('mobile_devices')
           .select('id')
@@ -241,34 +287,46 @@ export const importRepository = {
         const brandId = await getOrCreateBrand(row.brand_name, brandCache)
         const modelId = await getOrCreateModel(brandId, row.model_name, modelCache)
 
-        const { error } = await supabase
+        const { data: dev, error } = await supabase
           .from('mobile_devices')
           .insert({
-            imei1:              row.imei1,
-            imei2:              row.imei2       ?? null,
-            serial_number:      row.serial_number ?? null,
-            model_id:           modelId,
-            storage:            row.storage      ?? null,
-            color:              row.color        ?? null,
-            condition:          row.condition,
-            cost_price:         row.cost_price,
-            selling_price:      row.selling_price || row.cost_price,
+            imei1:                row.imei1,
+            imei2:                row.imei2         ?? null,
+            serial_number:        row.serial_number ?? null,
+            model_id:             modelId,
+            storage:              row.storage       ?? null,
+            color:                row.color         ?? null,
+            condition:            row.condition,
+            cost_price:           row.cost_price,
+            selling_price:        row.selling_price || row.cost_price,
             actual_selling_price: null,
-            purchase_date:      row.purchase_date,
-            warranty_months:    row.warranty_months,
-            warranty_expires_at: null,
-            status:             'in_stock',
-            supplier_id:        userId,   // placeholder — no supplier in template
-            purchase_invoice_id: null,
-            sold_to_customer_id: null,
-            sale_invoice_id:    null,
-            sold_at:            null,
-            location:           null,
-            notes:              row.notes ?? null,
-            added_by:           userId,
-            sold_by:            null,
+            purchase_date:        row.purchase_date,
+            warranty_months:      row.warranty_months,
+            warranty_expires_at:  null,
+            status:               'in_stock',
+            supplier_id:          supplierId,
+            purchase_invoice_id:  invoiceId,
+            sold_to_customer_id:  null,
+            sale_invoice_id:      null,
+            sold_at:              null,
+            location:             null,
+            notes:                row.notes ?? null,
+            added_by:             userId,
+            sold_by:              null,
           } as never)
+          .select('id')
+          .single()
         if (error) throw new Error(error.message)
+
+        // سطر الفاتورة
+        const { error: lineErr } = await supabase
+          .from('purchase_invoice_devices')
+          .insert({
+            invoice_id: invoiceId,
+            device_id:  (dev as { id: string }).id,
+            cost_price: row.cost_price,
+          } as never)
+        if (lineErr) throw new Error(lineErr.message)
 
         result.success++
       } catch (err) {
@@ -277,6 +335,22 @@ export const importRepository = {
       }
 
       onProgress?.(i + 1, rows.length)
+    }
+
+    // 4) تصحيح إجمالي الفاتورة على الناجح فعلياً
+    if (result.success !== rows.length) {
+      const { data: lines } = await supabase
+        .from('purchase_invoice_devices')
+        .select('cost_price')
+        .eq('invoice_id', invoiceId)
+
+      const actual = ((lines ?? []) as { cost_price: number }[])
+        .reduce((s, l) => s + Number(l.cost_price || 0), 0)
+
+      await supabase
+        .from('purchase_invoices')
+        .update({ total_amount: actual, paid_amount: actual } as never)
+        .eq('id', invoiceId)
     }
 
     return result
