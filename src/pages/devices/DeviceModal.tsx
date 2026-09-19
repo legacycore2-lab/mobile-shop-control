@@ -4,7 +4,7 @@ import { Plus, X, ScanLine } from 'lucide-react'
 import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
 import {
-  useCreateDevice, useUpdateDevice,
+  useUpdateDevice,
   useBrands, useModelsByBrand, useCreateBrand, useCreateModel,
 } from '@/hooks/useDevices'
 import { useSuppliers } from '@/hooks/useSuppliers'
@@ -39,7 +39,6 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
   const { data: brands     = [] } = useBrands()
   const { data: suppliers  = [] } = useSuppliers()
 
-  const createMutation      = useCreateDevice()
   const updateMutation      = useUpdateDevice()
   const createBrandMutation = useCreateBrand()
   const createModelMutation = useCreateModel()
@@ -129,44 +128,27 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
     e.preventDefault()
     setError('')
     try {
-      if (device) {
-        await updateMutation.mutateAsync({
-          id: device.id,
-          form: {
-            ...form,
-            cost_price:      Number(form.cost_price),
-            selling_price:   Number(form.selling_price) || 0,
-            warranty_months: Number(form.warranty_months) || 0,
-            battery_health:  form.battery_health ? Number(form.battery_health) : null,
-          },
-        })
-        onClose()
-      } else {
-        await createMutation.mutateAsync({
+      if (!device) {
+        setError('لا يمكن إنشاء جهاز من هنا — الأجهزة تدخل المخزون عبر فاتورة شراء فقط')
+        return
+      }
+      await updateMutation.mutateAsync({
+        id: device.id,
+        form: {
           ...form,
           cost_price:      Number(form.cost_price),
           selling_price:   Number(form.selling_price) || 0,
           warranty_months: Number(form.warranty_months) || 0,
           battery_health:  form.battery_health ? Number(form.battery_health) : null,
-          added_by:        profile?.id ?? '',
-        })
-        // Find brand & model names for label
-        const brand = brands.find(b => b.id === form.brand_id)
-        const model = allModels.find(m => m.id === form.model_id)
-        const extras = [form.storage, form.color].filter(Boolean).join(' · ')
-        setPrintLabel({
-          imei:  form.imei1,
-          name:  `${brand?.name ?? ''} ${model?.name ?? ''}`.trim(),
-          extra: extras,
-          price: Number(form.selling_price) || 0,
-        })
-      }
+        },
+      })
+      onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'حدث خطأ')
     }
   }
 
-  const loading = createMutation.isPending || updateMutation.isPending
+  const loading = updateMutation.isPending
 
   const labelCls  = 'text-sm font-semibold text-gray-700 dark:text-gray-300'
   const inputCls  = 'h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-full'
