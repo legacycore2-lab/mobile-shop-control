@@ -218,7 +218,7 @@ export const importRepository = {
   },
 
   // ── Import Devices ────────────────────────────────────────────────────────
-  // ينشئ فاتورة شراء تلقائياً للدفعة المستوردة — لا يُسمح بجهاز بدون فاتورة
+  // فاتورة شراء منفصلة لكل جهاز — لا يُسمح بجهاز بدون فاتورة
   importDevices: async (
     rows:   ImportDeviceRow[],
     userId: string,
@@ -230,7 +230,7 @@ export const importRepository = {
     const brandCache = new Map<string, string>()
     const modelCache = new Map<string, string>()
 
-    // 1) المورد الافتراضي للاستيراد
+    // المورد الافتراضي للاستيراد
     const { data: sup } = await supabase
       .from('suppliers')
       .select('id')
@@ -248,32 +248,6 @@ export const importRepository = {
       supplierId = (created as { id: string }).id
     }
 
-    // 2) فاتورة شراء واحدة للدفعة كلها
-    const totalCost = rows.reduce((s, r) => s + Number(r.cost_price || 0), 0)
-
-    const { data: numData, error: numErr } = await supabase.rpc('next_purchase_invoice_number')
-    if (numErr) throw new Error(`تعذر توليد رقم الفاتورة: ${numErr.message}`)
-
-    const { data: invData, error: invErr } = await supabase
-      .from('purchase_invoices')
-      .insert({
-        invoice_number: numData as string,
-        supplier_id:    supplierId,
-        invoice_date:   new Date().toISOString().split('T')[0],
-        total_amount:   totalCost,
-        paid_amount:    totalCost,
-        discount:       0,
-        notes:          `فاتورة استيراد — ${rows.length} جهاز`,
-        status:         'confirmed',
-        created_by:     userId,
-        cancellation_reason: null,
-      } as never)
-      .select('id')
-      .single()
-    if (invErr) throw new Error(`تعذر إنشاء فاتورة الاستيراد: ${invErr.message}`)
-    const invoiceId = (invData as { id: string }).id
-
-    // 3) إدراج الأجهزة مربوطة بالفاتورة
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       try {
@@ -287,6 +261,32 @@ export const importRepository = {
         const brandId = await getOrCreateBrand(row.brand_name, brandCache)
         const modelId = await getOrCreateModel(brandId, row.model_name, modelCache)
 
+        // 1) فاتورة شراء لهذا الجهاز
+        const { data: numData, error: numErr } = await supabase.rpc('next_purchase_invoice_number')
+        if (numErr) throw new Error(`تعذر توليد رقم الفاتورة: ${numErr.message}`)
+
+        const cost = Number(row.cost_price || 0)
+
+        const { data: invData, error: invErr } = await supabase
+          .from('purchase_invoices')
+          .insert({
+            invoice_number: numData as string,
+            supplier_id:    supplierId,
+            invoice_date:   row.purchase_date,
+            total_amount:   cost,
+            paid_amount:    cost,
+            discount:       0,
+            notes:          `فاتورة استيراد — ${row.brand_name} ${row.model_name}`,
+            status:         'confirmed',
+            created_by:     userId,
+            cancellation_reason: null,
+          } as never)
+          .select('id')
+          .single()
+        if (invErr) throw new Error(`تعذر إنشاء الفاتورة: ${invErr.message}`)
+        const invoiceId = (invData as { id: string }).id
+
+        // 2) الجهاز مربوطاً بالفاتورة
         const { data: dev, error } = await supabase
           .from('mobile_devices')
           .insert({
@@ -316,9 +316,12 @@ export const importRepository = {
           } as never)
           .select('id')
           .single()
-        if (error) throw new Error(error.message)
+        if (error) {
+          await supabase.from('purchase_invoices').delete().eq('id', invoiceId)
+          throw new Error(error.message)
+        }
 
-        // سطر الفاتورة
+        // 3) سطر الفاتورة
         const { error: lineErr } = await supabase
           .from('purchase_invoice_devices')
           .insert({
@@ -335,22 +338,6 @@ export const importRepository = {
       }
 
       onProgress?.(i + 1, rows.length)
-    }
-
-    // 4) تصحيح إجمالي الفاتورة على الناجح فعلياً
-    if (result.success !== rows.length) {
-      const { data: lines } = await supabase
-        .from('purchase_invoice_devices')
-        .select('cost_price')
-        .eq('invoice_id', invoiceId)
-
-      const actual = ((lines ?? []) as { cost_price: number }[])
-        .reduce((s, l) => s + Number(l.cost_price || 0), 0)
-
-      await supabase
-        .from('purchase_invoices')
-        .update({ total_amount: actual, paid_amount: actual } as never)
-        .eq('id', invoiceId)
     }
 
     return result
