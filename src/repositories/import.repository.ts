@@ -241,7 +241,7 @@ export const importRepository = {
     if (!supplierId) {
       const { data: created, error: supErr } = await supabase
         .from('suppliers')
-        .insert({ name: 'بدون', notes: 'مورد افتراضي للأجهزة المستوردة' } as never)
+        .insert({ name: 'بدون', notes: 'مورد افتراضي للأجهزة المستوردة', created_by: userId } as never)
         .select('id')
         .single()
       if (supErr) throw new Error(`تعذر إنشاء المورد: ${supErr.message}`)
