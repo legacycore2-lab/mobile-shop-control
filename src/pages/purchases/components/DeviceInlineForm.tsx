@@ -57,11 +57,14 @@ export function AddDeviceInlineForm({
   onAdded,
   onCancel,
   userId,
+  ensureInvoiceId,
 }: {
   supplierId: string
   onAdded: (line: InvoiceDeviceLine & { label: string }) => void
   onCancel: () => void
   userId: string
+  /** ينشئ فاتورة المسودة عند الحاجة ويعيد رقمها — الجهاز لا يُنشأ بدونها */
+  ensureInvoiceId: () => Promise<string>
 }) {
   const { data: brands = [] } = useBrands()
   const [form, setForm]       = useState<NewDeviceForm>(BLANK_DEVICE)
@@ -148,6 +151,7 @@ export function AddDeviceInlineForm({
         location:        '',
         notes:           form.notes.trim(),
         added_by:        userId,
+        purchase_invoice_id: await ensureInvoiceId(),
       }
       const device = await createDevice.mutateAsync(deviceForm)
 
