@@ -52,12 +52,13 @@ const UNITS    = ['قطعة', 'زوج', 'كرتون', 'متر', 'لتر']
 // ── Add Device Inline ─────────────────────────────────────────────────────────
 
 function AddDeviceInlineForm({
-  supplierId, onAdded, onCancel, userId,
+  supplierId, onAdded, onCancel, userId, invoiceId,
 }: {
   supplierId: string
   onAdded: (line: AddedDevice) => void
   onCancel: () => void
   userId: string
+  invoiceId: string
 }) {
   const { data: brands = [] } = useBrands()
   const [form, setForm]       = useState<NewDeviceForm>(BLANK_DEVICE)
@@ -113,6 +114,7 @@ function AddDeviceInlineForm({
         selling_price: form.selling_price ? Number(form.selling_price) : 0,
         warranty_months: Number(form.warranty_months) || 12,
         location: '', notes: form.notes.trim(), added_by: userId,
+        purchase_invoice_id: invoiceId,
       }
       const device = await createDevice.mutateAsync(deviceForm)
       const brand  = brands.find(b => b.id === form.brand_id)
@@ -653,6 +655,7 @@ export function EditPurchaseModal({
                 {showAddDevice ? (
                   <AddDeviceInlineForm
                     supplierId={supplierId}
+                    invoiceId={invoiceId}
                     userId={profile?.id ?? ''}
                     onAdded={handleDeviceAdded}
                     onCancel={() => setShowAddDevice(false)}
