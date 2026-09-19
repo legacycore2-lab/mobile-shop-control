@@ -20,6 +20,8 @@ export interface DeviceFormData {
   location:        string
   notes:           string
   added_by:        string
+  /** إلزامي — الجهاز لا يدخل المخزون إلا عبر فاتورة شراء */
+  purchase_invoice_id: string
 }
 
 export interface DeviceStats {
@@ -102,6 +104,7 @@ export const devicesService = {
     if (!form.supplier_id)            throw new Error('المورد مطلوب')
     if (!form.purchase_date)          throw new Error('تاريخ الشراء مطلوب')
     if (Number(form.cost_price) <= 0) throw new Error('سعر الشراء يجب أن يكون أكبر من صفر')
+    if (!form.purchase_invoice_id)    throw new Error('فاتورة الشراء مطلوبة — لا يمكن إضافة جهاز بدون فاتورة')
 
     const warrantyMonths = Number(form.warranty_months) || 0
     const purchaseDate   = new Date(form.purchase_date)
@@ -119,7 +122,7 @@ export const devicesService = {
       battery_health:      form.battery_health != null ? Number(form.battery_health) : null,
       condition:           VALID_CONDITIONS.includes(form.condition as Condition) ? form.condition : 'new',
       supplier_id:         form.supplier_id,
-      purchase_invoice_id: null,
+      purchase_invoice_id: form.purchase_invoice_id,
       purchase_date:       form.purchase_date,
       cost_price:          Number(form.cost_price),
       selling_price:       Number(form.selling_price) || null,
