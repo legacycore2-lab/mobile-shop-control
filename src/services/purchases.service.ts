@@ -27,6 +27,16 @@ export interface PurchaseStats {
   totalSpent: number; totalPaid: number; totalDue: number
 }
 
+/** Supabase/PostgREST errors are plain objects (not `instanceof Error`) — extract `.message` safely. */
+function extractErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (typeof e === 'object' && e !== null && 'message' in e) {
+    const m = (e as { message: unknown }).message
+    if (typeof m === 'string' && m) return m
+  }
+  return String(e)
+}
+
 function parseRpcError(msg: string): string {
   if (msg.includes('INVOICE_NOT_FOUND'))         return 'الفاتورة غير موجودة'
   if (msg.includes('INVOICE_NOT_DRAFT'))         return 'يمكن تأكيد الفواتير المسودة فقط'
@@ -201,7 +211,7 @@ export const purchasesService = {
     try {
       await purchasesRepository.cancelWithReason(id, reason)
     } catch (e) {
-      throw new Error(parseRpcError(e instanceof Error ? e.message : String(e)))
+      throw new Error(parseRpcError(extractErrorMessage(e)))
     }
     if (userId) {
       void (async () => {
