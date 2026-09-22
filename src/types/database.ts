@@ -2,7 +2,7 @@
 // ── Single source of truth for ALL entity types ───────────────────────────────
 
 export type UserRole         = 'owner' | 'manager' | 'cashier' | 'warehouse'
-export type DeviceStatus     = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair'
+export type DeviceStatus     = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair' | 'cancelled'
 export type ProductType      = 'accessory' | 'spare_part'
 export type InvoiceStatus    = 'draft' | 'confirmed' | 'cancelled'
 export type PaymentType      = 'purchase' | 'sale'
