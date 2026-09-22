@@ -22,7 +22,7 @@ export interface InvoiceProductLine {
 const INVOICE_SELECT = `
   id, invoice_number, supplier_id, invoice_date,
   total_amount, paid_amount, discount,
-  notes, status, cancellation_reason, created_by, created_at, updated_at,
+  notes, status, created_by, created_at, updated_at,
   suppliers!supplier_id ( name ),
   profiles!created_by ( full_name ),
   devices_agg:purchase_invoice_devices ( id ),
@@ -65,7 +65,17 @@ export const purchasesRepository = {
     if (invErr) throw invErr
     if (!inv) return null
 
-    const invoice = buildPurchaseInvoiceView(inv as unknown as Record<string, unknown>)
+    // Fetch cancellation_reason separately (generated column workaround)
+    const { data: extra } = await supabase
+      .from('purchase_invoices')
+      .select('cancellation_reason')
+      .eq('id', id)
+      .single()
+
+    const invoice = buildPurchaseInvoiceView({
+      ...(inv as unknown as Record<string, unknown>),
+      cancellation_reason: extra?.['cancellation_reason'] ?? null,
+    })
 
     const { data: devRows, error: devErr } = await supabase
       .from('purchase_invoice_devices')
