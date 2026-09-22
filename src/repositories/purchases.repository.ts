@@ -21,7 +21,7 @@ export interface InvoiceProductLine {
 
 const INVOICE_SELECT = `
   id, invoice_number, supplier_id, invoice_date,
-  total_amount, paid_amount, discount, remaining,
+  total_amount, paid_amount, discount,
   notes, status, cancellation_reason, created_by, created_at, updated_at,
   suppliers!supplier_id ( name ),
   profiles!created_by ( full_name ),
