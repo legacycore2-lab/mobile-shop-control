@@ -20,6 +20,7 @@ export const DEVICE_STATUS_MAP: Record<DeviceStatus, {
   returned:       { label: 'مُعاد',       variant: 'warning' },
   defective:      { label: 'تالف',        variant: 'danger'  },
   sent_to_repair: { label: 'في الصيانة', variant: 'warning' },
+  cancelled:      { label: 'ملغي',        variant: 'neutral' },
 }
 
 // ── Device condition ──────────────────────────────────────────────────────────
