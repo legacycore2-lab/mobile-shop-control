@@ -7,6 +7,7 @@ import {
 import { paymentsRepository } from '@/repositories/payments.repository'
 import { supabase } from '@/lib/supabase'
 import { logAction } from '@/lib/audit'
+import { extractErrorMessage } from '@/lib/errors'
 import type { PurchaseInvoice, PurchaseInvoiceView, PurchaseInvoiceDetail } from '@/types/database'
 
 export type { InvoiceDeviceLine, InvoiceProductLine, PurchaseInvoiceDetail }
@@ -25,16 +26,6 @@ export interface PurchaseFormData {
 export interface PurchaseStats {
   total: number; draft: number; confirmed: number; cancelled: number
   totalSpent: number; totalPaid: number; totalDue: number
-}
-
-/** Supabase/PostgREST errors are plain objects (not `instanceof Error`) — extract `.message` safely. */
-function extractErrorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message
-  if (typeof e === 'object' && e !== null && 'message' in e) {
-    const m = (e as { message: unknown }).message
-    if (typeof m === 'string' && m) return m
-  }
-  return String(e)
 }
 
 function parseRpcError(msg: string): string {
