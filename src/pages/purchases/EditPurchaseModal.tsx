@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 
 import { fmt } from '@/lib/fmt'
+import { friendlyDbError } from '@/lib/errors'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -120,7 +121,7 @@ function AddDeviceInlineForm({
       const brand  = brands.find(b => b.id === form.brand_id)
       const model  = models.find(m => m.id === form.model_id)
       onAdded({ device_id: device.id, cost_price: Number(form.cost_price), selling_price: form.selling_price ? Number(form.selling_price) : 0, label: `${brand?.name ?? ''} ${model?.name ?? ''} — ${form.imei1}` })
-    } catch (err) { setError(err instanceof Error ? err.message : 'حدث خطأ') }
+    } catch (err) { setError(friendlyDbError(err)) }
     finally { setSaving(false) }
   }
 
