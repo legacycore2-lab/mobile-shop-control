@@ -19,6 +19,7 @@ import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { validate } from '@/lib/validate'
+import { friendlyDbError } from '@/lib/errors'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
 
 // ── New Device Form (inline inside modal) ─────────────────────────────────────
@@ -161,12 +162,7 @@ export function AddDeviceInlineForm({
 
       onAdded({ device_id: device.id, cost_price: Number(form.cost_price), label })
     } catch (err) {
-      const msg = err instanceof Error
-        ? err.message
-        : typeof err === 'object' && err && 'message' in err
-          ? String((err as { message: unknown }).message)
-          : JSON.stringify(err)
-      setError(msg || 'حدث خطأ')
+      setError(friendlyDbError(err))
     } finally {
       setSaving(false)
     }
