@@ -87,6 +87,24 @@ export interface DeviceMovementRow {
   total_profit:        number
 }
 
+export interface DevicePriceRow {
+  id:            string
+  brand_name:    string
+  model_name:    string
+  imei1:         string
+  imei2:         string
+  storage:       string
+  color:         string
+  condition:     string
+  status:        string
+  cost_price:    number
+  selling_price: number
+  profit:        number
+  margin_pct:    number
+  purchase_date: string | null
+  sold_at:       string | null
+}
+
 // ── Repository ────────────────────────────────────────────────────────────────
 
 export const reportsRepository = {
@@ -387,6 +405,49 @@ export const reportsRepository = {
   },
 
   // ── SOH + Movement للأجهزة — الإيراد من sale_invoices.total_amount ────────
+  getDevicePriceList: async (): Promise<DevicePriceRow[]> => {
+    const { data, error } = await supabase
+      .from('mobile_devices')
+      .select(`
+        id, imei1, imei2, storage, color, condition, status,
+        cost_price, selling_price, purchase_date, sold_at,
+        mobile_models!model_id (
+          name,
+          mobile_brands!brand_id ( name )
+        )
+      `)
+      .not('status', 'eq', 'cancelled')
+      .order('purchase_date', { ascending: false })
+      .limit(2000)
+    if (error) throw error
+
+    return (data ?? []).map((row) => {
+      const r     = row as Record<string, unknown>
+      const model = r['mobile_models']    as Record<string, unknown> | null
+      const brand = model?.['mobile_brands'] as Record<string, unknown> | null
+      const cost  = Number(r['cost_price']    ?? 0)
+      const sell  = Number(r['selling_price'] ?? 0)
+      const profit = sell - cost
+      return {
+        id:            String(r['id']),
+        brand_name:    String(brand?.['name'] ?? '—'),
+        model_name:    String(model?.['name'] ?? '—'),
+        imei1:         String(r['imei1'] ?? ''),
+        imei2:         String(r['imei2'] ?? ''),
+        storage:       String(r['storage'] ?? ''),
+        color:         String(r['color']   ?? ''),
+        condition:     String(r['condition'] ?? ''),
+        status:        String(r['status']  ?? ''),
+        cost_price:    cost,
+        selling_price: sell,
+        profit,
+        margin_pct:    cost > 0 ? parseFloat(((profit / cost) * 100).toFixed(1)) : 0,
+        purchase_date: r['purchase_date'] as string | null,
+        sold_at:       r['sold_at']       as string | null,
+      } satisfies DevicePriceRow
+    })
+  },
+
   getDeviceMovement: async (from: string, to: string): Promise<DeviceMovementRow[]> => {
     // نجيب الأجهزة المباعة في الفترة مع بيانات الفاتورة
     const { data: soldData, error: soldErr } = await supabase
