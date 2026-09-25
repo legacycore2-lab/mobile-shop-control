@@ -67,3 +67,11 @@ export function useCashierPerformance(from?: string, to?: string) {
     ...OPTS,
   })
 }
+
+export function useDevicePriceList() {
+  return useQuery({
+    queryKey: ['reports', 'device_price_list'] as const,
+    queryFn:  reportsService.getDevicePriceList,
+    ...OPTS,
+  })
+}
