@@ -9,32 +9,26 @@ import { fmt } from '@/lib/fmt'
 import { cn } from '@/lib/cn'
 
 const STATUS_OPTIONS = [
-  { value: '',             label: 'الكل'        },
-  { value: 'in_stock',    label: 'في المخزون'  },
-  { value: 'sold',        label: 'مباع'         },
-  { value: 'returned',    label: 'مُعاد'        },
-  { value: 'defective',   label: 'تالف'         },
-  { value: 'sent_to_repair', label: 'في الصيانة' },
+  { value: '',               label: 'كل الحالات'   },
+  { value: 'in_stock',       label: 'في المخزون'   },
+  { value: 'sold',           label: 'مباع'          },
+  { value: 'returned',       label: 'مُعاد'         },
+  { value: 'defective',      label: 'تالف'          },
+  { value: 'sent_to_repair', label: 'في الصيانة'   },
 ]
+
+const SEL = 'h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500'
 
 function exportCsv(rows: ReturnType<typeof useDevicePriceList>['data']) {
   if (!rows?.length) return
-  const headers = ['#', 'الماركة', 'الموديل', 'IMEI 1', 'IMEI 2', 'التخزين', 'اللون', 'الحالة', 'سعر الشراء', 'سعر البيع', 'الفرق', 'هامش%']
+  const headers = ['#','الماركة','الموديل','IMEI 1','IMEI 2','التخزين','اللون','الحالة','سعر الشراء','سعر البيع','الفرق','هامش%']
   const lines = rows.map((r, i) => [
-    i + 1,
-    r.brand_name,
-    r.model_name,
-    r.imei1,
-    r.imei2,
-    r.storage,
-    r.color,
+    i + 1, r.brand_name, r.model_name, r.imei1, r.imei2,
+    r.storage, r.color,
     DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]?.label ?? r.status,
-    r.cost_price,
-    r.selling_price,
-    r.profit,
-    r.margin_pct,
+    r.cost_price, r.selling_price, r.profit, r.margin_pct,
   ])
-  const csv = '\uFEFF' + [headers, ...lines].map(row => row.join(',')).join('\n')
+  const csv  = '\uFEFF' + [headers, ...lines].map(row => row.join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
@@ -46,26 +40,47 @@ function exportCsv(rows: ReturnType<typeof useDevicePriceList>['data']) {
 
 export function PriceListTabContent() {
   const { data: devices = [], isLoading } = useDevicePriceList()
-  const [search, setSearch]   = useState('')
-  const [status, setStatus]   = useState('')
+
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [brand,  setBrand]  = useState('')
+  const [model,  setModel]  = useState('')
+
+  // قوائم الماركات والموديلات الديناميكية من البيانات نفسها
+  const brands = useMemo(
+    () => Array.from(new Set(devices.map(d => d.brand_name))).sort(),
+    [devices],
+  )
+
+  const models = useMemo(() => {
+    const base = brand ? devices.filter(d => d.brand_name === brand) : devices
+    return Array.from(new Set(base.map(d => d.model_name))).sort()
+  }, [devices, brand])
+
+  // إعادة ضبط الموديل لما تتغير الماركة
+  function handleBrandChange(b: string) {
+    setBrand(b)
+    setModel('')
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return devices.filter(r => {
-      if (status && r.status !== status) return false
+      if (status && r.status    !== status) return false
+      if (brand  && r.brand_name !== brand)  return false
+      if (model  && r.model_name !== model)  return false
       if (!q) return true
       return (
-        r.brand_name.toLowerCase().includes(q)   ||
-        r.model_name.toLowerCase().includes(q)   ||
-        r.imei1.includes(q)                       ||
-        r.imei2.includes(q)                       ||
-        r.storage.toLowerCase().includes(q)       ||
+        r.imei1.includes(q)                     ||
+        r.imei2.includes(q)                     ||
+        r.brand_name.toLowerCase().includes(q)  ||
+        r.model_name.toLowerCase().includes(q)  ||
+        r.storage.toLowerCase().includes(q)     ||
         r.color.toLowerCase().includes(q)
       )
     })
-  }, [devices, search, status])
+  }, [devices, search, status, brand, model])
 
-  // إجماليات الصفوف المعروضة
   const totalCost   = filtered.reduce((s, r) => s + r.cost_price,    0)
   const totalSell   = filtered.reduce((s, r) => s + r.selling_price, 0)
   const totalProfit = filtered.reduce((s, r) => s + r.profit,        0)
@@ -76,29 +91,36 @@ export function PriceListTabContent() {
   return (
     <div className="space-y-4">
 
-      {/* شريط التحكم */}
+      {/* شريط الفلاتر */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* بحث */}
+
+        {/* بحث حر */}
         <div className="relative flex-1 min-w-48">
           <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="بحث بـ IMEI · موديل · لون · تخزين..."
+            placeholder="بحث بـ IMEI · لون · تخزين..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full h-9 pr-8 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500"
           />
         </div>
 
+        {/* فلتر الماركة */}
+        <select value={brand} onChange={e => handleBrandChange(e.target.value)} className={SEL}>
+          <option value="">كل الماركات</option>
+          {brands.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+
+        {/* فلتر الموديل — يتفلتر حسب الماركة المختارة */}
+        <select value={model} onChange={e => setModel(e.target.value)} className={SEL} disabled={models.length === 0}>
+          <option value="">كل الموديلات</option>
+          {models.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+
         {/* فلتر الحالة */}
-        <select
-          value={status}
-          onChange={e => setStatus(e.target.value)}
-          className="h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500"
-        >
-          {STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+        <select value={status} onChange={e => setStatus(e.target.value)} className={SEL}>
+          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
         {/* تصدير */}
@@ -115,10 +137,10 @@ export function PriceListTabContent() {
       {!isLoading && filtered.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: 'عدد الأجهزة',      value: `${filtered.length} جهاز`,   color: 'text-blue-600 dark:text-blue-400'   },
-            { label: 'إجمالي التكلفة',   value: `${fmt(totalCost)} ج`,        color: 'text-purple-600 dark:text-purple-400' },
-            { label: 'إجمالي سعر البيع', value: `${fmt(totalSell)} ج`,        color: 'text-green-600 dark:text-green-400'  },
-            { label: 'إجمالي الفرق',     value: `${fmt(totalProfit)} ج`,      color: totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' },
+            { label: 'عدد الأجهزة',      value: `${filtered.length} جهاز`,  color: 'text-blue-600 dark:text-blue-400'    },
+            { label: 'إجمالي التكلفة',   value: `${fmt(totalCost)} ج`,       color: 'text-purple-600 dark:text-purple-400' },
+            { label: 'إجمالي سعر البيع', value: `${fmt(totalSell)} ج`,       color: 'text-green-600 dark:text-green-400'   },
+            { label: 'إجمالي الفرق',     value: `${fmt(totalProfit)} ج`,     color: totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' },
           ].map(k => (
             <div key={k.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{k.label}</p>
@@ -142,7 +164,7 @@ export function PriceListTabContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                {['#', 'الماركة', 'الموديل', 'IMEI 1', 'IMEI 2', 'تخزين', 'لون', 'حالة', 'سعر الشراء', 'سعر البيع', 'الفرق', 'هامش %'].map(h => (
+                {['#','الماركة','الموديل','IMEI 1','IMEI 2','تخزين','لون','حالة','سعر الشراء','سعر البيع','الفرق','هامش %'].map(h => (
                   <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
