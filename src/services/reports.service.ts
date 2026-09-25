@@ -4,13 +4,13 @@ import { expensesRepository } from '@/repositories/expenses.repository'
 import type {
   DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
   DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
-  ProductMovementRow, DeviceMovementRow,
+  ProductMovementRow, DeviceMovementRow, DevicePriceRow,
 } from '@/repositories/reports.repository'
 
 export type {
   DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
   DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
-  ProductMovementRow, DeviceMovementRow,
+  ProductMovementRow, DeviceMovementRow, DevicePriceRow,
 }
 
 export interface ReportSummary {
@@ -42,6 +42,9 @@ export const reportsService = {
 
   getDeviceMovement: (from: string, to: string): Promise<DeviceMovementRow[]> =>
     reportsRepository.getDeviceMovement(from, to),
+
+  getDevicePriceList: (): Promise<DevicePriceRow[]> =>
+    reportsRepository.getDevicePriceList(),
 
   getSummary: async (): Promise<ReportSummary> => {
     const [sales, stock, lowStock, invoiceRevenue, expenseStats] = await Promise.all([
