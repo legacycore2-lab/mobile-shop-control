@@ -6,6 +6,7 @@ const KEYS = {
   all:    ['devices']            as const,
   stats:  ['devices', 'stats']   as const,
   one:    (id: string)  => ['devices', id]          as const,
+  imei:   (imei: string) => ['devices', 'imei', imei] as const,
   brands: ['mobile_brands']      as const,
   models: (brandId: string) => ['mobile_models', brandId] as const,
 }
@@ -29,6 +30,16 @@ export function useDevice(id: string) {
     queryKey: KEYS.one(id),
     queryFn:  () => devicesService.getById(id),
     enabled:  !!id,
+  })
+}
+
+/** يدوّر على آخر جهاز مسجل بالـ IMEI ده — بيشتغل بس لما الرقم يكتمل (14-15 رقم) */
+export function useDeviceByImei(imei: string) {
+  const clean = imei.trim()
+  return useQuery({
+    queryKey: KEYS.imei(clean),
+    queryFn:  () => devicesService.lookupByImei(clean),
+    enabled:  /^\d{14,15}$/.test(clean),
   })
 }
 

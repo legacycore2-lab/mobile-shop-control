@@ -2,13 +2,13 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   X, Smartphone, Tag, AlertCircle, FileText,
-  Search, ScanLine, Zap, Plus, Save,
+  Search, ScanLine, Zap, Plus, Save, Info,
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
 import { usePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useProducts } from '@/hooks/useProducts'
-import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel } from '@/hooks/useDevices'
+import { useBrands, useModelsByBrand, useCreateDevice, useCreateBrand, useCreateModel, useDeviceByImei } from '@/hooks/useDevices'
 import { useProductCategories, useCreateProduct } from '@/hooks/useProducts'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
@@ -69,6 +69,13 @@ function AddDeviceInlineForm({
   const createBrand   = useCreateBrand()
   const createModel   = useCreateModel()
   const { data: models = [] } = useModelsByBrand(form.brand_id)
+
+  // الجهاز اتباع من عندنا قبل كده؟ (تنبيه بس — مش بيمنع التسجيل)
+  const { data: imeiLookup } = useDeviceByImei(form.imei1)
+  const previousSale = imeiLookup?.device?.status === 'sold' ? imeiLookup.device : null
+  const previousSaleDate = previousSale?.sold_at
+    ? new Date(previousSale.sold_at).toLocaleDateString('en-GB')
+    : null
 
   const [newBrandName, setNewBrandName] = useState('')
   const [showNewBrand, setShowNewBrand] = useState(false)
@@ -201,6 +208,18 @@ function AddDeviceInlineForm({
           <input value={form.imei2} onChange={e => set('imei2', e.target.value)} placeholder="اختياري" className={inp} maxLength={20} />
         </div>
       </div>
+
+      {previousSale && (
+        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 flex items-start gap-1.5">
+          <Info size={13} className="flex-shrink-0 mt-0.5" />
+          <span>
+            الجهاز ده كان مباع من عندنا قبل كده
+            {previousSaleDate ? ` بتاريخ ${previousSaleDate}` : ''}
+            {previousSale.customer_name ? ` للعميل ${previousSale.customer_name}` : ''}
+            {' '}— هيتسجل كجهاز جديد في المخزون
+          </span>
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <div className="flex flex-col gap-1">
