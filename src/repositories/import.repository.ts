@@ -255,7 +255,7 @@ export const importRepository = {
           .from('mobile_devices')
           .select('id')
           .eq('imei1', row.imei1)
-          .neq('status', 'sold')
+          .not('status', 'in', '(sold,cancelled)')
           .maybeSingle()
         if (dup) throw new Error(`IMEI مكرر في قاعدة البيانات: ${row.imei1}`)
 
