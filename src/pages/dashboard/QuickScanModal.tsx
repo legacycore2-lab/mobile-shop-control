@@ -72,6 +72,7 @@ async function lookupCode(code: string): Promise<ScanResult> {
       purchase_invoices!invoice_id ( invoice_number )
     `)
     .or(`imei1.eq.${searchImei},imei2.eq.${searchImei}`)
+    .order('created_at', { ascending: false })
     .limit(1)
 
   if (devices && devices.length > 0) {

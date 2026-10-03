@@ -55,6 +55,7 @@ async function lookup(code: string): Promise<DeviceInfo | null> {
       mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
     `)
     .or(`imei1.eq.${searchImei},imei2.eq.${searchImei}`)
+    .order('created_at', { ascending: false })
     .limit(1)
 
   if (!data || data.length === 0) return null

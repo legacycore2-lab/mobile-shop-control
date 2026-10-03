@@ -20,8 +20,8 @@ export function extractErrorMessage(err: unknown): string {
 export function friendlyDbError(err: unknown): string {
   const raw = extractErrorMessage(err)
 
-  if (raw.includes('mobile_devices_imei1_key') || raw.includes('mobile_devices_imei2_key')) {
-    return 'رقم الـ IMEI ده مسجل بالفعل لجهاز آخر في النظام — تأكد من الرقم أو ابحث عن الجهاز في صفحة الأجهزة'
+  if (raw.includes('mobile_devices_imei1_active_key') || raw.includes('mobile_devices_imei2_key')) {
+    return 'رقم الـ IMEI ده مسجل بالفعل لجهاز لسه موجود في النظام (مش مباع) — تأكد من الرقم أو ابحث عن الجهاز في صفحة الأجهزة'
   }
   if (raw.includes('duplicate key value violates unique constraint')) {
     return 'البيانات دي مسجلة بالفعل في النظام'
