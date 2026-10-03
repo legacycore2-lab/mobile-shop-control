@@ -217,6 +217,11 @@ function AddDeviceInlineForm({
             {previousSaleDate ? ` بتاريخ ${previousSaleDate}` : ''}
             {previousSale.customer_name ? ` للعميل ${previousSale.customer_name}` : ''}
             {' '}— هيتسجل كجهاز جديد في المخزون
+            <br />
+            آخر سعر شراء: <b>{fmt(previousSale.cost_price)} ج</b>
+            {previousSale.actual_selling_price != null && (
+              <>{' '}— آخر سعر بيع: <b>{fmt(previousSale.actual_selling_price)} ج</b></>
+            )}
           </span>
         </p>
       )}
