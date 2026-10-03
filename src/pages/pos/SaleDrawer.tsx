@@ -165,6 +165,15 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
                 </div>
               )}
 
+              {inv.status === 'cancelled' && (
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-start gap-2">
+                  <XCircle size={14} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    الفاتورة ملغاة — التفاصيل دي للعرض فقط، والأجهزة والمنتجات رجعت للمخزون.
+                  </p>
+                </div>
+              )}
+
               {/* Devices */}
               {detail.devices.length > 0 && (
                 <div>

@@ -166,6 +166,19 @@ export interface SaleInvoiceDetailProduct extends SaleInvoiceProduct {
   product_name: string; unit: string; cost_price: number
 }
 
+export interface SaleCancelSnapshot {
+  invoice_id: string; total_amount: number; discount: number
+  devices: Array<{
+    id: string; device_id: string; actual_selling_price: number
+    brand_name: string; model_name: string; imei1: string; cost_price: number
+  }>
+  products: Array<{
+    id: string; product_id: string; quantity: number; unit_price: number; subtotal: number
+    product_name: string; unit: string; cost_price: number
+  }>
+  created_at: string
+}
+
 export interface SaleInvoiceDetail {
   invoice:  SaleInvoiceView
   devices:  SaleInvoiceDetailDevice[]

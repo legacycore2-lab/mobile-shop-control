@@ -6,7 +6,7 @@ import { buildSaleInvoiceView, adjustProductStock, n } from '@/lib/db-helpers'
 import type {
   MobileDeviceView,
   SaleInvoice, SaleInvoiceView,
-  SaleInvoiceDetail, SaleInvoiceDetailDevice, SaleInvoiceDetailProduct,
+  SaleInvoiceDetail, SaleInvoiceDetailDevice, SaleInvoiceDetailProduct, SaleCancelSnapshot,
 } from '@/types/database'
 
 export interface SaleDeviceLine {
@@ -55,6 +55,23 @@ export const posRepository = {
     if (!inv) return null
 
     const invoice = buildSaleInvoiceView(inv as unknown as Record<string, unknown>)
+
+    if (invoice.status === 'cancelled') {
+      const { data: snap, error: snapErr } = await supabase
+        .from('sale_invoice_cancel_snapshots')
+        .select('*')
+        .eq('invoice_id', id)
+        .maybeSingle()
+      if (snapErr) throw snapErr
+      if (snap) {
+        const s = snap as unknown as SaleCancelSnapshot
+        return {
+          invoice: { ...invoice, total_amount: n(s.total_amount), discount: n(s.discount) },
+          devices: s.devices.map(d => ({ ...d, invoice_id: id, created_at: s.created_at })),
+          products: s.products.map(p => ({ ...p, invoice_id: id, created_at: s.created_at })),
+        }
+      }
+    }
 
     const { data: devRows, error: devErr } = await supabase
       .from('sale_invoice_devices')
