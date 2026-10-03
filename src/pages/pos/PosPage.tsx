@@ -32,19 +32,24 @@ export function PosPage() {
   const [page,         setPage]        = useState(1)
   const [showCreate,   setShowCreate]  = useState(false)
   const [autoDeviceId, setAutoDeviceId] = useState<string | null>(null)
+  const [detailId,     setDetailId]    = useState<string | null>(null)
   const location = useLocation()
 
   // لو جاي من DeviceFlashCard بعد مسح IMEI — افتح الفاتورة مباشرة بالجهاز
   useEffect(() => {
-    const state = location.state as { autoDeviceId?: string } | null
+    const state = location.state as { autoDeviceId?: string; openSaleId?: string } | null
     if (state?.autoDeviceId) {
       setAutoDeviceId(state.autoDeviceId)
       setShowCreate(true)
       // امسح الـ state علشان لو رجع للصفحة متفتحش تاني
       window.history.replaceState({}, '')
     }
+    // جاي من DeviceFlashCard لجهاز مباع — افتح فاتورة البيع بتاعته
+    if (state?.openSaleId) {
+      setDetailId(state.openSaleId)
+      window.history.replaceState({}, '')
+    }
   }, [location.state])
-  const [detailId,     setDetailId]    = useState<string | null>(null)
   const [payInvoice,   setPayInvoice]  = useState<SaleInvoiceView | null>(null)
   const [confirmCancel, setConfirmCancel] = useState<SaleInvoiceView | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<SaleInvoiceView | null>(null)
