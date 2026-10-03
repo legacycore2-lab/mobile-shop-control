@@ -58,12 +58,6 @@ const DISMISS_MS = 8000
 
 // ── DB lookup ─────────────────────────────────────────────────────────────────
 
-const COLUMNS = `
-  id, imei1, imei2, color, storage, condition, battery_health, status,
-  selling_price, actual_selling_price, cost_price, sold_at, sale_invoice_id,
-  brand_name, model_name, customer_name
-`
-
 /** جهاز شغّال الأول، بعده آخر بيع، وأخيراً الملغي — الأحدث الأول جوه كل مجموعة */
 function statusRank(status: string): number {
   if (status === 'sold')      return 1
@@ -73,23 +67,42 @@ function statusRank(status: string): number {
 
 async function lookup(code: string): Promise<DeviceInfo | null> {
   const searchImei = code.includes('/') ? code.split('/')[0].trim() : code.trim()
-  const { data } = await supabase
-    .from('mobile_devices_view')
-    .select(COLUMNS)
+  const { data, error } = await supabase
+    .from('mobile_devices')
+    .select(`
+      id, imei1, imei2, color, storage, condition, battery_health, status,
+      selling_price, actual_selling_price, cost_price,
+      sold_at, sale_invoice_id, sold_to_customer_id,
+      mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
+    `)
     .or(`imei1.eq.${searchImei},imei2.eq.${searchImei}`)
     .order('created_at', { ascending: false })
     .limit(5)
+  if (error) throw error
 
   const rows = (data ?? []) as unknown as Record<string, unknown>[]
   if (rows.length === 0) return null
-  const d = [...rows].sort((a, b) => statusRank(String(a['status'])) - statusRank(String(b['status'])))[0]
+  const d     = [...rows].sort((a, b) => statusRank(String(a['status'])) - statusRank(String(b['status'])))[0]
+  const model = d['mobile_models'] as Record<string, unknown> | null
+  const brand = model?.['mobile_brands'] as Record<string, unknown> | null
+
+  let customerName: string | null = null
+  const customerId = d['sold_to_customer_id'] as string | null
+  if (d['status'] === 'sold' && customerId) {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('name')
+      .eq('id', customerId)
+      .maybeSingle()
+    customerName = (customer as { name: string } | null)?.name ?? null
+  }
 
   return {
     id:              String(d['id']),
     imei1:           String(d['imei1']),
     imei2:           d['imei2'] as string | null,
-    brand_name:      String(d['brand_name'] ?? '—'),
-    model_name:      String(d['model_name'] ?? '—'),
+    brand_name:      String(brand?.['name'] ?? '—'),
+    model_name:      String(model?.['name'] ?? '—'),
     color:           d['color'] as string | null,
     storage:         d['storage'] as string | null,
     condition:       String(d['condition'] ?? 'used'),
@@ -100,7 +113,7 @@ async function lookup(code: string): Promise<DeviceInfo | null> {
     cost_price:      Number(d['cost_price'] || 0),
     sold_at:         d['sold_at'] as string | null,
     sale_invoice_id: d['sale_invoice_id'] as string | null,
-    customer_name:   d['customer_name'] as string | null,
+    customer_name:   customerName,
   }
 }
 
@@ -172,6 +185,7 @@ interface Props {
 export function DeviceFlashCard({ code, onClose }: Props) {
   const [device,   setDevice]   = useState<DeviceInfo | null>(null)
   const [loading,  setLoading]  = useState(true)
+  const [failed,   setFailed]   = useState(false)
   const [progress, setProgress] = useState(100)
   const [visible,  setVisible]  = useState(false)
   const navigate = useNavigate()
@@ -189,7 +203,9 @@ export function DeviceFlashCard({ code, onClose }: Props) {
 
   // Fetch
   useEffect(() => {
-    lookup(code).then(d => { setDevice(d); setLoading(false) })
+    lookup(code)
+      .then(d => { setDevice(d); setLoading(false) })
+      .catch(() => { setFailed(true); setLoading(false) })
   }, [code])
 
   // Auto-close countdown
@@ -262,7 +278,9 @@ export function DeviceFlashCard({ code, onClose }: Props) {
                 <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
                   <AlertCircle size={22} className="text-red-400" />
                 </div>
-                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">مش موجود في النظام</p>
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                  {failed ? 'حصلت مشكلة في تحميل بيانات الجهاز' : 'مش موجود في النظام'}
+                </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">{code}</p>
               </div>
             </div>
