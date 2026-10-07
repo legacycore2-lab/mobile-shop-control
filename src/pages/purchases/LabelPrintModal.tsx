@@ -189,6 +189,42 @@ export function LabelPrintModal({ data, onClose }: { data: LabelData; onClose: (
   )
 }
 
+// ── Copies stepper — يسمح بكتابة الرقم يدويًا ─────────────────────────────────
+
+const MAX_COPIES = 999
+
+function CopiesStepper({ value, disabled, onChange }: {
+  value:    number
+  disabled: boolean
+  onChange: (v: number) => void
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const btn = 'w-6 h-6 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors'
+
+  function handleChange(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 3)
+    setDraft(digits)
+    if (digits) onChange(Math.max(1, Math.min(MAX_COPIES, Number(digits))))
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button onClick={() => onChange(Math.max(1, value - 1))} disabled={disabled} className={btn}>−</button>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={draft ?? String(value)}
+        disabled={disabled}
+        onChange={e => handleChange(e.target.value)}
+        onFocus={e => e.target.select()}
+        onBlur={() => setDraft(null)}
+        className="w-10 h-6 text-center text-xs font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:border-blue-500 disabled:opacity-30"
+      />
+      <button onClick={() => onChange(Math.min(MAX_COPIES, value + 1))} disabled={disabled} className={btn}>+</button>
+    </div>
+  )
+}
+
 // ── Bulk Label Modal — بعد تأكيد الفاتورة ────────────────────────────────────
 
 interface BulkItem {
@@ -273,7 +309,7 @@ export function BulkLabelPrintModal({
   }
 
   function setCopies(id: string, val: number) {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, copies: Math.max(1, Math.min(999, val)) } : i))
+    setItems(prev => prev.map(i => i.id === id ? { ...i, copies: Math.max(1, Math.min(MAX_COPIES, val)) } : i))
   }
 
   function toggleAll() {
@@ -373,21 +409,7 @@ export function BulkLabelPrintModal({
                     </div>
 
                     {/* Copies */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => setCopies(item.id, item.copies - 1)}
-                        disabled={!item.checked}
-                        className="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors">
-                        −
-                      </button>
-                      <span className="w-6 text-center text-xs font-bold text-gray-900 dark:text-white">{item.copies}</span>
-                      <button
-                        onClick={() => setCopies(item.id, item.copies + 1)}
-                        disabled={!item.checked}
-                        className="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors">
-                        +
-                      </button>
-                    </div>
+                    <CopiesStepper value={item.copies} disabled={!item.checked} onChange={v => setCopies(item.id, v)} />
                   </div>
                 )
               })}
@@ -455,21 +477,7 @@ export function BulkLabelPrintModal({
                           بعدد الوحدات ({p.quantity})
                         </button>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setCopies(item.id, item.copies - 1)}
-                          disabled={!item.checked}
-                          className="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors">
-                          −
-                        </button>
-                        <span className="w-6 text-center text-xs font-bold text-gray-900 dark:text-white">{item.copies}</span>
-                        <button
-                          onClick={() => setCopies(item.id, item.copies + 1)}
-                          disabled={!item.checked}
-                          className="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors">
-                          +
-                        </button>
-                      </div>
+                      <CopiesStepper value={item.copies} disabled={!item.checked} onChange={v => setCopies(item.id, v)} />
                     </div>
                   </div>
                 )
