@@ -156,7 +156,7 @@ export function CreateSaleModal({ onClose, initialDeviceId }: { onClose: () => v
   const createMutation  = useCreateSale()
   const confirmMutation = useConfirmSale()
 
-  // Auto-add device from IMEI scan (جاي من DeviceFlashCard)
+  // Auto-add device from IMEI scan (جاي من ScanFlashCard)
   const initialDeviceAdded = useRef(false)
 
   useEffect(() => {

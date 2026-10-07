@@ -35,7 +35,7 @@ export function PosPage() {
   const [detailId,     setDetailId]    = useState<string | null>(null)
   const location = useLocation()
 
-  // لو جاي من DeviceFlashCard بعد مسح IMEI — افتح الفاتورة مباشرة بالجهاز
+  // لو جاي من ScanFlashCard بعد مسح IMEI — افتح الفاتورة مباشرة بالجهاز
   useEffect(() => {
     const state = location.state as { autoDeviceId?: string; openSaleId?: string } | null
     if (state?.autoDeviceId) {
@@ -44,7 +44,7 @@ export function PosPage() {
       // امسح الـ state علشان لو رجع للصفحة متفتحش تاني
       window.history.replaceState({}, '')
     }
-    // جاي من DeviceFlashCard لجهاز مباع — افتح فاتورة البيع بتاعته
+    // جاي من ScanFlashCard لجهاز مباع — افتح فاتورة البيع بتاعته
     if (state?.openSaleId) {
       setDetailId(state.openSaleId)
       window.history.replaceState({}, '')

@@ -31,7 +31,7 @@ const ExpensesPage       = lazy(() => import('@/pages/expenses/ExpensesPage').th
 const AttendancePage     = lazy(() => import('@/pages/attendance/AttendancePage').then(m => ({ default: m.AttendancePage })))
 const PermissionsPage    = lazy(() => import('@/pages/permissions/PermissionsPage').then(m => ({ default: m.PermissionsPage })))
 
-import { DeviceFlashCard } from '@/components/shared/DeviceFlashCard'
+import { ScanFlashCard } from '@/components/shared/ScanFlashCard'
 import { AppErrorBoundary, PageErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 const qc = new QueryClient({
@@ -178,7 +178,7 @@ function Guard() {
         </Suspense>
 
         {scanModal && (
-          <DeviceFlashCard
+          <ScanFlashCard
             code={scanCode}
             onClose={() => { setScanModal(false); setScanCode('') }}
           />

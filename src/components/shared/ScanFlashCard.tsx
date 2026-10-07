@@ -1,10 +1,10 @@
-// src/components/shared/DeviceFlashCard.tsx
-// بطاقة سريعة تظهر لما تسكن IMEI — تختفي تلقائي بعد 8 ثواني
+// src/components/shared/ScanFlashCard.tsx
+// بطاقة سريعة تظهر لما تسكن IMEI أو باركود منتج — تختفي تلقائي بعد 8 ثواني
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   X, ShoppingCart, AlertCircle, Wrench, RotateCcw, Ban,
-  Smartphone, Copy, Check, FileText,
+  Smartphone, Copy, Check, FileText, Package,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -29,6 +29,18 @@ interface DeviceInfo {
   sold_at:         string | null
   sale_invoice_id: string | null
   customer_name:   string | null
+}
+
+interface ProductInfo {
+  id:            string
+  name:          string
+  sku:           string | null
+  barcode:       string | null
+  category_name: string
+  unit:          string
+  stock_qty:     number
+  cost_price:    number
+  selling_price: number
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -117,6 +129,31 @@ async function lookup(code: string): Promise<DeviceInfo | null> {
   }
 }
 
+async function lookupProduct(code: string): Promise<ProductInfo | null> {
+  const clean = code.trim()
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, sku, barcode, unit, stock_qty, cost_price, selling_price, product_categories!category_id ( name )')
+    .or(`sku.eq.${clean},barcode.eq.${clean}`)
+    .limit(1)
+  if (error) throw error
+
+  const p = (data ?? [])[0] as unknown as Record<string, unknown> | undefined
+  if (!p) return null
+  const cat = p['product_categories'] as Record<string, unknown> | null
+  return {
+    id:            String(p['id']),
+    name:          String(p['name']),
+    sku:           p['sku'] as string | null,
+    barcode:       p['barcode'] as string | null,
+    category_name: String(cat?.['name'] ?? '—'),
+    unit:          String(p['unit'] ?? 'قطعة'),
+    stock_qty:     Number(p['stock_qty'] ?? 0),
+    cost_price:    Number(p['cost_price'] || 0),
+    selling_price: Number(p['selling_price'] || 0),
+  }
+}
+
 // ── Small parts ───────────────────────────────────────────────────────────────
 
 function BatteryBar({ pct }: { pct: number }) {
@@ -182,8 +219,9 @@ interface Props {
   onClose: () => void
 }
 
-export function DeviceFlashCard({ code, onClose }: Props) {
+export function ScanFlashCard({ code, onClose }: Props) {
   const [device,   setDevice]   = useState<DeviceInfo | null>(null)
+  const [product,  setProduct]  = useState<ProductInfo | null>(null)
   const [loading,  setLoading]  = useState(true)
   const [failed,   setFailed]   = useState(false)
   const [progress, setProgress] = useState(100)
@@ -204,7 +242,11 @@ export function DeviceFlashCard({ code, onClose }: Props) {
   // Fetch
   useEffect(() => {
     lookup(code)
-      .then(d => { setDevice(d); setLoading(false) })
+      .then(async d => {
+        if (d) setDevice(d)
+        else   setProduct(await lookupProduct(code))
+        setLoading(false)
+      })
       .catch(() => { setFailed(true); setLoading(false) })
   }, [code])
 
@@ -266,7 +308,7 @@ export function DeviceFlashCard({ code, onClose }: Props) {
           )}
 
           {/* Not found */}
-          {!loading && !device && (
+          {!loading && !device && !product && (
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate flex-1 ml-2">{code}</p>
@@ -279,9 +321,55 @@ export function DeviceFlashCard({ code, onClose }: Props) {
                   <AlertCircle size={22} className="text-red-400" />
                 </div>
                 <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                  {failed ? 'حصلت مشكلة في تحميل بيانات الجهاز' : 'مش موجود في النظام'}
+                  {failed ? 'حصلت مشكلة في تحميل البيانات' : 'مش موجود في النظام'}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">{code}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Product found */}
+          {!loading && product && (
+            <div className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <Package size={22} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate">{product.name}</p>
+                  <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">{product.category_name}</p>
+                </div>
+                <button
+                  onClick={handleClose}
+                  aria-label="إغلاق"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors flex-shrink-0 self-start"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3.5 py-3">
+                <p className="text-[13px] text-gray-500 dark:text-gray-400">سعر البيع</p>
+                <p className="text-[28px] font-black text-gray-900 dark:text-white tabular-nums leading-tight">
+                  {fmt(product.selling_price)}
+                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400 mr-1">ج</span>
+                </p>
+                {canSeeCost && (
+                  <div className="flex items-center gap-4 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-[13px]">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      التكلفة <span className="font-semibold text-gray-900 dark:text-white tabular-nums">{fmt(product.cost_price)}</span>
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      الربح للوحدة <ProfitText value={product.selling_price - product.cost_price} />
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+                <InfoRow label="المتوفر">{product.stock_qty} {product.unit}</InfoRow>
+                {product.sku && <ImeiRow label="SKU" value={product.sku} />}
+                {product.barcode && <ImeiRow label="الباركود" value={product.barcode} />}
               </div>
             </div>
           )}
