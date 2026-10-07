@@ -267,11 +267,7 @@ export function ProductModal({ product, onClose }: {
         onClose()
       } else {
         const created = await createMutation.mutateAsync(payload)
-        const autoCode = `PRD-${String(Date.now()).slice(-6)}`
-        const code = created.barcode || created.sku || autoCode
-        if (!created.barcode && !created.sku) {
-          void updateMutation.mutateAsync({ id: created.id, form: { sku: autoCode } }).catch(() => {})
-        }
+        const code = created.barcode || created.sku || created.id.slice(0, 12)
         const cat = categories.find(c => c.id === created.category_id)
         setPrintLabel({
           code,

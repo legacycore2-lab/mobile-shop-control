@@ -68,66 +68,39 @@ function QrDisplay({ code, size = 80 }: { code: string; size?: number }) {
 
 // ── Print engine ──────────────────────────────────────────────────────────────
 
-async function printLabels(items: { data: LabelData; copies: number }[], shopName: string) {
-  const today = new Date().toLocaleDateString('ar-EG')
-
+async function printLabels(items: { data: LabelData; copies: number }[]) {
   const labelBlocks: string[] = []
 
   for (const { data, copies } of items) {
     const code = getLabelCode(data)
-    const title = getLabelTitle(data)
 
     let qrDataUrl = ''
     try {
-      qrDataUrl = await QRCode.toDataURL(code, { width: 200, margin: 0, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
+      qrDataUrl = await QRCode.toDataURL(code, { width: 240, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
     } catch { /* ignore */ }
     const barcodeStr = qrDataUrl ? `<img src="${qrDataUrl}" />` : ''
 
-    const imeiLine = data.type === 'device'
-      ? `<div class="imei-row"><span class="imei-label">IMEI 1</span><span class="imei-value">${data.imei1}</span></div>${data.imei2 ? `<div class="imei-row"><span class="imei-label">IMEI 2</span><span class="imei-value">${data.imei2}</span></div>` : ''}`
-      : `<div class="imei-row"><span class="imei-label">${data.sku ? 'SKU' : 'المنتج'}</span><span class="imei-value">${data.sku ?? data.name}</span></div>`
-
-    const labelHtml = `
-      <div class="label">
-        <div class="imei-block">${imeiLine}</div>
-        <div class="barcode-section">${barcodeStr}</div>
-      </div>
-    `
+    const labelHtml = `<div class="label">${barcodeStr}</div>`
     for (let i = 0; i < copies; i++) labelBlocks.push(labelHtml)
   }
 
-  const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
-  <meta charset="UTF-8"><title>طباعة ليبلات</title>
+  const html = `<!DOCTYPE html><html><head>
+  <meta charset="UTF-8"><title>ليبل</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif!important }
-    body { background:#f5f5f5; direction:rtl; }
-    .labels-wrap { display:flex; flex-direction:column; align-items:flex-start; gap:0; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    @page { size:38mm 24.5mm; margin:0; }
+    html, body { background:#fff; width:38mm; }
     .label {
-      width:38mm; height:25mm;
-      background:#fff;
-      padding:1mm;
-      page-break-after:always;
-      page-break-inside:avoid;
-      display:flex; flex-direction:row-reverse; align-items:center; gap:1mm;
-      overflow:hidden;
+      width:38mm; height:24mm;
+      display:flex; align-items:center; justify-content:center;
+      break-inside:avoid; overflow:hidden;
     }
-    .imei-block { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:0.3mm; }
-    .imei-row { display:flex; flex-direction:column; align-items:flex-start; }
-    .imei-label { font-size:5px; color:#666; line-height:1; }
-    .imei-value { font-size:6px; font-weight:700; color:#000; font-family:monospace!important; letter-spacing:-0.2px; line-height:1.2; }
-    .barcode-section { flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-    .barcode-section img { display:block; width:17mm; height:17mm; }
-    @page { size:38mm 25mm; margin:0; }
-    @media print {
-      body { background:#fff; }
-      .labels-wrap { gap:0; }
-      .label { border:none; }
-    }
+    .label + .label { break-before:page; }
+    .label img { display:block; width:21mm; height:21mm; }
   </style>
 </head><body>
-<div class="labels-wrap">${labelBlocks.join('')}</div>
-<script>document.fonts.ready.then(()=>window.print())<\/script>
+${labelBlocks.join('')}
+<script>window.onload=function(){window.print()};<\/script>
 </body></html>`
 
   const win = window.open('', '_blank')
@@ -206,7 +179,7 @@ export function LabelPrintModal({ data, onClose }: { data: LabelData; onClose: (
             className="flex-1 h-10 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             إغلاق
           </button>
-          <button onClick={() => void printLabels([{ data, copies }], 'Mobile Shop')}
+          <button onClick={() => void printLabels([{ data, copies }])}
             className="flex-1 h-10 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center gap-2">
             <Printer size={14} /> طباعة {copies > 1 ? `(${copies} نسخ)` : ''}
           </button>
@@ -312,7 +285,7 @@ export function BulkLabelPrintModal({
     if (!selected.length) return
     setPrinting(true)
     try {
-      await printLabels(selected.map(i => ({ data: i.data, copies: i.copies })), 'Mobile Shop')
+      await printLabels(selected.map(i => ({ data: i.data, copies: i.copies })))
     } finally {
       setPrinting(false)
     }

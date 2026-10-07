@@ -34,6 +34,13 @@ export interface ProductStats {
   totalSellingValue: number
 }
 
+// كود تلقائي للمنتج اللي مالوش SKU ولا باركود — عشان يتطبع له QR ويتمسح في الكاشير
+function generateProductCode(): string {
+  const time = Date.now().toString(36).toUpperCase()
+  const rand = Math.random().toString(36).slice(2, 5).toUpperCase()
+  return `PRD-${time}${rand}`
+}
+
 export const productsService = {
 
   // ── Categories ────────────────────────────────────────────────────────────
@@ -88,11 +95,14 @@ export const productsService = {
     if (Number(form.cost_price) < 0)    throw new Error('سعر الشراء غير صحيح')
     if (Number(form.selling_price) < 0) throw new Error('سعر البيع غير صحيح')
 
+    const sku     = form.sku?.trim()     || null
+    const barcode = form.barcode?.trim() || null
+
     return productsRepository.create({
       category_id:         form.category_id,
       name:                form.name.trim(),
-      sku:                 form.sku?.trim()     || null,
-      barcode:             form.barcode?.trim() || null,
+      sku:                 sku ?? (barcode ? null : generateProductCode()),
+      barcode,
       product_type:        form.product_type,
       compatible_models:   null,
       cost_price:          Number(form.cost_price)    || 0,
