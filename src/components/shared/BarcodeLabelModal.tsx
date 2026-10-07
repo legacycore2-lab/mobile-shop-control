@@ -62,28 +62,16 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     color: { dark: '#000000', light: '#ffffff' },
   })
 
-  const priceHtml = label.price
-    ? `<div class="price">${label.price.toLocaleString('en-US')} ج</div>`
-    : ''
-
   const singleLabel = `
     <div class="label">
-      <div class="right">
-        <div class="name">${label.name}</div>
-        ${label.subName ? `<div class="sub">${label.subName}</div>` : ''}
-        ${label.storage ? `<div class="attr">${label.storage}</div>` : ''}
-        ${label.color   ? `<div class="attr">${label.color}</div>`   : ''}
-        ${priceHtml}
-      </div>
       <img class="qr" src="${qrDataUrl}" />
     </div>`
 
-  const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+  const html = `<!DOCTYPE html><html><head>
   <meta charset="UTF-8">
   <title>ليبل</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo',Arial,sans-serif!important; }
+    * { margin:0; padding:0; box-sizing:border-box; }
     @page { size: 38mm 25mm; margin: 0; }
     body { background:#fff; width:38mm; height:25mm; overflow:hidden; }
     .wrap { display:flex; flex-direction:column; gap:0; }
@@ -92,31 +80,17 @@ async function printLabel(label: BarcodeLabel, copies: number) {
       height: 25mm;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 1.5mm 1.5mm;
+      justify-content: center;
       page-break-after: always;
       overflow: hidden;
     }
-    .right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 0.8mm;
-      overflow: hidden;
-      padding-left: 1mm;
-    }
-    .name  { font-size: 6.5pt; font-weight: 700; color:#111; line-height:1.1; }
-    .sub   { font-size: 5.5pt; font-weight: 600; color:#333; }
-    .attr  { font-size: 5pt;   color: #555; }
-    .price { font-size: 7pt;   font-weight: 800; color: #15803d; margin-top:0.5mm; }
-    .qr    { width: 20mm; height: 20mm; flex-shrink: 0; }
+    .qr { width: 23mm; height: 23mm; }
   </style>
   </head><body>
   <div class="wrap">
     ${Array.from({ length: copies }).map(() => singleLabel).join('')}
   </div>
-  <script>document.fonts.ready.then(()=>window.print());<\/script>
+  <script>window.print();<\/script>
   </body></html>`
 
   const win = window.open('', '_blank')
