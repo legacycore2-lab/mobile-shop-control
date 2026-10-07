@@ -76,7 +76,7 @@ export function AddProductInlineForm({
         product_type:        'accessory',
         cost_price:          Number(form.cost_price),
         selling_price:       form.selling_price ? Number(form.selling_price) : 0,
-        stock_qty:           Number(form.stock_qty) || 0,
+        stock_qty:           0, // المخزون بيزيد عند تأكيد الفاتورة — لو اتسجل هنا هيتحسب مرتين
         reorder_level:       Number(form.reorder_level) || 5,
         unit:                form.unit || 'قطعة',
         default_supplier_id: supplierId,
