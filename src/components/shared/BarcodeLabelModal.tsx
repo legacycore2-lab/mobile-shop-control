@@ -72,25 +72,24 @@ async function printLabel(label: BarcodeLabel, copies: number) {
   <title>ليبل</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    @page { size: 38mm 25mm; margin: 0; }
-    body { background:#fff; width:38mm; height:25mm; overflow:hidden; }
-    .wrap { display:flex; flex-direction:column; gap:0; }
+    @page { size: 38mm 24.5mm; margin: 0; }
+    html, body { background:#fff; width:38mm; }
     .label {
       width: 38mm;
-      height: 25mm;
+      height: 24.5mm;
       display: flex;
       align-items: center;
       justify-content: center;
-      page-break-after: always;
+      break-after: page;
+      break-inside: avoid;
       overflow: hidden;
     }
-    .qr { width: 23mm; height: 23mm; }
+    .label:last-child { break-after: auto; }
+    .qr { width: 21mm; height: 21mm; display: block; }
   </style>
   </head><body>
-  <div class="wrap">
-    ${Array.from({ length: copies }).map(() => singleLabel).join('')}
-  </div>
-  <script>window.print();<\/script>
+  ${Array.from({ length: copies }).map(() => singleLabel).join('')}
+  <script>window.onload=function(){window.print()};<\/script>
   </body></html>`
 
   const win = window.open('', '_blank')
