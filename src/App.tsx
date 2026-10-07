@@ -1,4 +1,5 @@
 // src/App.tsx
+import { scannedChar } from '@/components/shared/BarcodeScanner'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
@@ -74,8 +75,9 @@ function GlobalUsbScanner({ onScan }: { onScan: (code: string) => void }) {
         return
       }
 
-      if (e.key.length === 1) {
-        buf.current += e.key
+      const ch = scannedChar(e)
+      if (ch) {
+        buf.current += ch
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => { buf.current = '' }, 150)
       }

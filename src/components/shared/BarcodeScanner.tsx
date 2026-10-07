@@ -14,6 +14,22 @@ interface BarcodeScannerProps {
   placeholder?: string
 }
 
+// الـ USB scanner بيكتب كأنه كيبورد — لو لغة الكيبورد عربي، e.key بيرجع حروف عربي.
+// بنقرأ الحرف من المفتاح الفعلي (e.code) عشان الكود يتقرأ صح بأي لغة.
+export function scannedChar(e: KeyboardEvent): string {
+  const letter = /^Key([A-Z])$/.exec(e.code)
+  if (letter) {
+    const upper = e.shiftKey !== e.getModifierState('CapsLock')
+    return upper ? letter[1] : letter[1].toLowerCase()
+  }
+  const digit = /^Digit(\d)$/.exec(e.code)
+  if (digit && !e.shiftKey) return digit[1]
+  if (e.code === 'Minus')  return e.shiftKey ? '_' : '-'
+  if (e.code === 'Slash' && !e.shiftKey) return '/'
+  if (e.code === 'Period' && !e.shiftKey) return '.'
+  return e.key.length === 1 && e.key.charCodeAt(0) < 128 ? e.key : ''
+}
+
 // ── USB hook (used both inside modal and externally) ──────────────────────────
 
 export function useUsbScanner(onScan: (code: string) => void, active: boolean) {
@@ -31,8 +47,9 @@ export function useUsbScanner(onScan: (code: string) => void, active: boolean) {
         buf.current = ''
         return
       }
-      if (e.key.length === 1) {
-        buf.current += e.key
+      const ch = scannedChar(e)
+      if (ch) {
+        buf.current += ch
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => { buf.current = '' }, 100)
       }
