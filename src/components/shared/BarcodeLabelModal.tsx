@@ -190,7 +190,6 @@ export function BarcodeLabelModal({ label, onClose }: Props) {
           {/* QR preview only */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center gap-2">
             <QRCanvas value={label.code} size={140} />
-            <p className="font-mono text-xs text-gray-500 tracking-wider">{label.code}</p>
           </div>
 
           {/* Label size note */}
