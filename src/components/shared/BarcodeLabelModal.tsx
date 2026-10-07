@@ -76,15 +76,14 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     html, body { background:#fff; width:38mm; }
     .label {
       width: 38mm;
-      height: 24.5mm;
+      height: 24mm;
       display: flex;
       align-items: center;
       justify-content: center;
-      break-after: page;
       break-inside: avoid;
       overflow: hidden;
     }
-    .label:last-child { break-after: auto; }
+    .label + .label { break-before: page; }
     .qr { width: 21mm; height: 21mm; display: block; }
   </style>
   </head><body>
