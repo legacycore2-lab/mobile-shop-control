@@ -41,6 +41,8 @@ export function useUsbScanner(onScan: (code: string) => void, active: boolean) {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      // السكانر مبيكررش مفتاح — التكرار معناه إن مفتاح ضاغط عليه، فنفضّي المخزن
+      if (e.repeat) { buf.current = ''; return }
       if (e.key === 'Enter') {
         const code = buf.current.trim()
         if (code.length >= 4) onScan(code)

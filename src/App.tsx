@@ -66,6 +66,7 @@ function GlobalUsbScanner({ onScan }: { onScan: (code: string) => void }) {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.repeat) { buf.current = ''; return }
 
       if (e.key === 'Enter') {
         const code = buf.current.trim()
