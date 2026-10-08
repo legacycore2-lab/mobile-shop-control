@@ -371,6 +371,16 @@ export function ScanFlashCard({ code, onClose }: Props) {
                 {product.sku && <ImeiRow label="SKU" value={product.sku} />}
                 {product.barcode && <ImeiRow label="الباركود" value={product.barcode} />}
               </div>
+
+              {product.stock_qty > 0 && (
+                <button
+                  onClick={() => { handleClose(); navigate('/pos', { state: { autoProductId: product.id } }) }}
+                  className="mt-3 w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                >
+                  <ShoppingCart size={16} />
+                  بيع دلوقتي
+                </button>
+              )}
             </div>
           )}
 

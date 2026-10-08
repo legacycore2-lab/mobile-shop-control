@@ -148,7 +148,11 @@ function NotFoundCard({ code, onDismiss }: { code: string; onDismiss: () => void
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
-export function CreateSaleModal({ onClose, initialDeviceId }: { onClose: () => void; initialDeviceId?: string }) {
+export function CreateSaleModal({ onClose, initialDeviceId, initialProductId }: {
+  onClose: () => void
+  initialDeviceId?: string
+  initialProductId?: string
+}) {
   const { profile }               = useAuth()
   const { data: customers  = [] } = useCustomers()
   const { data: products   = [] } = useProducts()
@@ -187,6 +191,19 @@ export function CreateSaleModal({ onClose, initialDeviceId }: { onClose: () => v
   const [scanPreview,   setScanPreview]   = useState<ScanPreview | null>(null)
   const [notFoundCode,  setNotFoundCode]  = useState<string | null>(null)
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Auto-add product from barcode scan (جاي من ScanFlashCard)
+  const initialProductAdded = useRef(false)
+
+  useEffect(() => {
+    if (!initialProductId || initialProductAdded.current || products.length === 0) return
+    if (products.some(p => p.id === initialProductId)) {
+      addProduct(initialProductId)
+      setTab('products')
+      initialProductAdded.current = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProductId, products])
 
   // ── helpers ───────────────────────────────────────────────────────────────
 

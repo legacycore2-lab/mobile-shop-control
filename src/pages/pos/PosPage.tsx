@@ -32,16 +32,22 @@ export function PosPage() {
   const [page,         setPage]        = useState(1)
   const [showCreate,   setShowCreate]  = useState(false)
   const [autoDeviceId, setAutoDeviceId] = useState<string | null>(null)
+  const [autoProductId, setAutoProductId] = useState<string | null>(null)
   const [detailId,     setDetailId]    = useState<string | null>(null)
   const location = useLocation()
 
-  // لو جاي من ScanFlashCard بعد مسح IMEI — افتح الفاتورة مباشرة بالجهاز
+  // لو جاي من ScanFlashCard بعد مسح IMEI أو باركود منتج — افتح الفاتورة مباشرة بيه
   useEffect(() => {
-    const state = location.state as { autoDeviceId?: string; openSaleId?: string } | null
+    const state = location.state as { autoDeviceId?: string; autoProductId?: string; openSaleId?: string } | null
     if (state?.autoDeviceId) {
       setAutoDeviceId(state.autoDeviceId)
       setShowCreate(true)
       // امسح الـ state علشان لو رجع للصفحة متفتحش تاني
+      window.history.replaceState({}, '')
+    }
+    if (state?.autoProductId) {
+      setAutoProductId(state.autoProductId)
+      setShowCreate(true)
       window.history.replaceState({}, '')
     }
     // جاي من ScanFlashCard لجهاز مباع — افتح فاتورة البيع بتاعته
@@ -272,7 +278,8 @@ export function PosPage() {
       {showCreate && (
         <CreateSaleModal
           initialDeviceId={autoDeviceId ?? undefined}
-          onClose={() => { setShowCreate(false); setAutoDeviceId(null) }}
+          initialProductId={autoProductId ?? undefined}
+          onClose={() => { setShowCreate(false); setAutoDeviceId(null); setAutoProductId(null) }}
         />
       )}
       {detailId   && <SaleDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
