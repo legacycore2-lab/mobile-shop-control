@@ -1,12 +1,15 @@
 // src/pages/products/ProductDrawer.tsx
-import { X, Package, AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { X, Package, AlertTriangle, Printer } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
 import { cn } from '@/lib/cn'
 import { TYPE_MAP } from './constants'
 import { fmt } from '@/lib/fmt'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 
 export function ProductDrawer({ product: p, onClose }: { product: ProductWithCategory; onClose: () => void }) {
+  const [showLabel, setShowLabel] = useState(false)
   const isLow = p.stock_qty <= p.reorder_level
 
   const rows: { label: string; value: string | number | null | undefined }[] = [
@@ -85,7 +88,28 @@ export function ProductDrawer({ product: p, onClose }: { product: ProductWithCat
             </div>
           )}
         </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-800">
+          <button onClick={() => setShowLabel(true)}
+            className="w-full h-10 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+            <Printer size={16} /> طباعة ليبل
+          </button>
+        </div>
       </div>
+
+      {showLabel && (
+        <BarcodeLabelModal
+          label={{
+            type:    'product',
+            code:    p.barcode || p.sku || p.id.slice(0, 12),
+            name:    p.name,
+            subName: p.category_name ?? TYPE_MAP[p.product_type]?.label,
+            price:   p.selling_price,
+          }}
+          onClose={() => setShowLabel(false)}
+        />
+      )}
     </div>
   )
 }
