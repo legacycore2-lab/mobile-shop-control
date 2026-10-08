@@ -290,6 +290,7 @@ export const reportsRepository = {
       .from('products')
       .select('id, name, stock_qty, reorder_level, cost_price, selling_price, is_active, product_categories!category_id ( name )')
       .eq('is_active', true)
+      .eq('is_deleted', false)
     if (error) throw error
     return ((data ?? []) as unknown[])
       .map(row => {
@@ -344,6 +345,7 @@ export const reportsRepository = {
       .from('products')
       .select('id, name, sku, unit, stock_qty, cost_price, selling_price, reorder_level, product_categories!category_id ( name )')
       .eq('is_active', true)
+      .eq('is_deleted', false)
       .order('name')
     if (prodErr) throw prodErr
 

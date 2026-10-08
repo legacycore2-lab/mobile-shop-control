@@ -106,6 +106,7 @@ async function lookupCode(code: string): Promise<ScanResult> {
     .from('products')
     .select(`id, name, sku, barcode, unit, stock_qty, cost_price, selling_price, reorder_level, product_categories!category_id ( name )`)
     .or(`sku.eq.${clean},barcode.eq.${clean}`)
+    .eq('is_deleted', false)
     .limit(1)
 
   if (products && products.length > 0) {

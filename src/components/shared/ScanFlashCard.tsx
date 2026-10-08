@@ -135,6 +135,7 @@ async function lookupProduct(code: string): Promise<ProductInfo | null> {
     .from('products')
     .select('id, name, sku, barcode, unit, stock_qty, cost_price, selling_price, product_categories!category_id ( name )')
     .or(`sku.eq.${clean},barcode.eq.${clean}`)
+    .eq('is_deleted', false)
     .limit(1)
   if (error) throw error
 
