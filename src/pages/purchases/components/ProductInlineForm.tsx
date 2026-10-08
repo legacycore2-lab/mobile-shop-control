@@ -91,6 +91,7 @@ export function AddProductInlineForm({
         product_id: product.id,
         quantity:   qty,
         unit_price: Number(form.cost_price),
+        line_selling_price: form.selling_price ? Number(form.selling_price) : 0,
         label:      form.name.trim(),
       })
     } catch (err) {

@@ -14,9 +14,10 @@ export interface InvoiceDeviceLine {
 }
 
 export interface InvoiceProductLine {
-  product_id: string
-  quantity:   number
-  unit_price: number
+  product_id:         string
+  quantity:           number
+  unit_price:         number
+  line_selling_price: number
 }
 
 const INVOICE_SELECT = `
@@ -138,6 +139,7 @@ export const purchasesRepository = {
         quantity:      n(p['quantity']),
         unit_price:    n(p['unit_price']),
         subtotal:      n(p['subtotal']),
+        line_selling_price: p['line_selling_price'] == null ? null : n(p['line_selling_price']),
         created_at:    String(p['created_at']),
         product_name:  String(prd?.['name']     ?? '—'),
         unit:          String(prd?.['unit']      ?? 'قطعة'),
@@ -202,6 +204,13 @@ export const purchasesRepository = {
       p_reason:     reason || null,
     } as never)
     if (error) throw error
+  },
+
+  refreshProductPrices: async (productIds: string[]): Promise<void> => {
+    for (const id of productIds) {
+      const { error } = await supabase.rpc('refresh_product_prices', { p_product_id: id } as never)
+      if (error) throw error
+    }
   },
 
   getDeviceLinesByInvoice: async (invoiceId: string) => {

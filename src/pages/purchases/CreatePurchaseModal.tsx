@@ -133,11 +133,11 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
     setProductLines(prev => {
       const exists = prev.find(l => l.product_id === productId)
       if (exists) return prev.map(l => l.product_id === productId ? { ...l, quantity: l.quantity + 1 } : l)
-      return [...prev, { product_id: productId, quantity: 1, unit_price: product.cost_price }]
+      return [...prev, { product_id: productId, quantity: 1, unit_price: product.cost_price, line_selling_price: product.selling_price }]
     })
   }
 
-  function updateProductLine(productId: string, field: 'quantity' | 'unit_price', value: number) {
+  function updateProductLine(productId: string, field: 'quantity' | 'unit_price' | 'line_selling_price', value: number) {
     setProductLines(prev => prev.map(l => l.product_id === productId ? { ...l, [field]: value } : l))
   }
 
@@ -536,18 +536,29 @@ export function CreatePurchaseModal({ onClose }: { onClose: () => void }) {
                           {productLines.map(line => {
                             const product = products.find(p => p.id === line.product_id)
                             return (
-                              <div key={line.product_id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
-                                <div className="flex-1 min-w-0">
+                              <div key={line.product_id} className="flex flex-wrap items-end gap-x-3 gap-y-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
+                                <div className="flex-1 min-w-[8rem] self-center">
                                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{product?.name}</p>
                                 </div>
-                                <input type="number" min="1" value={line.quantity}
-                                  onChange={e => updateProductLine(line.product_id, 'quantity', Number(e.target.value))}
-                                  className="w-16 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
-                                <span className="text-xs text-gray-400 dark:text-gray-600">×</span>
-                                <input type="number" min="0" step="0.01" value={line.unit_price}
-                                  onChange={e => updateProductLine(line.product_id, 'unit_price', Number(e.target.value))}
-                                  className="w-24 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
-                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap w-20 text-left">
+                                <label className="flex flex-col gap-0.5">
+                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">الكمية</span>
+                                  <input type="number" min="1" value={line.quantity}
+                                    onChange={e => updateProductLine(line.product_id, 'quantity', Number(e.target.value))}
+                                    className="w-16 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">سعر الشراء</span>
+                                  <input type="number" min="0" step="0.01" value={line.unit_price}
+                                    onChange={e => updateProductLine(line.product_id, 'unit_price', Number(e.target.value))}
+                                    className="w-24 h-8 border border-gray-200 dark:border-gray-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-blue-500" />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                  <span className="text-[10px] text-green-600 dark:text-green-400">سعر البيع</span>
+                                  <input type="number" min="0" step="0.01" value={line.line_selling_price}
+                                    onChange={e => updateProductLine(line.product_id, 'line_selling_price', Number(e.target.value))}
+                                    className="w-24 h-8 border border-green-300 dark:border-green-700 rounded-lg px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:outline-none focus:border-green-500" />
+                                </label>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap w-20 text-left self-center">
                                   = {fmt(line.quantity * line.unit_price)} ج
                                 </span>
                                 <button type="button"

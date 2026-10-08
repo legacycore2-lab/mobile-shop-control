@@ -110,7 +110,9 @@ export interface PurchaseInvoiceDevice {
 
 export interface PurchaseInvoiceProduct {
   id: string; invoice_id: string; product_id: string
-  quantity: number; unit_price: number; subtotal: number; created_at: string
+  quantity: number; unit_price: number; subtotal: number
+  line_selling_price: number | null
+  created_at: string
 }
 
 export interface PurchaseInvoiceDetailDevice extends PurchaseInvoiceDevice {

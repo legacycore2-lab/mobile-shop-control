@@ -68,6 +68,14 @@ export function useConfirmPurchase() {
   })
 }
 
+export function useRefreshProductPrices() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (productIds: string[]) => purchasesService.refreshProductPrices(productIds),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['products'] }) },
+  })
+}
+
 export function useCreatePurchaseShell() {
   return useMutation({
     mutationFn: ({ supplierId, invoiceDate, createdBy }: { supplierId: string; invoiceDate: string; createdBy: string }) =>

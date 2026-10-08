@@ -42,6 +42,7 @@ export const purchasesService = {
   getStats:  (): Promise<PurchaseStats>                          => purchasesRepository.getStats(),
   nextInvoiceNumber: (): Promise<string>                         => purchasesRepository.nextInvoiceNumber(),
   getUnlinkedDevicesBySupplier: (supplierId: string)             => purchasesRepository.getUnlinkedDevicesBySupplier(supplierId),
+  refreshProductPrices: (productIds: string[]): Promise<void>    => purchasesRepository.refreshProductPrices(productIds),
 
   /** ينشئ فاتورة مسودة فارغة ليُربط بها الأجهزة قبل الحفظ النهائي */
   createShell: async (supplierId: string, invoiceDate: string, createdBy: string): Promise<PurchaseInvoice> => {
