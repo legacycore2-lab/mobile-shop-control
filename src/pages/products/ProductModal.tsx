@@ -255,7 +255,7 @@ export function ProductModal({ product, onClose }: {
     try {
       const payload = {
         ...form,
-        name:          nameSearch.trim() || form.name,
+        name:          product ? form.name : (nameSearch.trim() || form.name),
         cost_price:    Number(form.cost_price)    || 0,
         selling_price: Number(form.selling_price) || 0,
         stock_qty:     Number(form.stock_qty)     || 0,
