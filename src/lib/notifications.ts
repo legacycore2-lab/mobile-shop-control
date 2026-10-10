@@ -38,8 +38,8 @@ export function sendNotification(title: string, body: string, tag?: string): voi
     new Notification(title, {
       body,
       tag,
-      icon:  '/mobile-shop-control/icon.png',
-      badge: '/mobile-shop-control/icon.png',
+      icon:  '/mobile-shop-control/icon-192.png',
+      badge: '/mobile-shop-control/icon-192.png',
       dir:   'rtl',
       lang:  'ar',
     })

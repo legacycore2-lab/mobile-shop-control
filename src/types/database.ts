@@ -215,6 +215,11 @@ export interface AuditLog {
   ip_address: string | null; created_at: string
 }
 
+export interface PushSubscriptionRow {
+  id: string; user_id: string; endpoint: string
+  p256dh: string; auth: string; created_at: string
+}
+
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
 export interface ExpenseCategory {
@@ -349,6 +354,7 @@ export type Database = {
       sale_invoice_devices:      { Row: SaleInvoiceDevice;      Insert: Omit<SaleInvoiceDevice, 'id'|'created_at'>;                        Update: never }
       sale_invoice_products:     { Row: SaleInvoiceProduct;     Insert: Omit<SaleInvoiceProduct, 'id'|'created_at'|'subtotal'>;            Update: never }
       payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
+      push_subscriptions:        { Row: PushSubscriptionRow;    Insert: Omit<PushSubscriptionRow, 'id'|'created_at'>;                      Update: never }
       audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
       expense_categories:        { Row: ExpenseCategory;        Insert: Omit<ExpenseCategory, 'id'|'created_at'>;                          Update: Partial<ExpenseCategory> }
       expenses:                  { Row: Expense;                Insert: Omit<Expense, 'id'|'created_at'|'updated_at'>;                     Update: Partial<Expense> }

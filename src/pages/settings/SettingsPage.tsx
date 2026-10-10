@@ -11,6 +11,7 @@ import { useSupplierStats } from '@/hooks/useSuppliers'
 import { useCustomerStats } from '@/hooks/useCustomers'
 import { useDeviceStats } from '@/hooks/useDevices'
 import { useProductStats } from '@/hooks/useProducts'
+import { useEnablePush, useDisablePush } from '@/hooks/usePushSubscription'
 import { supabase } from '@/lib/supabase'
 import {
   notificationsEnabled, setNotificationsEnabled,
@@ -77,10 +78,14 @@ export function SettingsPage() {
   const [notifEnabled,    setNotifEnabled]    = useState(notificationsEnabled())
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>(getPermission())
   const [notifLoading,    setNotifLoading]    = useState(false)
+  const [notifError,      setNotifError]      = useState('')
+  const enablePush  = useEnablePush()
+  const disablePush = useDisablePush()
 
   async function handleToggleNotifications() {
     if (!notificationsSupported()) return
     setNotifLoading(true)
+    setNotifError('')
     try {
       if (!notifEnabled) {
         const perm = await requestPermission()
@@ -88,10 +93,18 @@ export function SettingsPage() {
         if (perm === 'granted') {
           setNotificationsEnabled(true)
           setNotifEnabled(true)
+          if (session?.user.id) {
+            try {
+              await enablePush.mutateAsync(session.user.id)
+            } catch {
+              setNotifError('تعذّر تفعيل الإشعارات في الخلفية — الإشعارات تعمل فقط والتطبيق مفتوح')
+            }
+          }
         }
       } else {
         setNotificationsEnabled(false)
         setNotifEnabled(false)
+        await disablePush.mutateAsync().catch(() => undefined)
       }
     } finally {
       setNotifLoading(false)
@@ -482,6 +495,12 @@ export function SettingsPage() {
                     </div>
                   )}
 
+                  {notifError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
+                      <p className="text-xs text-red-600 dark:text-red-500">{notifError}</p>
+                    </div>
+                  )}
+
                   {/* Enabled status */}
                   {notifEnabled && notifPermission === 'granted' && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 flex items-start gap-2">
@@ -489,7 +508,7 @@ export function SettingsPage() {
                       <div>
                         <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">التنبيهات مفعّلة</p>
                         <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-                          ستصلك إشعارات عند انخفاض مخزون أي منتج — حتى لو النافذة مصغّرة
+                          ستصلك إشعارات عند انخفاض مخزون أي منتج — حتى لو التطبيق مقفول
                         </p>
                       </div>
                     </div>
