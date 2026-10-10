@@ -20,6 +20,7 @@ const TABLE_KEYS: Record<string, string[][]> = {
   customers:                [['customers'], ['ledger', 'customers']],
   mobile_brands:            [['brands']],
   mobile_models:            [['models']],
+  catalog_orders:           [['catalog_orders']],
 }
 
 let channel: ReturnType<typeof supabase.channel> | null = null

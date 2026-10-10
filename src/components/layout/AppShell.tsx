@@ -8,11 +8,12 @@ import {
   UserCheck, LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
   Menu, X, Store, Sun, Moon, Tag, Shield, ShieldCheck,
-  BookOpen, FileUp, Receipt, Bell, RefreshCw, Home,
+  BookOpen, FileUp, Receipt, Bell, RefreshCw, Home, ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useNewOrdersCount } from '@/hooks/useCatalogOrders'
 import type { Resource } from '@/lib/permissions'
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/devices',     icon: Smartphone,      label: 'الأجهزة',                      resource: 'devices'     },
   { to: '/pos',         icon: ShoppingCart,    label: 'نقطة البيع',                   resource: 'pos'         },
   { to: '/purchases',   icon: Package,         label: 'المشتريات',                    resource: 'purchases'   },
+  { to: '/orders',      icon: ClipboardList,   label: 'طلبات العملاء',                resource: 'orders'      },
   { to: '/products',    icon: Tag,             label: 'المنتجات',                     resource: 'products'    },
   { to: '/suppliers',   icon: Truck,           label: 'الموردين',                     resource: 'suppliers'   },
   { to: '/customers',   icon: Users,           label: 'العملاء',                      resource: 'customers'   },
@@ -129,6 +131,7 @@ export function AppShell() {
 
   useStockNotifications()
   const alertCount = useAlertCount()
+  const newOrders  = useNewOrdersCount(perm.canView('orders'))
 
   const visibleNav = NAV.filter(n => perm.canView(n.resource as Resource))
 
@@ -233,6 +236,11 @@ export function AppShell() {
             >
               <Icon size={17} className="flex-shrink-0" />
               <span className="flex-1 truncate">{label}</span>
+              {to === '/orders' && newOrders > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {newOrders > 99 ? '99+' : newOrders}
+                </span>
+              )}
               {to === '/products' && alertCount > 0 && (
                 <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                   {alertCount > 99 ? '99+' : alertCount}

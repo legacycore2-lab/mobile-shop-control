@@ -220,6 +220,38 @@ export interface PushSubscriptionRow {
   p256dh: string; auth: string; created_at: string
 }
 
+// ── Public catalog & customer orders ──────────────────────────────────────────
+
+export type CatalogOrderStatus = 'new' | 'confirmed' | 'completed' | 'cancelled'
+
+export interface CatalogOrder {
+  id: string; order_number: string; customer_name: string; customer_phone: string
+  notes: string | null; status: CatalogOrderStatus; total: number
+  handled_by: string | null; created_at: string; updated_at: string
+}
+
+export interface CatalogOrderItem {
+  id: string; order_id: string; item_type: 'product' | 'device'
+  product_id: string | null; device_id: string | null
+  name: string; unit_price: number; quantity: number
+}
+
+export interface CatalogProduct {
+  id: string; name: string; category: string; product_type: ProductType
+  selling_price: number; stock_qty: number; unit: string
+}
+
+export interface CatalogDevice {
+  id: string; brand: string; model: string; storage: string | null; color: string | null
+  condition: string; selling_price: number; battery_health: number | null; warranty_months: number
+}
+
+export interface PublicCatalog { products: CatalogProduct[]; devices: CatalogDevice[] }
+
+export interface CatalogOrderItemInput { kind: 'product' | 'device'; id: string; quantity: number }
+
+export interface CatalogOrderResult { id: string; order_number: string; total: number }
+
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
 export interface ExpenseCategory {
@@ -354,6 +386,8 @@ export type Database = {
       sale_invoice_devices:      { Row: SaleInvoiceDevice;      Insert: Omit<SaleInvoiceDevice, 'id'|'created_at'>;                        Update: never }
       sale_invoice_products:     { Row: SaleInvoiceProduct;     Insert: Omit<SaleInvoiceProduct, 'id'|'created_at'|'subtotal'>;            Update: never }
       payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
+      catalog_orders:            { Row: CatalogOrder;           Insert: never;                                                             Update: Partial<CatalogOrder> }
+      catalog_order_items:       { Row: CatalogOrderItem;       Insert: never;                                                             Update: never }
       push_subscriptions:        { Row: PushSubscriptionRow;    Insert: Omit<PushSubscriptionRow, 'id'|'created_at'>;                      Update: never }
       audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
       expense_categories:        { Row: ExpenseCategory;        Insert: Omit<ExpenseCategory, 'id'|'created_at'>;                          Update: Partial<ExpenseCategory> }
@@ -366,6 +400,8 @@ export type Database = {
     Functions: {
       lookup_device_by_imei:        { Args: { p_imei: string };      Returns: MobileDeviceView[] }
       get_low_stock_products:       { Args: Record<never, never>;     Returns: { product_id: string; product_name: string; stock_qty: number; reorder_level: number; category_name: string }[] }
+      get_public_catalog:           { Args: Record<never, never>;     Returns: PublicCatalog }
+      create_catalog_order:         { Args: { p_name: string; p_phone: string; p_notes: string | null; p_items: CatalogOrderItemInput[] }; Returns: CatalogOrderResult }
       next_purchase_invoice_number: { Args: Record<never, never>;     Returns: string }
       next_sale_invoice_number:     { Args: Record<never, never>;     Returns: string }
       record_attendance:            { Args: { p_employee_id: string; p_lat: number; p_lng: number; p_type: string }; Returns: RecordAttendanceResult }

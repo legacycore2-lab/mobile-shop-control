@@ -6,6 +6,7 @@ export type Resource =
   | 'dashboard' | 'devices'  | 'pos'      | 'purchases' | 'products'
   | 'suppliers' | 'customers'| 'expenses' | 'attendance'| 'reports'
   | 'ledger'    | 'audit'    | 'import'   | 'settings'  | 'permissions'
+  | 'orders'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete'
 
@@ -35,7 +36,7 @@ export function can(
 export const RESOURCES: Resource[] = [
   'dashboard','devices','pos','purchases','products',
   'suppliers','customers','expenses','attendance',
-  'reports','ledger','audit','import','settings','permissions',
+  'reports','ledger','audit','import','settings','permissions','orders',
 ]
 
 export const ACTIONS: Action[] = ['view','create','edit','delete']
@@ -56,6 +57,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   import:      'استيراد البيانات',
   settings:    'الإعدادات',
   permissions: 'الصلاحيات',
+  orders:      'طلبات العملاء',
 }
 
 export const ACTION_LABELS: Record<Action, string> = {

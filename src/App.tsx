@@ -29,6 +29,8 @@ const PartyStatementPage = lazy(() => import('@/pages/payments/PartyStatementPag
 const ImportPage         = lazy(() => import('@/pages/import/ImportPage').then(m => ({ default: m.ImportPage })))
 const ExpensesPage       = lazy(() => import('@/pages/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
 const AttendancePage     = lazy(() => import('@/pages/attendance/AttendancePage').then(m => ({ default: m.AttendancePage })))
+const OrdersPage         = lazy(() => import('@/pages/orders/OrdersPage').then(m => ({ default: m.OrdersPage })))
+const CatalogPage        = lazy(() => import('@/pages/catalog/CatalogPage').then(m => ({ default: m.CatalogPage })))
 const PermissionsPage    = lazy(() => import('@/pages/permissions/PermissionsPage').then(m => ({ default: m.PermissionsPage })))
 
 import { ScanFlashCard } from '@/components/shared/ScanFlashCard'
@@ -170,6 +172,7 @@ function Guard() {
               <Route path="/expenses"    element={<PageErrorBoundary><ProtectedRoute resource="expenses"><ExpensesPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/attendance"  element={<PageErrorBoundary><ProtectedRoute resource="attendance"><AttendancePage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/permissions" element={<PageErrorBoundary><ProtectedRoute resource="permissions"><PermissionsPage /></ProtectedRoute></PageErrorBoundary>} />
+              <Route path="/orders"      element={<PageErrorBoundary><ProtectedRoute resource="orders"><OrdersPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/import"      element={<PageErrorBoundary><ProtectedRoute resource="import"><ImportPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/settings"    element={<PageErrorBoundary><ProtectedRoute resource="settings"><SettingsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="*"            element={<Navigate to="/" replace />} />
@@ -194,7 +197,10 @@ export default function App() {
       <QueryClientProvider client={qc}>
         <AuthProvider>
           <BrowserRouter basename="/mobile-shop-control">
-            <Guard />
+            <Routes>
+              <Route path="/catalog" element={<Suspense fallback={PageLoader}><CatalogPage /></Suspense>} />
+              <Route path="/*"       element={<Guard />} />
+            </Routes>
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
