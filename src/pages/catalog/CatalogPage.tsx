@@ -80,7 +80,6 @@ export function CatalogPage() {
       />
 
       <CatalogHero
-        availableCount={available.length}
         featured={available.slice(0, 2)}
         onBrowse={() => scrollToId('catalog')}
         onHowTo={() => scrollToId('how')}

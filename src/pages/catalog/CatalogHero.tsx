@@ -10,13 +10,12 @@ const ICONS: Record<CatalogGroup, React.ElementType> = {
 }
 
 interface Props {
-  availableCount: number
   featured:       CatalogEntry[]
   onBrowse:       () => void
   onHowTo:        () => void
 }
 
-export function CatalogHero({ availableCount, featured, onBrowse, onHowTo }: Props) {
+export function CatalogHero({ featured, onBrowse, onHowTo }: Props) {
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-8 sm:pt-10">
       <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-[#0F2A6B] px-6 py-10 sm:px-12 sm:py-14 flex flex-wrap items-center gap-10">
@@ -32,7 +31,6 @@ export function CatalogHero({ availableCount, featured, onBrowse, onHowTo }: Pro
           </h1>
           <p className="text-base sm:text-lg leading-8 text-blue-100/90 max-w-lg mb-7">
             اختار من البضاعة المتاحة وابعت طلبك أونلاين. هنتواصل معاك نأكّده.
-            {availableCount > 0 && <> متاح دلوقتي <b className="text-white">{availableCount}</b> صنف.</>}
           </p>
           <div className="flex flex-wrap gap-3">
             <button onClick={onBrowse} className="h-12 px-7 rounded-xl bg-white text-[#0F2A6B] font-bold text-base hover:bg-blue-50 transition-colors">
