@@ -13,7 +13,7 @@ import { CartPanel } from './CartPanel'
 import { BrandMark } from './BrandMark'
 import { PriceFilter } from './PriceFilter'
 import { SortSelect } from './SortSelect'
-import { WhatsAppButton } from './WhatsAppButton'
+import { ContactButtons } from './ContactButtons'
 import { CatalogDetailModal } from './CatalogDetailModal'
 import { CompareModal } from './CompareModal'
 import { catalogService, type CatalogGroup, type CatalogSort, type CatalogEntry } from '@/services/catalog.service'
@@ -200,7 +200,7 @@ export function CatalogPage() {
 
       <CatalogInfo store={store} />
 
-      <WhatsAppButton number={store?.whatsapp ?? ''} />
+      <ContactButtons store={store} />
 
       {compareEntries.length > 0 && (
         <div className="fixed bottom-5 right-1/2 translate-x-1/2 z-40 bg-slate-900 text-white rounded-full shadow-lg pl-2 pr-5 h-12 flex items-center gap-3 text-sm">
@@ -217,7 +217,7 @@ export function CatalogPage() {
         <CatalogDetailModal
           entry={opened}
           inCartQty={qtyInCart(opened.key)}
-          whatsapp={store?.whatsapp ?? ''}
+          store={store}
           onAdd={() => cart.add(opened)}
           onClose={() => setOpenKey(null)}
         />

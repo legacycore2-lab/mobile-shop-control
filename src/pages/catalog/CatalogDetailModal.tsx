@@ -1,15 +1,16 @@
 // src/pages/catalog/CatalogDetailModal.tsx
-import { X, Share2, MessageCircle, Plus, Check, Smartphone, Package, Wrench } from 'lucide-react'
+import { X, Share2, MessageCircle, Phone, Plus, Check, Smartphone, Package, Wrench } from 'lucide-react'
 import { fmt } from '@/lib/fmt'
 import { whatsappUrl } from '@/lib/whatsapp'
 import { catalogService, type CatalogEntry } from '@/services/catalog.service'
+import type { StoreInfo } from '@/types/database'
 
 const ICON = { device: Smartphone, accessory: Package, spare_part: Wrench } as const
 
 interface Props {
   entry:     CatalogEntry
   inCartQty: number
-  whatsapp:  string
+  store:     StoreInfo | null
   onAdd:     () => void
   onClose:   () => void
 }
@@ -18,7 +19,7 @@ function pageUrl(): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}catalog`
 }
 
-export function CatalogDetailModal({ entry, inCartQty, whatsapp, onAdd, onClose }: Props) {
+export function CatalogDetailModal({ entry, inCartQty, store, onAdd, onClose }: Props) {
   const Icon       = ICON[entry.group]
   const soldOut    = entry.maxQty < 1
   const reachedMax = inCartQty >= entry.maxQty
@@ -82,11 +83,21 @@ export function CatalogDetailModal({ entry, inCartQty, whatsapp, onAdd, onClose 
             </button>
           </div>
 
-          {whatsapp && (
-            <a href={whatsappUrl(whatsapp, `مرحبًا، عايز أستفسر عن ${entry.title}`)} target="_blank" rel="noreferrer"
-              className="h-11 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-sm font-semibold flex items-center justify-center gap-2">
-              <MessageCircle size={16} /> اسأل عن المنتج على واتساب
-            </a>
+          {(store?.whatsapp || store?.phone) && (
+            <div className="flex gap-2">
+              {store.phone && (
+                <a href={`tel:${store.phone}`}
+                  className="flex-1 h-11 rounded-xl border border-slate-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold flex items-center justify-center gap-2">
+                  <Phone size={16} /> اتصال
+                </a>
+              )}
+              {store.whatsapp && (
+                <a href={whatsappUrl(store.whatsapp, `مرحبًا، عايز أستفسر عن ${entry.title}`)} target="_blank" rel="noreferrer"
+                  className="flex-1 h-11 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-sm font-semibold flex items-center justify-center gap-2">
+                  <MessageCircle size={16} /> واتساب
+                </a>
+              )}
+            </div>
           )}
         </div>
       </div>
