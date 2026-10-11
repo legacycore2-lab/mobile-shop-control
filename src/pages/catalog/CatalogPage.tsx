@@ -266,6 +266,7 @@ export function CatalogPage() {
         <CartPanel
           lines={cart.lines}
           total={cart.total}
+          store={store}
           onChange={cart.change}
           onRemove={cart.remove}
           onClose={() => setShowCart(false)}

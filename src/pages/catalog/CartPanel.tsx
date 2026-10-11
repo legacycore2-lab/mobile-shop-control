@@ -5,24 +5,27 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { fmt } from '@/lib/fmt'
 import { useSubmitCatalogOrder } from '@/hooks/useCatalog'
+import { PaymentChips, activePaymentMethods } from './PaymentChips'
 import type { CartLine } from '@/services/catalog.service'
-import type { CatalogOrderResult } from '@/types/database'
+import type { CatalogOrderResult, StoreInfo } from '@/types/database'
 
 interface Props {
   lines:     CartLine[]
   total:     number
+  store:     StoreInfo | null
   onChange:  (key: string, delta: number) => void
   onRemove:  (key: string) => void
   onClose:   () => void
   onSuccess: (result: CatalogOrderResult) => void
 }
 
-export function CartPanel({ lines, total, onChange, onRemove, onClose, onSuccess }: Props) {
+export function CartPanel({ lines, total, store, onChange, onRemove, onClose, onSuccess }: Props) {
   const [name,  setName]  = useState('')
   const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const submit = useSubmitCatalogOrder()
+  const payMethods = activePaymentMethods(store)
 
   async function handleSubmit() {
     setError('')
@@ -83,6 +86,13 @@ export function CartPanel({ lines, total, onChange, onRemove, onClose, onSuccess
                 className="w-full border rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
+
+          {payMethods.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">هتدفع إزاي؟ (الطرق المتاحة)</p>
+              <PaymentChips methods={payMethods} />
+            </div>
+          )}
 
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
