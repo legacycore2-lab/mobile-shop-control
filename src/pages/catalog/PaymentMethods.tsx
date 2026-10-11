@@ -1,17 +1,18 @@
 // src/pages/catalog/PaymentMethods.tsx
 // شريط طرق الدفع تحت الواجهة الرئيسية (بيظهر منها المفعّل بس من إعدادات المحل)
-import { Banknote, Wallet } from 'lucide-react'
+import { Wallet } from 'lucide-react'
 import type { StoreInfo } from '@/types/database'
 
-interface Method { key: string; title: string; icon?: React.ElementType; logos?: string[] }
+interface Method { key: string; title: string; logos: string[] }
 
-const WALLET_LOGOS  = ['vodafone', 'etisalat', 'orange', 'we', 'cash']
+const WALLET_LOGOS  = ['vodafone', 'etisalat', 'orange', 'we']
+const CASH_LOGO     = ['cash']
 const INSTAPAY_LOGO = ['instapay']
 
 function methodsOf(store: StoreInfo): Method[] {
   const list: Method[] = []
   if (store.pay_cash)
-    list.push({ key: 'cash', title: 'كاش عند الاستلام', icon: Banknote })
+    list.push({ key: 'cash', title: 'كاش عند الاستلام', logos: CASH_LOGO })
   if (store.pay_vodafone_cash)
     list.push({ key: 'wallet', title: 'محافظ إلكترونية', logos: WALLET_LOGOS })
   if (store.pay_instapay)
@@ -31,17 +32,14 @@ export function PaymentMethods({ store }: { store: StoreInfo | null }) {
           <Wallet size={18} className="text-amber-500" /> طرق الدفع
         </p>
         <div className="flex flex-wrap gap-2.5">
-          {methods.map(({ key, title, icon: Icon, logos }) => (
+          {methods.map(({ key, title, logos }) => (
             <div key={key} className="min-h-11 px-3.5 py-1.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 flex items-center gap-3 text-sm">
-              {Icon && <Icon size={18} className="text-emerald-600 dark:text-emerald-400" />}
               <span className="font-semibold text-gray-900 dark:text-white">{title}</span>
-              {logos && (
-                <span className="flex items-center gap-2.5 bg-white rounded-xl px-2.5 py-1">
-                  {logos.map(l => (
-                    <img key={l} src={logoUrl(l)} alt={l} loading="lazy" className="h-6 w-auto object-contain" />
-                  ))}
-                </span>
-              )}
+              <span className="flex items-center gap-2.5 bg-white rounded-xl px-2.5 py-1">
+                {logos.map(l => (
+                  <img key={l} src={logoUrl(l)} alt={l} loading="lazy" className="h-6 w-auto object-contain" />
+                ))}
+              </span>
             </div>
           ))}
         </div>
