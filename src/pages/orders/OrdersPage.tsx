@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { useAuth } from '@/lib/auth'
 import { usePermissions } from '@/hooks/usePermissions'
-import { useCatalogOrders, useUpdateOrderStatus } from '@/hooks/useCatalogOrders'
+import { useCatalogOrders, useUpdateOrderStatus, useDeliverOrder } from '@/hooks/useCatalogOrders'
 import { OrderDrawer } from './OrderDrawer'
 import { CatalogReportPanel } from './CatalogReportPanel'
 import { ReviewsPanel } from './ReviewsPanel'
@@ -19,6 +19,7 @@ export function OrdersPage() {
   const perm        = usePermissions()
   const { data: orders = [], isLoading } = useCatalogOrders()
   const update = useUpdateOrderStatus()
+  const deliver = useDeliverOrder()
 
   const [filter,     setFilter]     = useState<OrderFilter>('all')
   const [search,     setSearch]     = useState('')
@@ -44,6 +45,11 @@ export function OrdersPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch { /* ignore */ }
+  }
+
+  async function handleDeliver(input: { paidAmount: number; discount: number }) {
+    if (!selected || !session) return
+    await deliver.mutateAsync({ order: selected, input: { ...input, userId: session.user.id } })
   }
 
   function handleChangeStatus(status: CatalogOrderStatus) {
@@ -144,6 +150,8 @@ export function OrdersPage() {
           canEdit={perm.canEdit('orders')}
           saving={update.isPending}
           onChangeStatus={handleChangeStatus}
+          onDeliver={handleDeliver}
+          delivering={deliver.isPending}
           onClose={() => setSelectedId(null)}
         />
       )}

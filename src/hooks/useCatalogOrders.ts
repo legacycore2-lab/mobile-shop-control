@@ -1,6 +1,6 @@
 // src/hooks/useCatalogOrders.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { catalogOrdersService } from '@/services/catalogOrders.service'
+import { catalogOrdersService, type CatalogOrderWithItems, type DeliveryInput } from '@/services/catalogOrders.service'
 import type { CatalogOrderStatus } from '@/types/database'
 
 const KEYS = {
@@ -32,5 +32,15 @@ export function useUpdateOrderStatus() {
     mutationFn: ({ id, status, userId }: { id: string; status: CatalogOrderStatus; userId: string }) =>
       catalogOrdersService.updateStatus(id, status, userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.all }),
+  })
+}
+
+export function useDeliverOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ order, input }: { order: CatalogOrderWithItems; input: DeliveryInput }) =>
+      catalogOrdersService.deliver(order, input),
+    // التسليم بيغيّر المبيعات والمخزون والعملاء والمدفوعات
+    onSuccess: () => qc.invalidateQueries(),
   })
 }

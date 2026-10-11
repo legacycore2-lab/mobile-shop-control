@@ -1,12 +1,14 @@
 // src/pages/orders/OrderDrawer.tsx
+import { useState } from 'react'
 import { X, Phone, MessageCircle } from 'lucide-react'
+import { DeliveryForm } from './DeliveryForm'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { fmt } from '@/lib/fmt'
 import { whatsappUrl } from '@/lib/whatsapp'
 import { buildOrderMessage } from '@/services/catalogOrders.service'
 import { ORDER_STATUS_MAP, fmtOrderDate } from './constants'
-import type { CatalogOrderWithItems } from '@/services/catalogOrders.service'
+import type { CatalogOrderWithItems, DeliveryInput } from '@/services/catalogOrders.service'
 import type { CatalogOrderStatus } from '@/types/database'
 
 interface Props {
@@ -14,6 +16,8 @@ interface Props {
   canEdit:      boolean
   saving:       boolean
   onChangeStatus: (status: CatalogOrderStatus) => void
+  onDeliver:    (input: Omit<DeliveryInput, 'userId'>) => Promise<void>
+  delivering:   boolean
   onClose:      () => void
 }
 
@@ -32,8 +36,20 @@ const NEXT_ACTIONS: Record<CatalogOrderStatus, { status: CatalogOrderStatus; lab
   ],
 }
 
-export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onClose }: Props) {
+export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onDeliver, delivering, onClose }: Props) {
   const st = ORDER_STATUS_MAP[order.status]
+  const [showDelivery,   setShowDelivery]   = useState(false)
+  const [deliveryError,  setDeliveryError]  = useState('')
+
+  async function handleDeliver(input: Omit<DeliveryInput, 'userId'>) {
+    setDeliveryError('')
+    try {
+      await onDeliver(input)
+      setShowDelivery(false)
+    } catch (e) {
+      setDeliveryError((e as { message?: string }).message ?? 'تعذّر التسليم')
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-end"
@@ -90,6 +106,26 @@ export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onClose }:
             </div>
           </div>
 
+          {order.status === 'completed' && order.sale_invoice_id && (
+            <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 p-4 text-sm space-y-1">
+              <p className="font-semibold text-green-700 dark:text-green-400">اتسلّم وتم إنشاء فاتورة بيع</p>
+              <p className="text-gray-700 dark:text-gray-300">المبلغ المستلم: <span className="font-bold">{fmt(order.paid_amount)} ج</span></p>
+              {order.paid_amount < order.total && (
+                <p className="text-gray-700 dark:text-gray-300">المتبقي على العميل: <span className="font-bold text-red-600">{fmt(order.total - order.paid_amount)} ج</span></p>
+              )}
+            </div>
+          )}
+
+          {showDelivery && (
+            <DeliveryForm
+              total={order.total}
+              loading={delivering}
+              error={deliveryError}
+              onSubmit={input => void handleDeliver(input)}
+              onCancel={() => setShowDelivery(false)}
+            />
+          )}
+
           {order.notes && (
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">ملاحظات العميل</p>
@@ -98,11 +134,11 @@ export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onClose }:
           )}
         </div>
 
-        {canEdit && NEXT_ACTIONS[order.status].length > 0 && (
+        {canEdit && !showDelivery && NEXT_ACTIONS[order.status].length > 0 && (
           <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-800 flex gap-2">
             {NEXT_ACTIONS[order.status].map(a => (
               <Button key={a.status} variant={a.variant} className="flex-1" loading={saving}
-                onClick={() => onChangeStatus(a.status)}>
+                onClick={() => a.status === 'completed' ? setShowDelivery(true) : onChangeStatus(a.status)}>
                 {a.label}
               </Button>
             ))}

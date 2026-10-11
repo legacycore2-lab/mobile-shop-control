@@ -52,4 +52,18 @@ export const catalogOrdersRepository = {
       .eq('id', id)
     if (error) throw error
   },
+  // تسليم الطلب: ربطه بفاتورة البيع والمبلغ المستلم
+  complete: async (id: string, invoiceId: string, paidAmount: number, userId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('catalog_orders')
+      .update({
+        status:          'completed',
+        sale_invoice_id: invoiceId,
+        paid_amount:     paidAmount,
+        handled_by:      userId,
+        updated_at:      new Date().toISOString(),
+      } as never)
+      .eq('id', id)
+    if (error) throw error
+  },
 }

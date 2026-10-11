@@ -229,7 +229,8 @@ export type CatalogOrderStatus = 'new' | 'confirmed' | 'completed' | 'cancelled'
 export interface CatalogOrder {
   id: string; order_number: string; customer_name: string; customer_phone: string
   notes: string | null; status: CatalogOrderStatus; total: number
-  handled_by: string | null; created_at: string; updated_at: string
+  handled_by: string | null; sale_invoice_id: string | null; paid_amount: number
+  created_at: string; updated_at: string
 }
 
 export interface CatalogOrderItem {
