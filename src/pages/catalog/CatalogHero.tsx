@@ -1,4 +1,5 @@
 // src/pages/catalog/CatalogHero.tsx
+import { BrandMark } from './BrandMark'
 import type { BrandCount } from '@/services/catalog.service'
 
 interface Props {
@@ -45,9 +46,7 @@ export function CatalogHero({ brands, onPickBrand, onBrowse, onHowTo }: Props) {
                   onClick={() => onPickBrand(b.brand)}
                   className="bg-white hover:bg-blue-50 rounded-[18px] px-4 py-3.5 flex items-center gap-3 text-right shadow-[0_16px_32px_rgba(6,18,60,.3)] transition-colors"
                 >
-                  <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 font-bold text-base flex items-center justify-center flex-shrink-0" dir="ltr">
-                    {b.brand.charAt(0).toUpperCase()}
-                  </span>
+                  <BrandMark brand={b.brand} size="md" />
                   <span className="min-w-0">
                     <span className="block font-semibold text-sm text-slate-900 truncate" dir="ltr">{b.brand}</span>
                     <span className="block text-xs text-slate-500">{b.count} متاح</span>

@@ -10,6 +10,7 @@ import { CatalogHero } from './CatalogHero'
 import { CatalogItemCard } from './CatalogItemCard'
 import { CatalogInfo } from './CatalogInfo'
 import { CartPanel } from './CartPanel'
+import { BrandMark } from './BrandMark'
 import { catalogService, type CatalogGroup } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
@@ -121,11 +122,12 @@ export function CatalogPage() {
             {[{ brand: null, count: 0 }, ...brands].map(b => (
               <button key={b.brand ?? 'all'} onClick={() => setBrand(b.brand)} dir={b.brand ? 'ltr' : 'rtl'}
                 className={cn(
-                  'h-9 px-4 rounded-full text-sm whitespace-nowrap border transition-colors',
+                  'h-10 px-4 rounded-full text-sm whitespace-nowrap border transition-colors flex items-center gap-2',
                   brand === b.brand
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white font-semibold'
                     : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-slate-200 dark:border-gray-700',
                 )}>
+                {b.brand && <BrandMark brand={b.brand} size="sm" />}
                 {b.brand ?? 'كل الماركات'}
               </button>
             ))}
