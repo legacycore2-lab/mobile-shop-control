@@ -10,12 +10,15 @@ export interface CatalogEntry {
   kind:     'product' | 'device'
   ids:      string[]
   group:    CatalogGroup
+  brand:    string | null
   title:    string
   subtitle: string
   details:  string[]
   price:    number
   maxQty:   number            // 0 = نفد
 }
+
+export interface BrandCount { brand: string; count: number }
 
 export interface CartLine {
   key:       string
@@ -42,6 +45,7 @@ export const catalogService = {
       kind:     'product',
       ids:      [p.id],
       group:    p.product_type,
+      brand:    null,
       title:    p.name,
       subtitle: p.category,
       details:  [],
@@ -68,6 +72,7 @@ export const catalogService = {
         kind:     'device',
         ids:      [d.id],
         group:    'device',
+        brand:    d.brand,
         title:    `${d.brand} ${d.model}`,
         subtitle: 'موبايل',
         details,
@@ -77,6 +82,18 @@ export const catalogService = {
     }
 
     return [...grouped.values(), ...products]
+  },
+
+  // ── الماركات المتاحة (عدد الأجهزة لكل ماركة) ─────────────────────────────────
+  brandCounts: (entries: CatalogEntry[]): BrandCount[] => {
+    const counts = new Map<string, number>()
+    for (const e of entries) {
+      if (e.kind !== 'device' || !e.brand) continue
+      counts.set(e.brand, (counts.get(e.brand) ?? 0) + e.ids.length)
+    }
+    return [...counts.entries()]
+      .map(([brand, count]) => ({ brand, count }))
+      .sort((a, b) => b.count - a.count || a.brand.localeCompare(b.brand))
   },
 
   // ── السلة ───────────────────────────────────────────────────────────────────

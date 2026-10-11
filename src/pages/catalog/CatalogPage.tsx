@@ -10,7 +10,7 @@ import { CatalogHero } from './CatalogHero'
 import { CatalogItemCard } from './CatalogItemCard'
 import { CatalogInfo } from './CatalogInfo'
 import { CartPanel } from './CartPanel'
-import type { CatalogGroup } from '@/services/catalog.service'
+import { catalogService, type CatalogGroup } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
 type Filter = 'all' | CatalogGroup
@@ -34,7 +34,7 @@ export function CatalogPage() {
   const [showCart, setShowCart] = useState(false)
   const [done,     setDone]     = useState<CatalogOrderResult | null>(null)
 
-  const available = useMemo(() => entries.filter(e => e.maxQty > 0), [entries])
+  const brands = useMemo(() => catalogService.brandCounts(entries), [entries])
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -45,6 +45,12 @@ export function CatalogPage() {
   }, [entries, filter, search])
 
   const qtyInCart = (key: string) => cart.lines.find(l => l.key === key)?.quantity ?? 0
+
+  function handlePickBrand(brand: string) {
+    setFilter('device')
+    setSearch(brand)
+    scrollToId('catalog')
+  }
 
   function handleSuccess(result: CatalogOrderResult) {
     cart.clear()
@@ -80,7 +86,8 @@ export function CatalogPage() {
       />
 
       <CatalogHero
-        featured={available.slice(0, 2)}
+        brands={brands}
+        onPickBrand={handlePickBrand}
         onBrowse={() => scrollToId('catalog')}
         onHowTo={() => scrollToId('how')}
       />

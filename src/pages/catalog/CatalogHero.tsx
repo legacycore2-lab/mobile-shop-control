@@ -1,21 +1,14 @@
 // src/pages/catalog/CatalogHero.tsx
-import { Smartphone, Package, Wrench } from 'lucide-react'
-import { fmt } from '@/lib/fmt'
-import type { CatalogEntry, CatalogGroup } from '@/services/catalog.service'
-
-const ICONS: Record<CatalogGroup, React.ElementType> = {
-  device:     Smartphone,
-  accessory:  Package,
-  spare_part: Wrench,
-}
+import type { BrandCount } from '@/services/catalog.service'
 
 interface Props {
-  featured:       CatalogEntry[]
-  onBrowse:       () => void
-  onHowTo:        () => void
+  brands:       BrandCount[]
+  onPickBrand:  (brand: string) => void
+  onBrowse:     () => void
+  onHowTo:      () => void
 }
 
-export function CatalogHero({ featured, onBrowse, onHowTo }: Props) {
+export function CatalogHero({ brands, onPickBrand, onBrowse, onHowTo }: Props) {
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-8 sm:pt-10">
       <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-[#0F2A6B] px-6 py-10 sm:px-12 sm:py-14 flex flex-wrap items-center gap-10">
@@ -42,24 +35,26 @@ export function CatalogHero({ featured, onBrowse, onHowTo }: Props) {
           </div>
         </div>
 
-        {featured.length > 0 && (
-          <div className="relative flex-[1_1_280px] min-w-0 flex flex-col gap-3.5 max-w-sm w-full mx-auto">
-            {featured.map((e, i) => {
-              const Icon = ICONS[e.group]
-              return (
-                <div key={e.key}
-                  className={`bg-white rounded-[20px] px-5 py-4 flex items-center gap-3.5 shadow-[0_20px_40px_rgba(6,18,60,.35)] ${i % 2 === 1 ? 'sm:mr-7' : ''}`}>
-                  <div className="w-12 h-12 rounded-[14px] bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <Icon size={24} className="text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-slate-900 truncate">{e.title}</p>
-                    <p className="text-xs text-slate-500">متوفر</p>
-                  </div>
-                  <p className="font-bold text-lg text-slate-900">{fmt(e.price)} ج</p>
-                </div>
-              )
-            })}
+        {brands.length > 0 && (
+          <div className="relative flex-[1_1_300px] min-w-0 w-full max-w-md mx-auto">
+            <p className="text-sm text-blue-100/90 mb-3">تصفّح حسب الماركة</p>
+            <div className="grid grid-cols-2 gap-3">
+              {brands.slice(0, 6).map(b => (
+                <button
+                  key={b.brand}
+                  onClick={() => onPickBrand(b.brand)}
+                  className="bg-white hover:bg-blue-50 rounded-[18px] px-4 py-3.5 flex items-center gap-3 text-right shadow-[0_16px_32px_rgba(6,18,60,.3)] transition-colors"
+                >
+                  <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 font-bold text-base flex items-center justify-center flex-shrink-0" dir="ltr">
+                    {b.brand.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-sm text-slate-900 truncate" dir="ltr">{b.brand}</span>
+                    <span className="block text-xs text-slate-500">{b.count} متاح</span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
