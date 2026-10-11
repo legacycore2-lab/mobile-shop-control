@@ -3,6 +3,7 @@
 import { Smartphone, Package, Wrench, Plus, Check, Heart, GitCompareArrows } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
+import { ConditionBadge } from './ConditionBadge'
 import { catalogService, type CatalogEntry, type CatalogGroup } from '@/services/catalog.service'
 
 const GROUP_STYLE: Record<CatalogGroup, { icon: React.ElementType; label: string; tint: string; color: string }> = {
@@ -45,9 +46,11 @@ export function CatalogListItem({ entry, inCartQty, onAdd, onOpen, favorite, com
 
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <div onClick={onOpen} className="cursor-pointer">
-          <p className="text-xs text-slate-500 dark:text-gray-400">
-            {entry.kind === 'device' ? g.label : entry.subtitle}
-            <span className={cn('mr-2 font-semibold', soldOut ? 'text-red-600' : 'text-emerald-600')}>
+          <p className="text-xs text-slate-500 dark:text-gray-400 flex items-center gap-2 mb-1">
+            {entry.condition
+              ? <ConditionBadge condition={entry.condition} />
+              : <span>{entry.subtitle}</span>}
+            <span className={cn('font-semibold', soldOut ? 'text-red-600' : 'text-emerald-600')}>
               {soldOut ? 'نفد' : 'متوفر'}
             </span>
           </p>

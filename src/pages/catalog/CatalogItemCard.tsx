@@ -2,6 +2,7 @@
 import { Smartphone, Package, Wrench, Plus, Check, GitCompareArrows, Heart } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
+import { ConditionBadge } from './ConditionBadge'
 import { catalogService, type CatalogEntry, type CatalogGroup } from '@/services/catalog.service'
 
 const GROUP_STYLE: Record<CatalogGroup, { icon: React.ElementType; label: string; tint: string; color: string }> = {
@@ -69,9 +70,11 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
       </div>
 
       <div onClick={onOpen} className="cursor-pointer">
-        <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">
-          {entry.kind === 'device' ? g.label : entry.subtitle}
-        </p>
+        <div className="mb-1.5 flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400">
+          {entry.condition
+            ? <ConditionBadge condition={entry.condition} />
+            : <span>{entry.subtitle}</span>}
+        </div>
         <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white leading-snug">{entry.title}</p>
       </div>
 

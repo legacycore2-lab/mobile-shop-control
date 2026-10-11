@@ -14,6 +14,7 @@ export interface CatalogEntry {
   title:    string
   subtitle: string
   details:  string[]
+  condition: string | null    // new | used | refurbished (الموبايلات فقط)
   price:    number
   oldPrice: number | null     // السعر قبل الخصم (null = مفيش عرض)
   maxQty:   number            // 0 = نفد
@@ -67,6 +68,7 @@ export const catalogService = {
       title:    p.name,
       subtitle: p.category,
       details:  [],
+      condition: null,
       price:    p.selling_price,
       oldPrice: catalogService.validOldPrice(p.selling_price, p.old_price),
       maxQty:   Math.max(p.stock_qty, 0),
@@ -90,7 +92,7 @@ export const catalogService = {
         { label: 'البطارية', value: d.battery_health ? `${d.battery_health}%` : '—' },
         { label: 'الضمان',  value: d.warranty_months > 0 ? `${d.warranty_months} شهر` : 'بدون' },
       ]
-      const details: string[] = [CONDITION_MAP[d.condition] ?? d.condition]
+      const details: string[] = []
       if (d.storage) details.push(d.storage)
       if (d.color) details.push(d.color)
       if (d.battery_health) details.push(`بطارية ${d.battery_health}%`)
@@ -104,6 +106,7 @@ export const catalogService = {
         title:    `${d.brand} ${d.model}`,
         subtitle: 'موبايل',
         details,
+        condition: d.condition,
         price:    d.selling_price,
         oldPrice: catalogService.validOldPrice(d.selling_price, d.old_price),
         maxQty:   1,
