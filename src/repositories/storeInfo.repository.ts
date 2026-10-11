@@ -6,7 +6,7 @@ export const storeInfoRepository = {
   get: async (): Promise<StoreInfo> => {
     const { data, error } = await supabase
       .from('store_info')
-      .select('whatsapp, phone, address, working_hours, map_url, installment_enabled, installment_interest_percent, installment_down_percent, pay_cash, vodafone_cash_number, instapay_address')
+      .select('whatsapp, phone, address, working_hours, map_url, installment_enabled, installment_interest_percent, installment_down_percent, pay_cash, pay_vodafone_cash, pay_instapay')
       .eq('id', 1)
       .single()
     if (error) throw error

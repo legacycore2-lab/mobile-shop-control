@@ -3,16 +3,16 @@
 import { Banknote, Smartphone, Landmark, Wallet } from 'lucide-react'
 import type { StoreInfo } from '@/types/database'
 
-interface Method { key: string; icon: React.ElementType; title: string; sub: string | null }
+interface Method { key: string; icon: React.ElementType; title: string }
 
 function methodsOf(store: StoreInfo): Method[] {
   const list: Method[] = []
   if (store.pay_cash)
-    list.push({ key: 'cash', icon: Banknote, title: 'كاش عند الاستلام', sub: null })
-  if (store.vodafone_cash_number)
-    list.push({ key: 'wallet', icon: Smartphone, title: 'فودافون كاش', sub: store.vodafone_cash_number })
-  if (store.instapay_address)
-    list.push({ key: 'instapay', icon: Landmark, title: 'إنستا باي', sub: store.instapay_address })
+    list.push({ key: 'cash', icon: Banknote, title: 'كاش عند الاستلام' })
+  if (store.pay_vodafone_cash)
+    list.push({ key: 'wallet', icon: Smartphone, title: 'فودافون كاش' })
+  if (store.pay_instapay)
+    list.push({ key: 'instapay', icon: Landmark, title: 'إنستا باي' })
   return list
 }
 
@@ -26,11 +26,10 @@ export function PaymentMethods({ store }: { store: StoreInfo | null }) {
           <Wallet size={18} className="text-amber-500" /> طرق الدفع
         </p>
         <div className="flex flex-wrap gap-2.5">
-          {methods.map(({ key, icon: Icon, title, sub }) => (
+          {methods.map(({ key, icon: Icon, title }) => (
             <div key={key} className="h-10 px-3.5 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-2 text-sm">
               <Icon size={16} className="text-amber-600 dark:text-amber-400" />
               <span className="font-semibold text-gray-900 dark:text-white">{title}</span>
-              {sub && <span dir="ltr" className="text-slate-600 dark:text-gray-300 tabular-nums">{sub}</span>}
             </div>
           ))}
         </div>

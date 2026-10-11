@@ -254,7 +254,7 @@ export interface CatalogDevice {
 export interface StoreInfo {
   whatsapp: string; phone: string; address: string; working_hours: string; map_url: string
   installment_enabled: boolean; installment_interest_percent: number; installment_down_percent: number
-  pay_cash: boolean; vodafone_cash_number: string; instapay_address: string
+  pay_cash: boolean; pay_vodafone_cash: boolean; pay_instapay: boolean
 }
 
 export interface CatalogReview { name: string; rating: number; comment: string | null; created_at: string }
