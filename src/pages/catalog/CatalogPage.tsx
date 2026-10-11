@@ -11,6 +11,7 @@ import { CatalogItemCard } from './CatalogItemCard'
 import { CatalogInfo } from './CatalogInfo'
 import { CartPanel } from './CartPanel'
 import { BrandMark } from './BrandMark'
+import { PriceFilter } from './PriceFilter'
 import { catalogService, type CatalogGroup } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
@@ -33,6 +34,8 @@ export function CatalogPage() {
   const [filter,   setFilter]   = useState<Filter>('all')
   const [search,   setSearch]   = useState('')
   const [brand,    setBrand]    = useState<string | null>(null)
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
   const [showCart, setShowCart] = useState(false)
   const [done,     setDone]     = useState<CatalogOrderResult | null>(null)
 
@@ -43,9 +46,10 @@ export function CatalogPage() {
     return entries.filter(e =>
       (filter === 'all' || e.group === filter) &&
       (!brand || e.brand === brand) &&
+      catalogService.inPriceRange(e, minPrice, maxPrice) &&
       (!q || `${e.title} ${e.subtitle} ${e.details.join(' ')}`.toLowerCase().includes(q)),
     )
-  }, [entries, filter, brand, search])
+  }, [entries, filter, brand, search, minPrice, maxPrice])
 
   const qtyInCart = (key: string) => cart.lines.find(l => l.key === key)?.quantity ?? 0
 
@@ -133,6 +137,11 @@ export function CatalogPage() {
             ))}
           </div>
         )}
+
+        <PriceFilter
+          min={minPrice} max={maxPrice}
+          onChange={(lo, hi) => { setMinPrice(lo); setMaxPrice(hi) }}
+        />
 
         {isLoading && (
           <div className="flex justify-center py-16">

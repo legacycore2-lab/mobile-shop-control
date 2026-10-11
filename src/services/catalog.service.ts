@@ -87,6 +87,13 @@ export const catalogService = {
     return [...grouped.values(), ...products]
   },
 
+  // ── فلتر السعر (القيم نصوص من حقول الإدخال، الفاضي = بدون حد) ───────────────
+  inPriceRange: (entry: CatalogEntry, min: string, max: string): boolean => {
+    if (min && entry.price < Number(min)) return false
+    if (max && entry.price > Number(max)) return false
+    return true
+  },
+
   // ── الماركات المتاحة (عدد الأجهزة لكل ماركة) ─────────────────────────────────
   brandCounts: (entries: CatalogEntry[]): BrandCount[] => {
     const counts = new Map<string, number>()
