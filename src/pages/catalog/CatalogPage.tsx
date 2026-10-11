@@ -31,6 +31,7 @@ export function CatalogPage() {
   const cart = useCart()
   const [filter,   setFilter]   = useState<Filter>('all')
   const [search,   setSearch]   = useState('')
+  const [brand,    setBrand]    = useState<string | null>(null)
   const [showCart, setShowCart] = useState(false)
   const [done,     setDone]     = useState<CatalogOrderResult | null>(null)
 
@@ -40,15 +41,22 @@ export function CatalogPage() {
     const q = search.trim().toLowerCase()
     return entries.filter(e =>
       (filter === 'all' || e.group === filter) &&
+      (!brand || e.brand === brand) &&
       (!q || `${e.title} ${e.subtitle} ${e.details.join(' ')}`.toLowerCase().includes(q)),
     )
-  }, [entries, filter, search])
+  }, [entries, filter, brand, search])
 
   const qtyInCart = (key: string) => cart.lines.find(l => l.key === key)?.quantity ?? 0
 
-  function handlePickBrand(brand: string) {
+  function handleFilter(next: Filter) {
+    setFilter(next)
+    if (next !== 'device') setBrand(null)
+  }
+
+  function handlePickBrand(picked: string) {
     setFilter('device')
-    setSearch(brand)
+    setBrand(picked)
+    setSearch('')
     scrollToId('catalog')
   }
 
@@ -95,7 +103,7 @@ export function CatalogPage() {
       <section id="catalog" className="max-w-6xl mx-auto px-4 sm:px-7 pt-9 space-y-5 scroll-mt-20">
         <div className="flex gap-3 overflow-x-auto pb-1">
           {FILTERS.map(f => (
-            <button key={f.id} onClick={() => setFilter(f.id)}
+            <button key={f.id} onClick={() => handleFilter(f.id)}
               className={cn(
                 'h-10 px-6 rounded-full text-sm font-medium whitespace-nowrap border transition-colors',
                 filter === f.id
@@ -106,6 +114,23 @@ export function CatalogPage() {
             </button>
           ))}
         </div>
+
+        {filter === 'device' && brands.length > 0 && (
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+            <span className="text-sm text-slate-500 dark:text-gray-400 whitespace-nowrap">الماركة:</span>
+            {[{ brand: null, count: 0 }, ...brands].map(b => (
+              <button key={b.brand ?? 'all'} onClick={() => setBrand(b.brand)} dir={b.brand ? 'ltr' : 'rtl'}
+                className={cn(
+                  'h-9 px-4 rounded-full text-sm whitespace-nowrap border transition-colors',
+                  brand === b.brand
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white font-semibold'
+                    : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-slate-200 dark:border-gray-700',
+                )}>
+                {b.brand ?? 'كل الماركات'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {isLoading && (
           <div className="flex justify-center py-16">
