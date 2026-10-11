@@ -2,6 +2,7 @@
 // أسفل الصفحة: مميزات + إزاي أطلب + فوتر
 import { CircleDollarSign, RefreshCw, PhoneCall, MapPin, Clock, Phone } from 'lucide-react'
 import { BrandWordmark } from './BrandWordmark'
+import { PaymentMethods } from './PaymentMethods'
 import type { StoreInfo } from '@/types/database'
 
 const TRUST: { icon: React.ElementType; title: string; sub: string }[] = [
@@ -35,6 +36,8 @@ export function CatalogInfo({ store }: { store: StoreInfo | null }) {
           ))}
         </div>
       </section>
+
+      <PaymentMethods store={store} />
 
       <section id="how" className="max-w-6xl mx-auto px-4 sm:px-7 pt-14 pb-16">
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-7">إزاي أطلب؟</h2>

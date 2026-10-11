@@ -31,6 +31,17 @@ function Form({ initial }: { initial: StoreInfo }) {
       <Input label="مواعيد العمل" placeholder="يوميًا من 10 ص إلى 10 م" value={form.working_hours} onChange={e => set('working_hours', e.target.value)} />
       <Input label="رابط الموقع على الخريطة" placeholder="https://maps.google.com/..." dir="ltr" value={form.map_url} onChange={e => set('map_url', e.target.value)} />
       <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-4">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">طرق الدفع (بتظهر للعملاء في الكتالوج)</p>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={form.pay_cash}
+            onChange={e => set('pay_cash', e.target.checked)}
+            className="w-4 h-4 accent-blue-600 cursor-pointer" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">كاش عند الاستلام</span>
+        </label>
+        <Input label="رقم فودافون كاش / المحفظة" placeholder="01012345678" dir="ltr" value={form.vodafone_cash_number} onChange={e => set('vodafone_cash_number', e.target.value)} />
+        <Input label="عنوان إنستا باي" placeholder="name@instapay" dir="ltr" value={form.instapay_address} onChange={e => set('instapay_address', e.target.value)} />
+      </div>
+      <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" checked={form.installment_enabled}
             onChange={e => set('installment_enabled', e.target.checked)}

@@ -17,9 +17,13 @@ export const storeInfoService = {
       installment_enabled:          info.installment_enabled,
       installment_interest_percent: Number(info.installment_interest_percent) || 0,
       installment_down_percent:     Number(info.installment_down_percent) || 0,
+      pay_cash:             info.pay_cash,
+      vodafone_cash_number: info.vodafone_cash_number.replace(/\s|-/g, ''),
+      instapay_address:     info.instapay_address.trim(),
     }
     if (clean.whatsapp && !PHONE_RE.test(clean.whatsapp)) throw new Error('رقم الواتساب غير صحيح')
     if (clean.phone    && !PHONE_RE.test(clean.phone))    throw new Error('رقم الهاتف غير صحيح')
+    if (clean.vodafone_cash_number && !PHONE_RE.test(clean.vodafone_cash_number)) throw new Error('رقم فودافون كاش غير صحيح')
     if (clean.map_url  && !/^https?:\/\//.test(clean.map_url)) throw new Error('رابط الخريطة لازم يبدأ بـ https://')
     if (clean.installment_interest_percent < 0 || clean.installment_interest_percent > 100) throw new Error('نسبة الفائدة بين 0 و100')
     if (clean.installment_down_percent < 0 || clean.installment_down_percent > 90) throw new Error('نسبة المقدم بين 0 و90')
