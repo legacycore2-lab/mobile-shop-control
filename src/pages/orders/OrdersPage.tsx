@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/auth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useCatalogOrders, useUpdateOrderStatus } from '@/hooks/useCatalogOrders'
 import { OrderDrawer } from './OrderDrawer'
+import { CatalogReportPanel } from './CatalogReportPanel'
+import { ReviewsPanel } from './ReviewsPanel'
 import { topOrderedItems } from '@/services/catalogOrders.service'
 import { ORDER_FILTERS, ORDER_STATUS_MAP, fmtOrderDate, type OrderFilter } from './constants'
 import type { CatalogOrderStatus } from '@/types/database'
@@ -62,6 +64,10 @@ export function OrdersPage() {
           {copied ? <><Check size={14} className="text-green-600" /> تم النسخ</> : <><Link2 size={14} /> نسخ رابط المعرض</>}
         </button>
       </div>
+
+      <CatalogReportPanel />
+
+      <ReviewsPanel canEdit={perm.canEdit('orders')} />
 
       {top.length > 0 && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">

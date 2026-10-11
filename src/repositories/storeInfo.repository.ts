@@ -6,11 +6,16 @@ export const storeInfoRepository = {
   get: async (): Promise<StoreInfo> => {
     const { data, error } = await supabase
       .from('store_info')
-      .select('whatsapp, phone, address, working_hours, map_url')
+      .select('whatsapp, phone, address, working_hours, map_url, installment_enabled, installment_interest_percent, installment_down_percent')
       .eq('id', 1)
       .single()
     if (error) throw error
-    return data as StoreInfo
+    const row = data as StoreInfo
+    return {
+      ...row,
+      installment_interest_percent: Number(row.installment_interest_percent),
+      installment_down_percent:     Number(row.installment_down_percent),
+    }
   },
 
   update: async (info: StoreInfo): Promise<void> => {

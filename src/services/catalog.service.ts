@@ -1,7 +1,7 @@
 // src/services/catalog.service.ts
 import { catalogRepository } from '@/repositories/catalog.repository'
 import { CONDITION_MAP } from '@/constants/statusMaps'
-import type { PublicCatalog, CatalogOrderItemInput, CatalogOrderResult } from '@/types/database'
+import type { PublicCatalog, CatalogOrderItemInput, CatalogOrderResult, TrackedOrder, StoreInfo } from '@/types/database'
 
 export type CatalogGroup = 'device' | 'accessory' | 'spare_part'
 
@@ -15,6 +15,7 @@ export interface CatalogEntry {
   subtitle: string
   details:  string[]
   price:    number
+  oldPrice: number | null     // السعر قبل الخصم (null = مفيش عرض)
   maxQty:   number            // 0 = نفد
   image:    string | null
   specs:    { label: string; value: string }[]   // للمقارنة (الموبايلات فقط)
@@ -46,6 +47,13 @@ const MAX_ORDER_ITEMS = 30
 
 export const catalogService = {
 
+  // العرض بيظهر بس لو السعر القديم أكبر من الحالي
+  validOldPrice: (price: number, old: number | null): number | null =>
+    old !== null && old > price ? old : null,
+
+  discountPercent: (price: number, old: number): number =>
+    Math.round(((old - price) / old) * 100),
+
   getCatalog: (): Promise<PublicCatalog> => catalogRepository.getPublic(),
 
   // ── تحويل البيانات لقائمة عرض موحّدة (الأجهزة المتطابقة بتتجمّع) ───────────
@@ -60,6 +68,7 @@ export const catalogService = {
       subtitle: p.category,
       details:  [],
       price:    p.selling_price,
+      oldPrice: catalogService.validOldPrice(p.selling_price, p.old_price),
       maxQty:   Math.max(p.stock_qty, 0),
       image:    p.image_url,
       specs:    [],
@@ -67,7 +76,7 @@ export const catalogService = {
 
     const grouped = new Map<string, CatalogEntry>()
     for (const d of catalog.devices) {
-      const key = ['d', d.brand, d.model, d.storage, d.color, d.condition, d.selling_price, d.battery_health, d.warranty_months].join('|')
+      const key = ['d', d.brand, d.model, d.storage, d.color, d.condition, d.selling_price, d.old_price, d.battery_health, d.warranty_months].join('|')
       const existing = grouped.get(key)
       if (existing) {
         existing.ids.push(d.id)
@@ -96,6 +105,7 @@ export const catalogService = {
         subtitle: 'موبايل',
         details,
         price:    d.selling_price,
+        oldPrice: catalogService.validOldPrice(d.selling_price, d.old_price),
         maxQty:   1,
         image:    d.image_url,
         specs,
@@ -191,4 +201,38 @@ export const catalogService = {
       items,
     })
   },
+}
+
+// ── تتبع الطلب والتقييم ───────────────────────────────────────────────────────
+
+export const trackingService = {
+  track: async (number: string, phone: string): Promise<TrackedOrder> => {
+    if (!number.trim()) throw new Error('اكتب رقم الطلب')
+    if (phone.replace(/\D/g, '').length < 8) throw new Error('اكتب رقم الموبايل اللي طلبت بيه')
+    const order = await catalogRepository.trackOrder(number.trim(), phone)
+    if (!order) throw new Error('مفيش طلب بالبيانات دي، راجع الرقم')
+    return order
+  },
+
+  review: async (number: string, phone: string, rating: number, comment: string): Promise<void> => {
+    if (rating < 1 || rating > 5) throw new Error('اختار تقييم من 1 إلى 5')
+    return catalogRepository.submitReview(number, phone, rating, comment.trim() || null)
+  },
+
+  logEvent: (type: 'visit' | 'view', item: string | null, session: string): Promise<void> =>
+    catalogRepository.logEvent(type, item, session),
+}
+
+// ── التقسيط (فايدة سنوية بسيطة على المبلغ المتبقي بعد المقدم) ───────────────────
+
+export const INSTALLMENT_MONTHS = [6, 12, 18, 24] as const
+
+export interface InstallmentPlan { down: number; monthly: number; total: number }
+
+export function installmentPlan(price: number, months: number, store: StoreInfo): InstallmentPlan {
+  const down      = Math.round(price * store.installment_down_percent / 100)
+  const financed  = price - down
+  const interest  = financed * (store.installment_interest_percent / 100) * (months / 12)
+  const monthly   = Math.ceil((financed + interest) / months)
+  return { down, monthly, total: down + monthly * months }
 }

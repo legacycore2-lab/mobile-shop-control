@@ -2,6 +2,7 @@
 import { X, Share2, MessageCircle, Phone, Plus, Check, Smartphone, Package, Wrench } from 'lucide-react'
 import { fmt } from '@/lib/fmt'
 import { whatsappUrl } from '@/lib/whatsapp'
+import { InstallmentCalculator } from './InstallmentCalculator'
 import { catalogService, type CatalogEntry } from '@/services/catalog.service'
 import type { StoreInfo } from '@/types/database'
 
@@ -64,13 +65,27 @@ export function CatalogDetailModal({ entry, inCartQty, store, onAdd, onClose }: 
           ) : null}
 
           <div className="flex items-end justify-between">
-            <p className="text-3xl font-bold text-gray-900 dark:text-white leading-none">
-              {fmt(entry.price)} <span className="text-base font-medium text-slate-500">ج</span>
-            </p>
+            <div>
+              {entry.oldPrice !== null && (
+                <p className="text-sm text-slate-400 line-through mb-1">
+                  {fmt(entry.oldPrice)} ج
+                  <span className="mr-2 text-xs font-bold text-red-500 no-underline inline-block">
+                    −{catalogService.discountPercent(entry.price, entry.oldPrice)}%
+                  </span>
+                </p>
+              )}
+              <p className="text-3xl font-bold text-gray-900 dark:text-white leading-none">
+                {fmt(entry.price)} <span className="text-base font-medium text-slate-500">ج</span>
+              </p>
+            </div>
             <p className={soldOut ? 'text-sm text-red-600' : 'text-sm text-emerald-600 dark:text-emerald-400'}>
               {soldOut ? 'نفد' : entry.kind === 'device' ? `متاح ${entry.maxQty} قطع` : 'متوفر'}
             </p>
           </div>
+
+          {entry.kind === 'device' && store?.installment_enabled && (
+            <InstallmentCalculator price={entry.price} store={store} />
+          )}
 
           <div className="flex gap-2">
             <button onClick={onAdd} disabled={soldOut || reachedMax}

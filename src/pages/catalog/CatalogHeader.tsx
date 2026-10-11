@@ -1,5 +1,5 @@
 // src/pages/catalog/CatalogHeader.tsx
-import { Search, ShoppingCart } from 'lucide-react'
+import { Search, ShoppingCart, PackageSearch } from 'lucide-react'
 import { BrandWordmark } from './BrandWordmark'
 
 interface Props {
@@ -7,9 +7,10 @@ interface Props {
   onSearch:    (value: string) => void
   cartCount:   number
   onOpenCart:  () => void
+  onTrack:     () => void
 }
 
-export function CatalogHeader({ search, onSearch, cartCount, onOpenCart }: Props) {
+export function CatalogHeader({ search, onSearch, cartCount, onOpenCart, onTrack }: Props) {
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-7 py-3 flex items-center gap-3 sm:gap-5 flex-wrap">
@@ -26,9 +27,17 @@ export function CatalogHeader({ search, onSearch, cartCount, onOpenCart }: Props
         </div>
 
         <button
+          onClick={onTrack}
+          className="mr-auto sm:mr-0 h-11 px-4 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-gray-800"
+        >
+          <PackageSearch size={16} />
+          <span className="hidden sm:inline">تتبّع طلبك</span>
+        </button>
+
+        <button
           onClick={onOpenCart}
           disabled={cartCount === 0}
-          className="mr-auto sm:mr-0 h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
+          className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
         >
           <ShoppingCart size={16} />
           السلة

@@ -20,14 +20,14 @@ interface FormState {
   product_type: ProductType; cost_price: string; selling_price: string
   stock_qty: string; reorder_level: string; unit: string
   default_supplier_id: string; is_active: boolean; notes: string
-  image_url: string | null; show_in_catalog: boolean
+  image_url: string | null; show_in_catalog: boolean; old_price: string
 }
 
 const EMPTY_FORM: FormState = {
   category_id: '', name: '', sku: '', barcode: '',
   product_type: 'accessory', cost_price: '', selling_price: '',
   stock_qty: '0', reorder_level: '5', unit: 'قطعة',
-  default_supplier_id: '', is_active: true, notes: '', image_url: null, show_in_catalog: true,
+  default_supplier_id: '', is_active: true, notes: '', image_url: null, show_in_catalog: true, old_price: '',
 }
 
 // ── Quick Stock Add Card ───────────────────────────────────────────────────────
@@ -160,6 +160,7 @@ export function ProductModal({ product, onClose }: {
           notes:               product.notes ?? '',
           image_url:           product.image_url,
           show_in_catalog:     product.show_in_catalog,
+          old_price:           product.old_price != null ? String(product.old_price) : '',
         }
       : EMPTY_FORM
   )
@@ -219,6 +220,7 @@ export function ProductModal({ product, onClose }: {
       notes:               matchedProduct.notes ?? '',
       image_url:           matchedProduct.image_url,
       show_in_catalog:     matchedProduct.show_in_catalog,
+      old_price:           matchedProduct.old_price != null ? String(matchedProduct.old_price) : '',
     })
     setMatchedProduct(null)
     setShowForm(true)
@@ -264,6 +266,7 @@ export function ProductModal({ product, onClose }: {
         name:          product ? form.name : (nameSearch.trim() || form.name),
         cost_price:    Number(form.cost_price)    || 0,
         selling_price: Number(form.selling_price) || 0,
+        old_price:     Number(form.old_price) || null,
         stock_qty:     Number(form.stock_qty)     || 0,
         reorder_level: Number(form.reorder_level) || 5,
         created_by:    profile?.id ?? '',
@@ -492,6 +495,11 @@ export function ProductModal({ product, onClose }: {
                     <label className={labelCls}>سعر البيع (ج.م) <span className="text-red-500">*</span></label>
                     <input type="number" min="0" step="0.01" value={form.selling_price}
                       onChange={e => set('selling_price', e.target.value)} placeholder="0.00" required className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={labelCls}>السعر قبل الخصم (اختياري)</label>
+                    <input type="number" min="0" step="0.01" value={form.old_price}
+                      onChange={e => set('old_price', e.target.value)} placeholder="يظهر مشطوب في الكتالوج" className={inputCls} />
                   </div>
                   {!product && (
                     <div className="flex flex-col gap-1.5">

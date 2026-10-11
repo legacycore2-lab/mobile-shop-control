@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { useCatalogEntries } from '@/hooks/useCatalog'
+import { useCatalogEntries, useCatalogAnalytics } from '@/hooks/useCatalog'
 import { useCart } from '@/hooks/useCart'
 import { CatalogHeader } from './CatalogHeader'
 import { CatalogHero } from './CatalogHero'
@@ -16,16 +16,20 @@ import { SortSelect } from './SortSelect'
 import { ContactButtons } from './ContactButtons'
 import { CatalogDetailModal } from './CatalogDetailModal'
 import { CompareModal } from './CompareModal'
+import { TrackOrderModal } from './TrackOrderModal'
+import { ReviewsSection } from './ReviewsSection'
+import { useFavorites } from '@/hooks/useFavorites'
 import { catalogService, type CatalogGroup, type CatalogSort, type CatalogEntry } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
-type Filter = 'all' | CatalogGroup
+type Filter = 'all' | 'favorites' | CatalogGroup
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all',        label: 'الكل'        },
   { id: 'device',     label: 'موبايلات'    },
   { id: 'accessory',  label: 'إكسسوارات'   },
   { id: 'spare_part', label: 'قطع غيار'    },
+  { id: 'favorites',  label: 'المفضلة'     },
 ]
 
 function scrollToId(id: string) {
@@ -33,14 +37,17 @@ function scrollToId(id: string) {
 }
 
 export function CatalogPage() {
-  const { entries, store, isLoading, isError, refetch } = useCatalogEntries()
+  const { entries, store, reviews, isLoading, isError, refetch } = useCatalogEntries()
   const cart = useCart()
+  const favorites = useFavorites()
+  const logView = useCatalogAnalytics()
   const [filter,   setFilter]   = useState<Filter>('all')
   const [search,   setSearch]   = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [sort,     setSort]     = useState<CatalogSort>('default')
   const [openKey,  setOpenKey]  = useState<string | null>(null)
   const [compareKeys, setCompareKeys] = useState<string[]>([])
   const [showCompare, setShowCompare] = useState(false)
+  const [track,    setTrack]    = useState<{ number: string } | null>(null)
   const [brand,    setBrand]    = useState<string | null>(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -52,14 +59,19 @@ export function CatalogPage() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
     return catalogService.sort(entries, sort).filter(e =>
-      (filter === 'all' || e.group === filter) &&
+      (filter === 'all' || (filter === 'favorites' ? favorites.has(e.key) : e.group === filter)) &&
       (!brand || e.brand === brand) &&
       catalogService.inPriceRange(e, minPrice, maxPrice) &&
       (!q || `${e.title} ${e.subtitle} ${e.details.join(' ')}`.toLowerCase().includes(q)),
     )
-  }, [entries, filter, brand, search, minPrice, maxPrice, sort])
+  }, [entries, filter, brand, search, minPrice, maxPrice, sort, favorites.keys])
 
   const opened         = entries.find(e => e.key === openKey) ?? null
+
+  function handleOpen(entry: CatalogEntry) {
+    setOpenKey(entry.key)
+    logView(entry.title)
+  }
   const compareEntries = compareKeys
     .map(k => entries.find(e => e.key === k))
     .filter((e): e is CatalogEntry => !!e)
@@ -98,6 +110,10 @@ export function CatalogPage() {
         <p className="text-sm text-slate-500 dark:text-gray-400">رقم الطلب</p>
         <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" dir="ltr">{done.order_number}</p>
         <p className="text-sm text-slate-500 dark:text-gray-400">هنتواصل معاك على رقمك لتأكيد الطلب</p>
+        <button onClick={() => { setTrack({ number: done.order_number }); setDone(null) }}
+          className="w-full h-11 rounded-xl border border-slate-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">
+          تتبّع الطلب
+        </button>
         <button onClick={() => setDone(null)}
           className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">
           العودة للمعرض
@@ -113,6 +129,7 @@ export function CatalogPage() {
         onSearch={setSearch}
         cartCount={cart.count}
         onOpenCart={() => setShowCart(true)}
+        onTrack={() => setTrack({ number: '' })}
       />
 
       <CatalogHero
@@ -187,7 +204,8 @@ export function CatalogPage() {
           {visible.map(e => (
             <CatalogItemCard
               key={e.key} entry={e} inCartQty={qtyInCart(e.key)} onAdd={() => cart.add(e)}
-              onOpen={() => setOpenKey(e.key)}
+              onOpen={() => handleOpen(e)}
+              favorite={{ active: favorites.has(e.key), onToggle: () => favorites.toggle(e.key) }}
               compare={e.kind === 'device' ? {
                 active:   compareKeys.includes(e.key),
                 disabled: compareKeys.length >= 3,
@@ -197,6 +215,8 @@ export function CatalogPage() {
           ))}
         </div>
       </section>
+
+      <ReviewsSection reviews={reviews} />
 
       <CatalogInfo store={store} />
 
@@ -222,6 +242,8 @@ export function CatalogPage() {
           onClose={() => setOpenKey(null)}
         />
       )}
+
+      {track && <TrackOrderModal initialNumber={track.number} onClose={() => setTrack(null)} />}
 
       {showCompare && compareEntries.length >= 2 && (
         <CompareModal entries={compareEntries} onClose={() => setShowCompare(false)} />

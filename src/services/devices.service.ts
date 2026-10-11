@@ -16,6 +16,7 @@ export interface DeviceFormData {
   purchase_date:   string
   cost_price:      number
   selling_price:   number
+  old_price?:      number | null   // السعر قبل الخصم (عرض في الكتالوج)
   warranty_months: number
   location:        string
   notes:           string
@@ -134,6 +135,7 @@ export const devicesService = {
       purchase_date:       form.purchase_date,
       cost_price:          Number(form.cost_price),
       selling_price:       Number(form.selling_price) || null,
+      old_price:           form.old_price ?? null,
       actual_selling_price: null,
       sold_to_customer_id:  null,
       sale_invoice_id:      null,
@@ -168,6 +170,7 @@ export const devicesService = {
     if (form.purchase_date !== undefined) payload.purchase_date = form.purchase_date
     if (form.cost_price    !== undefined) payload.cost_price    = Number(form.cost_price)
     if (form.selling_price !== undefined) payload.selling_price = Number(form.selling_price) || null
+    if (form.old_price     !== undefined) payload.old_price     = form.old_price || null
     if (form.warranty_months !== undefined) payload.warranty_months = Number(form.warranty_months) || 0
     if (form.location      !== undefined) payload.location      = form.location?.trim()      || null
     if (form.notes         !== undefined) payload.notes         = form.notes?.trim()         || null

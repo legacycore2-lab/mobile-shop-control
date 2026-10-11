@@ -44,6 +44,7 @@ export interface Product {
   compatible_models: string[] | null; cost_price: number; selling_price: number
   stock_qty: number; reorder_level: number; unit: string
   default_supplier_id: string | null; is_active: boolean; notes: string | null; image_url: string | null; show_in_catalog: boolean
+  old_price: number | null
   created_by: string; created_at: string; updated_at: string
 }
 
@@ -63,6 +64,7 @@ export interface MobileDevice {
   selling_price: number | null; actual_selling_price: number | null
   sold_to_customer_id: string | null; sale_invoice_id: string | null
   sold_at: string | null; warranty_months: number; warranty_expires_at: string | null
+  old_price: number | null
   battery_health: number | null; status: DeviceStatus; location: string | null; notes: string | null
   added_by: string; sold_by: string | null; created_at: string; updated_at: string
 }
@@ -238,20 +240,42 @@ export interface CatalogOrderItem {
 
 export interface CatalogProduct {
   id: string; name: string; category: string; product_type: ProductType
-  selling_price: number; stock_qty: number; unit: string; image_url: string | null
+  selling_price: number; old_price: number | null; stock_qty: number; unit: string; image_url: string | null
 }
 
 export interface CatalogDevice {
   id: string; brand: string; model: string; storage: string | null; color: string | null
-  condition: string; selling_price: number; battery_health: number | null; warranty_months: number
+  condition: string; selling_price: number; old_price: number | null
+  battery_health: number | null; warranty_months: number
   image_url: string | null
 }
 
 export interface StoreInfo {
   whatsapp: string; phone: string; address: string; working_hours: string; map_url: string
+  installment_enabled: boolean; installment_interest_percent: number; installment_down_percent: number
 }
 
-export interface PublicCatalog { store: StoreInfo; products: CatalogProduct[]; devices: CatalogDevice[] }
+export interface CatalogReview { name: string; rating: number; comment: string | null; created_at: string }
+
+export interface PublicCatalog {
+  store: StoreInfo; products: CatalogProduct[]; devices: CatalogDevice[]; reviews: CatalogReview[]
+}
+
+export interface TrackedOrder {
+  order_number: string; status: CatalogOrderStatus; total: number; created_at: string
+  items: { name: string; quantity: number }[]; reviewed: boolean
+}
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+
+export interface CatalogReviewRow {
+  id: string; order_id: string; customer_name: string; rating: number
+  comment: string | null; status: ReviewStatus; created_at: string
+}
+
+export interface CatalogReport {
+  visitors: number; orders: number; top_viewed: { name: string; views: number }[]
+}
 
 export interface CatalogOrderItemInput { kind: 'product' | 'device'; id: string; quantity: number }
 
@@ -393,6 +417,7 @@ export type Database = {
       payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
       catalog_orders:            { Row: CatalogOrder;           Insert: never;                                                             Update: Partial<CatalogOrder> }
       catalog_order_items:       { Row: CatalogOrderItem;       Insert: never;                                                             Update: never }
+      catalog_reviews:           { Row: CatalogReviewRow;       Insert: never;                                                             Update: Partial<CatalogReviewRow> }
       store_info:                { Row: StoreInfo & { id: number; updated_at: string }; Insert: never; Update: Partial<StoreInfo> }
       push_subscriptions:        { Row: PushSubscriptionRow;    Insert: Omit<PushSubscriptionRow, 'id'|'created_at'>;                      Update: never }
       audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
@@ -406,6 +431,10 @@ export type Database = {
     Functions: {
       lookup_device_by_imei:        { Args: { p_imei: string };      Returns: MobileDeviceView[] }
       get_low_stock_products:       { Args: Record<never, never>;     Returns: { product_id: string; product_name: string; stock_qty: number; reorder_level: number; category_name: string }[] }
+      track_catalog_order:          { Args: { p_number: string; p_phone: string }; Returns: TrackedOrder | null }
+      submit_catalog_review:        { Args: { p_number: string; p_phone: string; p_rating: number; p_comment: string | null }; Returns: undefined }
+      log_catalog_event:            { Args: { p_type: 'visit' | 'view'; p_item: string | null; p_session: string }; Returns: undefined }
+      get_catalog_report:           { Args: { p_days: number }; Returns: CatalogReport }
       get_public_catalog:           { Args: Record<never, never>;     Returns: PublicCatalog }
       create_catalog_order:         { Args: { p_name: string; p_phone: string; p_notes: string | null; p_items: CatalogOrderItemInput[] }; Returns: CatalogOrderResult }
       next_purchase_invoice_number: { Args: Record<never, never>;     Returns: string }

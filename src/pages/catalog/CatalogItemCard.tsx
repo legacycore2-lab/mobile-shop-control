@@ -1,8 +1,8 @@
 // src/pages/catalog/CatalogItemCard.tsx
-import { Smartphone, Package, Wrench, Plus, Check, GitCompareArrows } from 'lucide-react'
+import { Smartphone, Package, Wrench, Plus, Check, GitCompareArrows, Heart } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
-import type { CatalogEntry, CatalogGroup } from '@/services/catalog.service'
+import { catalogService, type CatalogEntry, type CatalogGroup } from '@/services/catalog.service'
 
 const GROUP_STYLE: Record<CatalogGroup, { icon: React.ElementType; label: string; tint: string; color: string }> = {
   device:     { icon: Smartphone, label: 'موبايل',    tint: 'bg-emerald-50 dark:bg-emerald-900/20', color: 'text-emerald-500' },
@@ -15,10 +15,11 @@ interface Props {
   inCartQty: number
   onAdd:     () => void
   onOpen:    () => void
+  favorite:  { active: boolean; onToggle: () => void }
   compare:   { active: boolean; disabled: boolean; onToggle: () => void } | null   // null = الصنف مش موبايل
 }
 
-export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, compare }: Props) {
+export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, compare }: Props) {
   const g          = GROUP_STYLE[entry.group]
   const Icon       = g.icon
   const soldOut    = entry.maxQty < 1
@@ -41,6 +42,17 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, compare }: Pr
         )}>
           {soldOut ? 'نفد' : 'متوفر'}
         </span>
+        <button
+          onClick={e => { e.stopPropagation(); favorite.onToggle() }}
+          aria-label="المفضلة"
+          className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-900/90 flex items-center justify-center">
+          <Heart size={15} className={favorite.active ? 'fill-red-500 text-red-500' : 'text-slate-400'} />
+        </button>
+        {entry.oldPrice !== null && !soldOut && (
+          <span className="absolute top-12 right-3 text-xs font-bold px-2.5 py-1 rounded-full bg-red-500 text-white">
+            عرض −{catalogService.discountPercent(entry.price, entry.oldPrice)}%
+          </span>
+        )}
         {compare && (
           <button
             onClick={e => { e.stopPropagation(); compare.onToggle() }}
@@ -75,6 +87,9 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, compare }: Pr
 
       <div className="flex items-center justify-between mt-auto pt-1">
         <div>
+          {entry.oldPrice !== null && (
+            <p className="text-xs text-slate-400 line-through mb-1">{fmt(entry.oldPrice)} ج</p>
+          )}
           <p className="text-[22px] font-bold text-gray-900 dark:text-white leading-none">
             {fmt(entry.price)} <span className="text-[13px] font-medium text-slate-500">ج</span>
           </p>

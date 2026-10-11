@@ -18,7 +18,7 @@ interface FormState {
   brand_id: string; model_id: string
   storage: string; color: string; condition: string; battery_health: string
   supplier_id: string; purchase_date: string
-  cost_price: string; selling_price: string
+  cost_price: string; selling_price: string; old_price: string
   warranty_months: string; location: string; notes: string
 }
 
@@ -27,7 +27,7 @@ const EMPTY_FORM: FormState = {
   brand_id: '', model_id: '',
   storage: '', color: '', condition: 'new', battery_health: '',
   supplier_id: '', purchase_date: new Date().toISOString().split('T')[0],
-  cost_price: '', selling_price: '',
+  cost_price: '', selling_price: '', old_price: '',
   warranty_months: '12', location: '', notes: '',
 }
 
@@ -61,6 +61,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
           purchase_date:   device.purchase_date,
           cost_price:      String(device.cost_price),
           selling_price:   String(device.selling_price ?? ''),
+          old_price:       String(device.old_price ?? ''),
           warranty_months: String(device.warranty_months),
           location:        device.location        ?? '',
           notes:           device.notes           ?? '',
@@ -140,6 +141,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
           ...form,
           cost_price:      Number(form.cost_price),
           selling_price:   Number(form.selling_price) || 0,
+          old_price:       Number(form.old_price) || null,
           warranty_months: Number(form.warranty_months) || 0,
           battery_health:  form.battery_health ? Number(form.battery_health) : null,
         },
@@ -377,6 +379,11 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
                   <label className={labelCls}>سعر البيع المقترح (ج.م)</label>
                   <input type="number" min="0" step="0.01" value={form.selling_price}
                     onChange={e => set('selling_price', e.target.value)} placeholder="0.00" className={inputCls} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>السعر قبل الخصم (اختياري)</label>
+                  <input type="number" min="0" step="0.01" value={form.old_price}
+                    onChange={e => set('old_price', e.target.value)} placeholder="يظهر مشطوب في الكتالوج" className={inputCls} />
                 </div>
               </div>
             </div>

@@ -11,7 +11,7 @@ function Form({ initial }: { initial: StoreInfo }) {
   const [msg,   setMsg]   = useState<{ ok: boolean; text: string } | null>(null)
   const update = useUpdateStoreInfo()
 
-  const set = (k: keyof StoreInfo, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k: keyof StoreInfo, v: string | number | boolean) => setForm(f => ({ ...f, [k]: v }))
 
   async function save() {
     setMsg(null)
@@ -30,6 +30,24 @@ function Form({ initial }: { initial: StoreInfo }) {
       <Input label="العنوان" value={form.address} onChange={e => set('address', e.target.value)} />
       <Input label="مواعيد العمل" placeholder="يوميًا من 10 ص إلى 10 م" value={form.working_hours} onChange={e => set('working_hours', e.target.value)} />
       <Input label="رابط الموقع على الخريطة" placeholder="https://maps.google.com/..." dir="ltr" value={form.map_url} onChange={e => set('map_url', e.target.value)} />
+      <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={form.installment_enabled}
+            onChange={e => set('installment_enabled', e.target.checked)}
+            className="w-4 h-4 accent-blue-600 cursor-pointer" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">إظهار حاسبة التقسيط للموبايلات في الكتالوج</span>
+        </label>
+        {form.installment_enabled && (
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="الفائدة السنوية %" type="number" min="0" max="100" step="0.1" dir="ltr"
+              value={String(form.installment_interest_percent)}
+              onChange={e => set('installment_interest_percent', e.target.value)} />
+            <Input label="المقدم %" type="number" min="0" max="90" step="1" dir="ltr"
+              value={String(form.installment_down_percent)}
+              onChange={e => set('installment_down_percent', e.target.value)} />
+          </div>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <Button onClick={() => void save()} loading={update.isPending}>حفظ</Button>
         {msg && <span className={`text-sm ${msg.ok ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</span>}
