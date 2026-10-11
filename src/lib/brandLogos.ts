@@ -9,6 +9,9 @@ const LOGO_ALIASES: Record<string, string[]> = {
   nokia:    ['nokia', 'نوكيا'],
   zte:      ['zte'],
   motorola: ['motorola', 'موتورولا'],
+  realme:   ['realme', 'ريلمي'],
+  xiaomi:   ['xiaomi', 'mi', 'شاومي', 'شياومي'],
+  poco:     ['poco', 'بوكو'],
 }
 
 export function getBrandLogo(brand: string): string | null {
