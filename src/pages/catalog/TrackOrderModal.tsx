@@ -25,7 +25,7 @@ function StatusSteps({ status }: { status: CatalogOrderStatus }) {
       {STEPS.map((s, i) => (
         <div key={s.status} className="flex-1 flex flex-col items-center gap-1.5 relative">
           {i > 0 && (
-            <span className={cn('absolute top-4 right-1/2 w-full h-0.5 -z-0', i <= current ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-gray-700')} />
+            <span className={cn('absolute top-4 left-1/2 w-full h-0.5', i <= current ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-gray-700')} />
           )}
           <span className={cn(
             'relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold',
