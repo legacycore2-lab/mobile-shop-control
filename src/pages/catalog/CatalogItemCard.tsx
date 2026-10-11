@@ -27,15 +27,15 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
 
   return (
     <div className={cn(
-      'bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-[22px] p-[18px] flex flex-col gap-3.5',
+      'bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl sm:rounded-[22px] p-2.5 sm:p-[18px] flex flex-col gap-2.5 sm:gap-3.5',
       soldOut && 'opacity-65',
     )}>
-      <div onClick={onOpen} className={cn('relative h-40 rounded-2xl flex items-center justify-center cursor-pointer', soldOut ? 'bg-slate-100 dark:bg-gray-800' : g.tint)}>
+      <div onClick={onOpen} className={cn('relative h-32 sm:h-40 rounded-xl sm:rounded-2xl flex items-center justify-center cursor-pointer', soldOut ? 'bg-slate-100 dark:bg-gray-800' : g.tint)}>
         {entry.image
           ? <img src={entry.image} alt={entry.title} loading="lazy" className="max-h-full max-w-full object-contain p-3" />
           : <Icon size={56} strokeWidth={1.3} className={soldOut ? 'text-slate-400' : g.color} />}
         <span className={cn(
-          'absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full',
+          'absolute top-2 right-2 sm:top-3 sm:right-3 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full',
           soldOut
             ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
             : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -45,11 +45,11 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
         <button
           onClick={e => { e.stopPropagation(); favorite.onToggle() }}
           aria-label="المفضلة"
-          className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-900/90 flex items-center justify-center">
+          className="absolute top-2 left-2 sm:top-3 sm:left-3 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-900/90 flex items-center justify-center">
           <Heart size={15} className={favorite.active ? 'fill-red-500 text-red-500' : 'text-slate-400'} />
         </button>
         {entry.oldPrice !== null && !soldOut && (
-          <span className="absolute top-12 right-3 text-xs font-bold px-2.5 py-1 rounded-full bg-red-500 text-white">
+          <span className="absolute top-9 right-2 sm:top-12 sm:right-3 text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-red-500 text-white">
             عرض −{catalogService.discountPercent(entry.price, entry.oldPrice)}%
           </span>
         )}
@@ -58,7 +58,7 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
             onClick={e => { e.stopPropagation(); compare.onToggle() }}
             disabled={compare.disabled && !compare.active}
             className={cn(
-              'absolute bottom-3 right-3 h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 border transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+              'absolute bottom-2 right-2 sm:bottom-3 sm:right-3 h-7 sm:h-8 px-2.5 sm:px-3 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 border transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
               compare.active
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-300 border-slate-200 dark:border-gray-700',
@@ -72,7 +72,7 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
         <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">
           {entry.kind === 'device' ? g.label : entry.subtitle}
         </p>
-        <p className="text-base font-semibold text-gray-900 dark:text-white leading-snug">{entry.title}</p>
+        <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white leading-snug">{entry.title}</p>
       </div>
 
       {entry.details.length > 0 && (
@@ -85,12 +85,12 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-auto pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-auto pt-1">
         <div>
           {entry.oldPrice !== null && (
             <p className="text-xs text-slate-400 line-through mb-1">{fmt(entry.oldPrice)} ج</p>
           )}
-          <p className="text-[22px] font-bold text-gray-900 dark:text-white leading-none">
+          <p className="text-lg sm:text-[22px] font-bold text-gray-900 dark:text-white leading-none">
             {fmt(entry.price)} <span className="text-[13px] font-medium text-slate-500">ج</span>
           </p>
           {entry.kind === 'device' && entry.maxQty > 1 && (
@@ -101,7 +101,7 @@ export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, favorite, com
           onClick={onAdd}
           disabled={soldOut || reachedMax}
           className={cn(
-            'h-10 px-4 rounded-[10px] text-sm font-semibold flex items-center gap-1.5 transition-colors',
+            'h-10 px-4 rounded-[10px] text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors',
             'disabled:cursor-not-allowed',
             soldOut
               ? 'bg-slate-200 dark:bg-gray-800 text-slate-400'

@@ -13,12 +13,15 @@ import { CartPanel } from './CartPanel'
 import { BrandMark } from './BrandMark'
 import { PriceFilter } from './PriceFilter'
 import { SortSelect } from './SortSelect'
+import { ViewToggle, type CatalogView } from './ViewToggle'
+import { CatalogListItem } from './CatalogListItem'
 import { ContactButtons } from './ContactButtons'
 import { CatalogDetailModal } from './CatalogDetailModal'
 import { CompareModal } from './CompareModal'
 import { TrackOrderModal } from './TrackOrderModal'
 import { ReviewsSection } from './ReviewsSection'
 import { useFavorites } from '@/hooks/useFavorites'
+import { readJson, writeJson } from '@/lib/clientStorage'
 import { catalogService, type CatalogGroup, type CatalogSort, type CatalogEntry } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
@@ -44,6 +47,7 @@ export function CatalogPage() {
   const [filter,   setFilter]   = useState<Filter>('all')
   const [search,   setSearch]   = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [sort,     setSort]     = useState<CatalogSort>('default')
+  const [view,     setViewState] = useState<CatalogView>(() => readJson<CatalogView>('catalog:view', 'grid'))
   const [openKey,  setOpenKey]  = useState<string | null>(null)
   const [compareKeys, setCompareKeys] = useState<string[]>([])
   const [showCompare, setShowCompare] = useState(false)
@@ -178,6 +182,7 @@ export function CatalogPage() {
             onChange={(lo, hi) => { setMinPrice(lo); setMaxPrice(hi) }}
           />
           <SortSelect value={sort} onChange={setSort} />
+          <ViewToggle value={view} onChange={v => { setViewState(v); writeJson('catalog:view', v) }} />
         </div>
 
         {isLoading && (
@@ -200,19 +205,24 @@ export function CatalogPage() {
           <p className="text-center text-sm text-slate-500 dark:text-gray-400 py-16">مفيش نتائج</p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[18px]">
-          {visible.map(e => (
-            <CatalogItemCard
-              key={e.key} entry={e} inCartQty={qtyInCart(e.key)} onAdd={() => cart.add(e)}
-              onOpen={() => handleOpen(e)}
-              favorite={{ active: favorites.has(e.key), onToggle: () => favorites.toggle(e.key) }}
-              compare={e.kind === 'device' ? {
+        <div className={view === 'grid'
+          ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-[18px]'
+          : 'flex flex-col gap-2.5'}>
+          {visible.map(e => {
+            const itemProps = {
+              entry: e, inCartQty: qtyInCart(e.key), onAdd: () => cart.add(e),
+              onOpen: () => handleOpen(e),
+              favorite: { active: favorites.has(e.key), onToggle: () => favorites.toggle(e.key) },
+              compare: e.kind === 'device' ? {
                 active:   compareKeys.includes(e.key),
                 disabled: compareKeys.length >= 3,
                 onToggle: () => toggleCompare(e.key),
-              } : null}
-            />
-          ))}
+              } : null,
+            }
+            return view === 'grid'
+              ? <CatalogItemCard key={e.key} {...itemProps} />
+              : <CatalogListItem key={e.key} {...itemProps} />
+          })}
         </div>
       </section>
 
