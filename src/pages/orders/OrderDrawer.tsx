@@ -116,6 +116,13 @@ export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onDeliver,
             </div>
           )}
 
+          {canEdit && order.status === 'completed' && !order.sale_invoice_id && !showDelivery && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10 p-4 space-y-3">
+              <p className="text-sm text-amber-800 dark:text-amber-300">الطلب ده اتسلّم من غير فاتورة بيع.</p>
+              <Button className="w-full" variant="primary" onClick={() => setShowDelivery(true)}>إنشاء فاتورة بيع</Button>
+            </div>
+          )}
+
           {showDelivery && (
             <DeliveryForm
               total={order.total}
