@@ -15,6 +15,7 @@ import { PriceFilter } from './PriceFilter'
 import { SortSelect } from './SortSelect'
 import { ViewToggle, type CatalogView } from './ViewToggle'
 import { CatalogListItem } from './CatalogListItem'
+import { PaymentMethods } from './PaymentMethods'
 import { ContactButtons } from './ContactButtons'
 import { CatalogDetailModal } from './CatalogDetailModal'
 import { CompareModal } from './CompareModal'
@@ -142,6 +143,8 @@ export function CatalogPage() {
         onBrowse={() => scrollToId('catalog')}
         onHowTo={() => scrollToId('how')}
       />
+
+      <PaymentMethods store={store} />
 
       <section id="catalog" className="max-w-6xl mx-auto px-4 sm:px-7 pt-9 space-y-5 scroll-mt-20">
         <div className="flex gap-3 overflow-x-auto pb-1">
