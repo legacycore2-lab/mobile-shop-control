@@ -1,6 +1,6 @@
 // src/pages/catalog/CatalogHeader.tsx
 import { Search, ShoppingCart, PackageSearch } from 'lucide-react'
-import { BrandWordmark } from './BrandWordmark'
+import { BrandBanner } from './BrandBanner'
 
 interface Props {
   search:      string
@@ -12,11 +12,11 @@ interface Props {
 
 export function CatalogHeader({ search, onSearch, cartCount, onOpenCart, onTrack }: Props) {
   return (
+    <>
+    <BrandBanner />
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-7 py-3 flex items-center gap-3 sm:gap-5 flex-wrap">
-        <BrandWordmark />
-
-        <div className="order-3 sm:order-none flex-1 basis-full sm:basis-64 min-w-0 relative">
+        <div className="flex-1 basis-0 sm:basis-64 min-w-0 relative">
           <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             value={search}
@@ -28,7 +28,7 @@ export function CatalogHeader({ search, onSearch, cartCount, onOpenCart, onTrack
 
         <button
           onClick={onTrack}
-          className="mr-auto sm:mr-0 h-11 px-4 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-gray-800"
+          className="h-11 px-4 rounded-xl border border-slate-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-gray-800"
         >
           <PackageSearch size={16} />
           <span className="hidden sm:inline">تتبّع طلبك</span>
@@ -49,5 +49,6 @@ export function CatalogHeader({ search, onSearch, cartCount, onOpenCart, onTrack
         </button>
       </div>
     </header>
+    </>
   )
 }
