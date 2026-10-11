@@ -1,5 +1,6 @@
 // src/pages/catalog/CatalogHeader.tsx
-import { Search, ShoppingCart, Store } from 'lucide-react'
+import { Search, ShoppingCart } from 'lucide-react'
+import { BrandWordmark } from './BrandWordmark'
 
 interface Props {
   search:      string
@@ -12,12 +13,7 @@ export function CatalogHeader({ search, onSearch, cartCount, onOpenCart }: Props
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-7 py-3 flex items-center gap-3 sm:gap-5 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-[10px] bg-blue-600 flex items-center justify-center">
-            <Store size={20} className="text-white" />
-          </div>
-          <span className="font-bold text-lg text-gray-900 dark:text-white">الشافعي ستور</span>
-        </div>
+        <BrandWordmark />
 
         <div className="order-3 sm:order-none flex-1 basis-full sm:basis-64 min-w-0 relative">
           <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

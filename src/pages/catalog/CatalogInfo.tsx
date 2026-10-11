@@ -1,6 +1,7 @@
 // src/pages/catalog/CatalogInfo.tsx
 // أسفل الصفحة: مميزات + إزاي أطلب + فوتر
 import { CircleDollarSign, RefreshCw, PhoneCall, MapPin, Clock, Phone } from 'lucide-react'
+import { BrandWordmark } from './BrandWordmark'
 import type { StoreInfo } from '@/types/database'
 
 const TRUST: { icon: React.ElementType; title: string; sub: string }[] = [
@@ -50,7 +51,7 @@ export function CatalogInfo({ store }: { store: StoreInfo | null }) {
 
       <footer className="bg-slate-900 text-slate-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-7 py-8 space-y-4">
-          <p className="text-base font-bold text-white">الشافعي ستور</p>
+          <BrandWordmark tone="dark" />
           {hasContact && store && (
             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-8 gap-y-3 text-sm">
               {store.address && (
