@@ -137,4 +137,12 @@ export const devicesRepository = {
     if (error) throw error
     return data as MobileModel
   },
+
+  updateModelImage: async (modelId: string, imageUrl: string | null): Promise<void> => {
+    const { error } = await supabase
+      .from('mobile_models')
+      .update({ image_url: imageUrl } as never)
+      .eq('id', modelId)
+    if (error) throw error
+  },
 }

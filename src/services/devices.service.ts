@@ -95,6 +95,11 @@ export const devicesService = {
     return devicesRepository.createModel(brandId, name.trim())
   },
 
+  updateModelImage: (modelId: string, imageUrl: string | null): Promise<void> => {
+    if (!modelId) throw new Error('اختر الموديل أولاً')
+    return devicesRepository.updateModelImage(modelId, imageUrl)
+  },
+
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   create: async (form: DeviceFormData): Promise<MobileDevice> => {

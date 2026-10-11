@@ -13,19 +13,21 @@ import type { ProductWithCategory } from '@/repositories/products.repository'
 import { TYPE_MAP } from './constants'
 import type { ProductType } from '@/types/database'
 import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
+import { ImageField } from '@/components/shared/ImageField'
 
 interface FormState {
   category_id: string; name: string; sku: string; barcode: string
   product_type: ProductType; cost_price: string; selling_price: string
   stock_qty: string; reorder_level: string; unit: string
   default_supplier_id: string; is_active: boolean; notes: string
+  image_url: string | null
 }
 
 const EMPTY_FORM: FormState = {
   category_id: '', name: '', sku: '', barcode: '',
   product_type: 'accessory', cost_price: '', selling_price: '',
   stock_qty: '0', reorder_level: '5', unit: 'قطعة',
-  default_supplier_id: '', is_active: true, notes: '',
+  default_supplier_id: '', is_active: true, notes: '', image_url: null,
 }
 
 // ── Quick Stock Add Card ───────────────────────────────────────────────────────
@@ -156,6 +158,7 @@ export function ProductModal({ product, onClose }: {
           default_supplier_id: product.default_supplier_id ?? '',
           is_active:           product.is_active,
           notes:               product.notes ?? '',
+          image_url:           product.image_url,
         }
       : EMPTY_FORM
   )
@@ -213,6 +216,7 @@ export function ProductModal({ product, onClose }: {
       default_supplier_id: matchedProduct.default_supplier_id ?? '',
       is_active:           matchedProduct.is_active,
       notes:               matchedProduct.notes ?? '',
+      image_url:           matchedProduct.image_url,
     })
     setMatchedProduct(null)
     setShowForm(true)
@@ -515,6 +519,14 @@ export function ProductModal({ product, onClose }: {
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <ImageField
+                      label="صورة المنتج (تظهر في الكتالوج)"
+                      folder="products"
+                      value={form.image_url}
+                      onChange={url => setForm(f => ({ ...f, image_url: url }))}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
                     <label className={labelCls}>ملاحظات</label>

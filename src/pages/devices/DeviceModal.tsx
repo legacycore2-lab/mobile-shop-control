@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react'
 import { Plus, X, ScanLine } from 'lucide-react'
 import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
+import { ImageField } from '@/components/shared/ImageField'
 import {
   useUpdateDevice,
-  useBrands, useModelsByBrand, useCreateBrand, useCreateModel,
+  useBrands, useModelsByBrand, useCreateBrand, useCreateModel, useUpdateModelImage,
 } from '@/hooks/useDevices'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useAuth } from '@/lib/auth'
@@ -42,6 +43,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
   const updateMutation      = useUpdateDevice()
   const createBrandMutation = useCreateBrand()
   const createModelMutation = useCreateModel()
+  const updateModelImage     = useUpdateModelImage()
 
   const [form, setForm] = useState<FormState>(
     device
@@ -300,6 +302,15 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
                 </div>
               </div>
             </div>
+
+            {form.model_id && (
+              <ImageField
+                label="صورة الموديل (تظهر في الكتالوج لكل أجهزة الموديل ده)"
+                folder="models"
+                value={allModels.find(m => m.id === form.model_id)?.image_url ?? null}
+                onChange={url => updateModelImage.mutate({ modelId: form.model_id, imageUrl: url })}
+              />
+            )}
 
             {/* Specs */}
             <div>

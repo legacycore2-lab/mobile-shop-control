@@ -16,6 +16,7 @@ export interface CatalogEntry {
   details:  string[]
   price:    number
   maxQty:   number            // 0 = نفد
+  image:    string | null
 }
 
 export interface BrandCount { brand: string; count: number }
@@ -51,6 +52,7 @@ export const catalogService = {
       details:  [],
       price:    p.selling_price,
       maxQty:   Math.max(p.stock_qty, 0),
+      image:    p.image_url,
     }))
 
     const grouped = new Map<string, CatalogEntry>()
@@ -78,6 +80,7 @@ export const catalogService = {
         details,
         price:    d.selling_price,
         maxQty:   1,
+        image:    d.image_url,
       })
     }
 

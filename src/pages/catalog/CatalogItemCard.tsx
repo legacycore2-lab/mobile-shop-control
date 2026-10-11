@@ -28,7 +28,9 @@ export function CatalogItemCard({ entry, inCartQty, onAdd }: Props) {
       soldOut && 'opacity-65',
     )}>
       <div className={cn('relative h-40 rounded-2xl flex items-center justify-center', soldOut ? 'bg-slate-100 dark:bg-gray-800' : g.tint)}>
-        <Icon size={56} strokeWidth={1.3} className={soldOut ? 'text-slate-400' : g.color} />
+        {entry.image
+          ? <img src={entry.image} alt={entry.title} loading="lazy" className="max-h-full max-w-full object-contain p-3" />
+          : <Icon size={56} strokeWidth={1.3} className={soldOut ? 'text-slate-400' : g.color} />}
         <span className={cn(
           'absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full',
           soldOut

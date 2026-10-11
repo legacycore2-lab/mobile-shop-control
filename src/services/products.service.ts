@@ -16,6 +16,7 @@ export interface ProductFormData {
   default_supplier_id: string
   is_active: boolean
   notes: string
+  image_url: string | null
   created_by: string
 }
 
@@ -113,6 +114,7 @@ export const productsService = {
       default_supplier_id: form.default_supplier_id   || null,
       is_active:           form.is_active ?? true,
       notes:               form.notes?.trim()         || null,
+      image_url:           form.image_url             || null,
       created_by:          form.created_by,
     })
   },
@@ -133,6 +135,7 @@ export const productsService = {
     if (form.default_supplier_id !== undefined) payload['default_supplier_id'] = form.default_supplier_id || null
     if (form.is_active           !== undefined) payload['is_active']           = form.is_active
     if (form.notes               !== undefined) payload['notes']               = form.notes?.trim() || null
+    if (form.image_url           !== undefined) payload['image_url']           = form.image_url || null
     return productsRepository.update(id, payload as Parameters<typeof productsRepository.update>[1])
   },
 

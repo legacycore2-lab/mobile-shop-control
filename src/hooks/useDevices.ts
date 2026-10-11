@@ -125,3 +125,12 @@ export function useCreateModel() {
       qc.invalidateQueries({ queryKey: KEYS.models(brandId) }),
   })
 }
+
+export function useUpdateModelImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ modelId, imageUrl }: { modelId: string; imageUrl: string | null }) =>
+      devicesService.updateModelImage(modelId, imageUrl),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mobile_models'] }),
+  })
+}

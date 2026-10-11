@@ -43,7 +43,7 @@ export interface Product {
   barcode: string | null; product_type: ProductType
   compatible_models: string[] | null; cost_price: number; selling_price: number
   stock_qty: number; reorder_level: number; unit: string
-  default_supplier_id: string | null; is_active: boolean; notes: string | null
+  default_supplier_id: string | null; is_active: boolean; notes: string | null; image_url: string | null
   created_by: string; created_at: string; updated_at: string
 }
 
@@ -52,7 +52,7 @@ export interface Product {
 export interface MobileBrand { id: string; name: string; created_at: string }
 
 export interface MobileModel {
-  id: string; brand_id: string; name: string; created_at: string
+  id: string; brand_id: string; name: string; image_url: string | null; created_at: string
 }
 
 export interface MobileDevice {
@@ -238,12 +238,13 @@ export interface CatalogOrderItem {
 
 export interface CatalogProduct {
   id: string; name: string; category: string; product_type: ProductType
-  selling_price: number; stock_qty: number; unit: string
+  selling_price: number; stock_qty: number; unit: string; image_url: string | null
 }
 
 export interface CatalogDevice {
   id: string; brand: string; model: string; storage: string | null; color: string | null
   condition: string; selling_price: number; battery_health: number | null; warranty_months: number
+  image_url: string | null
 }
 
 export interface PublicCatalog { products: CatalogProduct[]; devices: CatalogDevice[] }

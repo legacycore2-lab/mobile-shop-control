@@ -82,6 +82,7 @@ export function AddProductInlineForm({
         default_supplier_id: supplierId,
         is_active:           true,
         notes:               form.notes.trim(),
+        image_url:           null,
         created_by:          userId,
       }
       const product = await createProduct.mutateAsync(productForm)
