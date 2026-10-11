@@ -10,7 +10,7 @@ function methodsOf(store: StoreInfo): Method[] {
   if (store.pay_cash)
     list.push({ key: 'cash', icon: Banknote, title: 'كاش عند الاستلام' })
   if (store.pay_vodafone_cash)
-    list.push({ key: 'wallet', icon: Smartphone, title: 'فودافون كاش' })
+    list.push({ key: 'wallet', icon: Smartphone, title: 'محافظ إلكترونية' })
   if (store.pay_instapay)
     list.push({ key: 'instapay', icon: Landmark, title: 'إنستا باي' })
   return list

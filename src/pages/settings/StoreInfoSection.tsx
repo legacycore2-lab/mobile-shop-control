@@ -34,7 +34,7 @@ function Form({ initial }: { initial: StoreInfo }) {
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">طرق الدفع (بتظهر للعملاء في الكتالوج)</p>
         {([
           ['pay_cash', 'كاش عند الاستلام'],
-          ['pay_vodafone_cash', 'فودافون كاش'],
+          ['pay_vodafone_cash', 'محافظ إلكترونية'],
           ['pay_instapay', 'إنستا باي'],
         ] as const).map(([k, label]) => (
           <label key={k} className="flex items-center gap-3 cursor-pointer">
