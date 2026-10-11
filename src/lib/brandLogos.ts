@@ -12,6 +12,7 @@ const LOGO_ALIASES: Record<string, string[]> = {
   realme:   ['realme', 'ريلمي'],
   xiaomi:   ['xiaomi', 'mi', 'شاومي', 'شياومي'],
   poco:     ['poco', 'بوكو'],
+  infinix:  ['infinix', 'انفينكس', 'إنفينكس'],
   huawei:   ['huawei', 'هواوي'],
   redmi:    ['redmi', 'ريدمي'],
 }
