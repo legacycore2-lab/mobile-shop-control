@@ -1,5 +1,5 @@
 // src/pages/catalog/CatalogItemCard.tsx
-import { Smartphone, Package, Wrench, Plus, Check } from 'lucide-react'
+import { Smartphone, Package, Wrench, Plus, Check, GitCompareArrows } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import type { CatalogEntry, CatalogGroup } from '@/services/catalog.service'
@@ -14,9 +14,11 @@ interface Props {
   entry:     CatalogEntry
   inCartQty: number
   onAdd:     () => void
+  onOpen:    () => void
+  compare:   { active: boolean; disabled: boolean; onToggle: () => void } | null   // null = الصنف مش موبايل
 }
 
-export function CatalogItemCard({ entry, inCartQty, onAdd }: Props) {
+export function CatalogItemCard({ entry, inCartQty, onAdd, onOpen, compare }: Props) {
   const g          = GROUP_STYLE[entry.group]
   const Icon       = g.icon
   const soldOut    = entry.maxQty < 1
@@ -27,7 +29,7 @@ export function CatalogItemCard({ entry, inCartQty, onAdd }: Props) {
       'bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-[22px] p-[18px] flex flex-col gap-3.5',
       soldOut && 'opacity-65',
     )}>
-      <div className={cn('relative h-40 rounded-2xl flex items-center justify-center', soldOut ? 'bg-slate-100 dark:bg-gray-800' : g.tint)}>
+      <div onClick={onOpen} className={cn('relative h-40 rounded-2xl flex items-center justify-center cursor-pointer', soldOut ? 'bg-slate-100 dark:bg-gray-800' : g.tint)}>
         {entry.image
           ? <img src={entry.image} alt={entry.title} loading="lazy" className="max-h-full max-w-full object-contain p-3" />
           : <Icon size={56} strokeWidth={1.3} className={soldOut ? 'text-slate-400' : g.color} />}
@@ -39,9 +41,22 @@ export function CatalogItemCard({ entry, inCartQty, onAdd }: Props) {
         )}>
           {soldOut ? 'نفد' : 'متوفر'}
         </span>
+        {compare && (
+          <button
+            onClick={e => { e.stopPropagation(); compare.onToggle() }}
+            disabled={compare.disabled && !compare.active}
+            className={cn(
+              'absolute bottom-3 right-3 h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 border transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+              compare.active
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-300 border-slate-200 dark:border-gray-700',
+            )}>
+            <GitCompareArrows size={13} /> {compare.active ? 'في المقارنة' : 'قارن'}
+          </button>
+        )}
       </div>
 
-      <div>
+      <div onClick={onOpen} className="cursor-pointer">
         <p className="text-xs text-slate-500 dark:text-gray-400 mb-1">
           {entry.kind === 'device' ? g.label : entry.subtitle}
         </p>

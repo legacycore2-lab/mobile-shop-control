@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useCatalogOrders, useUpdateOrderStatus } from '@/hooks/useCatalogOrders'
 import { OrderDrawer } from './OrderDrawer'
+import { topOrderedItems } from '@/services/catalogOrders.service'
 import { ORDER_FILTERS, ORDER_STATUS_MAP, fmtOrderDate, type OrderFilter } from './constants'
 import type { CatalogOrderStatus } from '@/types/database'
 
@@ -30,6 +31,7 @@ export function OrdersPage() {
     )
   }, [orders, filter, search])
 
+  const top      = useMemo(() => topOrderedItems(orders), [orders])
   const selected = orders.find(o => o.id === selectedId) ?? null
   const countOf  = (f: OrderFilter) => f === 'all' ? orders.length : orders.filter(o => o.status === f).length
 
@@ -60,6 +62,21 @@ export function OrdersPage() {
           {copied ? <><Check size={14} className="text-green-600" /> تم النسخ</> : <><Link2 size={14} /> نسخ رابط المعرض</>}
         </button>
       </div>
+
+      {top.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">الأكثر طلبًا من الكتالوج</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+            {top.map((t, i) => (
+              <div key={t.name} className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 px-3 py-2">
+                <p className="text-xs text-gray-400">#{i + 1}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{t.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t.quantity} قطعة · {t.orders} طلب</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 space-y-3">
         <div className="relative">

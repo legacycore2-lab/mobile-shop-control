@@ -3,6 +3,8 @@ import { X, Phone, MessageCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { fmt } from '@/lib/fmt'
+import { whatsappUrl } from '@/lib/whatsapp'
+import { buildOrderMessage } from '@/services/catalogOrders.service'
 import { ORDER_STATUS_MAP, fmtOrderDate } from './constants'
 import type { CatalogOrderWithItems } from '@/services/catalogOrders.service'
 import type { CatalogOrderStatus } from '@/types/database'
@@ -28,11 +30,6 @@ const NEXT_ACTIONS: Record<CatalogOrderStatus, { status: CatalogOrderStatus; lab
   cancelled: [
     { status: 'new', label: 'إعادة فتح', variant: 'secondary' },
   ],
-}
-
-function whatsappNumber(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  return digits.startsWith('0') ? `20${digits.slice(1)}` : digits
 }
 
 export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onClose }: Props) {
@@ -70,9 +67,9 @@ export function OrderDrawer({ order, canEdit, saving, onChangeStatus, onClose }:
                 className="flex-1 h-9 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800">
                 <Phone size={14} /> اتصال
               </a>
-              <a href={`https://wa.me/${whatsappNumber(order.customer_phone)}`} target="_blank" rel="noreferrer"
+              <a href={whatsappUrl(order.customer_phone, buildOrderMessage(order))} target="_blank" rel="noreferrer"
                 className="flex-1 h-9 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium flex items-center justify-center gap-2">
-                <MessageCircle size={14} /> واتساب
+                <MessageCircle size={14} /> رسالة واتساب للعميل
               </a>
             </div>
           </div>

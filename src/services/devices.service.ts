@@ -95,9 +95,12 @@ export const devicesService = {
     return devicesRepository.createModel(brandId, name.trim())
   },
 
-  updateModelImage: (modelId: string, imageUrl: string | null): Promise<void> => {
+  updateModelCatalog: (
+    modelId: string,
+    patch: { image_url?: string | null; show_in_catalog?: boolean },
+  ): Promise<void> => {
     if (!modelId) throw new Error('اختر الموديل أولاً')
-    return devicesRepository.updateModelImage(modelId, imageUrl)
+    return devicesRepository.updateModelCatalog(modelId, patch)
   },
 
   // ── Mutations ─────────────────────────────────────────────────────────────

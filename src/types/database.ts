@@ -43,7 +43,7 @@ export interface Product {
   barcode: string | null; product_type: ProductType
   compatible_models: string[] | null; cost_price: number; selling_price: number
   stock_qty: number; reorder_level: number; unit: string
-  default_supplier_id: string | null; is_active: boolean; notes: string | null; image_url: string | null
+  default_supplier_id: string | null; is_active: boolean; notes: string | null; image_url: string | null; show_in_catalog: boolean
   created_by: string; created_at: string; updated_at: string
 }
 
@@ -52,7 +52,7 @@ export interface Product {
 export interface MobileBrand { id: string; name: string; created_at: string }
 
 export interface MobileModel {
-  id: string; brand_id: string; name: string; image_url: string | null; created_at: string
+  id: string; brand_id: string; name: string; image_url: string | null; show_in_catalog: boolean; created_at: string
 }
 
 export interface MobileDevice {
@@ -247,7 +247,11 @@ export interface CatalogDevice {
   image_url: string | null
 }
 
-export interface PublicCatalog { products: CatalogProduct[]; devices: CatalogDevice[] }
+export interface StoreInfo {
+  whatsapp: string; phone: string; address: string; working_hours: string; map_url: string
+}
+
+export interface PublicCatalog { store: StoreInfo; products: CatalogProduct[]; devices: CatalogDevice[] }
 
 export interface CatalogOrderItemInput { kind: 'product' | 'device'; id: string; quantity: number }
 
@@ -389,6 +393,7 @@ export type Database = {
       payments:                  { Row: Payment;                Insert: Omit<Payment, 'id'|'created_at'>;                                  Update: never }
       catalog_orders:            { Row: CatalogOrder;           Insert: never;                                                             Update: Partial<CatalogOrder> }
       catalog_order_items:       { Row: CatalogOrderItem;       Insert: never;                                                             Update: never }
+      store_info:                { Row: StoreInfo & { id: number; updated_at: string }; Insert: never; Update: Partial<StoreInfo> }
       push_subscriptions:        { Row: PushSubscriptionRow;    Insert: Omit<PushSubscriptionRow, 'id'|'created_at'>;                      Update: never }
       audit_logs:                { Row: AuditLog;               Insert: Omit<AuditLog, 'id'|'created_at'>;                                 Update: never }
       expense_categories:        { Row: ExpenseCategory;        Insert: Omit<ExpenseCategory, 'id'|'created_at'>;                          Update: Partial<ExpenseCategory> }

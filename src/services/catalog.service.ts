@@ -17,7 +17,16 @@ export interface CatalogEntry {
   price:    number
   maxQty:   number            // 0 = نفد
   image:    string | null
+  specs:    { label: string; value: string }[]   // للمقارنة (الموبايلات فقط)
 }
+
+export type CatalogSort = 'default' | 'price-asc' | 'price-desc'
+
+export const SORT_OPTIONS: { id: CatalogSort; label: string }[] = [
+  { id: 'default',    label: 'الترتيب الافتراضي' },
+  { id: 'price-asc',  label: 'الأرخص أولاً'      },
+  { id: 'price-desc', label: 'الأغلى أولاً'      },
+]
 
 export interface BrandCount { brand: string; count: number }
 
@@ -53,6 +62,7 @@ export const catalogService = {
       price:    p.selling_price,
       maxQty:   Math.max(p.stock_qty, 0),
       image:    p.image_url,
+      specs:    [],
     }))
 
     const grouped = new Map<string, CatalogEntry>()
@@ -64,6 +74,13 @@ export const catalogService = {
         existing.maxQty = existing.ids.length
         continue
       }
+      const specs: CatalogEntry['specs'] = [
+        { label: 'الحالة',  value: CONDITION_MAP[d.condition] ?? d.condition },
+        { label: 'السعة',   value: d.storage ?? '—' },
+        { label: 'اللون',   value: d.color ?? '—' },
+        { label: 'البطارية', value: d.battery_health ? `${d.battery_health}%` : '—' },
+        { label: 'الضمان',  value: d.warranty_months > 0 ? `${d.warranty_months} شهر` : 'بدون' },
+      ]
       const details: string[] = [CONDITION_MAP[d.condition] ?? d.condition]
       if (d.storage) details.push(d.storage)
       if (d.color) details.push(d.color)
@@ -81,6 +98,7 @@ export const catalogService = {
         price:    d.selling_price,
         maxQty:   1,
         image:    d.image_url,
+        specs,
       })
     }
 
@@ -93,6 +111,18 @@ export const catalogService = {
     if (max && entry.price > Number(max)) return false
     return true
   },
+
+  // ── الترتيب (المتاح قبل النافد دايمًا) ──────────────────────────────────────
+  sort: (entries: CatalogEntry[], mode: CatalogSort): CatalogEntry[] => {
+    if (mode === 'default') return entries
+    const dir = mode === 'price-asc' ? 1 : -1
+    return [...entries].sort((a, b) =>
+      Number(a.maxQty < 1) - Number(b.maxQty < 1) || (a.price - b.price) * dir)
+  },
+
+  // ── مشاركة صنف (نص + رابط الكتالوج مفتوح على الصنف) ─────────────────────────
+  shareText: (entry: CatalogEntry, baseUrl: string): string =>
+    `${entry.title} — ${entry.price.toLocaleString('en-US')} ج\n${baseUrl}?q=${encodeURIComponent(entry.title)}`,
 
   // ── الماركات المتاحة (عدد الأجهزة لكل ماركة) ─────────────────────────────────
   brandCounts: (entries: CatalogEntry[]): BrandCount[] => {

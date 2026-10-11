@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
+import { StoreInfoSection } from './StoreInfoSection'
 
 
 const ROLE_MAP: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'neutral' }> = {
@@ -397,6 +398,9 @@ export function SettingsPage() {
                 </div>
               </Section>
             </div>
+            <Section title="بيانات المحل" sub="بتظهر للعملاء في صفحة المعرض (واتساب، عنوان، مواعيد)">
+              <StoreInfoSection />
+            </Section>
             <Section title="معلومات النظام">
               <div className="space-y-0">
                 <StatRow label="الإصدار"           value="1.0.0" />

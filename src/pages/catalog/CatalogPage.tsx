@@ -12,7 +12,11 @@ import { CatalogInfo } from './CatalogInfo'
 import { CartPanel } from './CartPanel'
 import { BrandMark } from './BrandMark'
 import { PriceFilter } from './PriceFilter'
-import { catalogService, type CatalogGroup } from '@/services/catalog.service'
+import { SortSelect } from './SortSelect'
+import { WhatsAppButton } from './WhatsAppButton'
+import { CatalogDetailModal } from './CatalogDetailModal'
+import { CompareModal } from './CompareModal'
+import { catalogService, type CatalogGroup, type CatalogSort, type CatalogEntry } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
 type Filter = 'all' | CatalogGroup
@@ -29,10 +33,14 @@ function scrollToId(id: string) {
 }
 
 export function CatalogPage() {
-  const { entries, isLoading, isError, refetch } = useCatalogEntries()
+  const { entries, store, isLoading, isError, refetch } = useCatalogEntries()
   const cart = useCart()
   const [filter,   setFilter]   = useState<Filter>('all')
-  const [search,   setSearch]   = useState('')
+  const [search,   setSearch]   = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
+  const [sort,     setSort]     = useState<CatalogSort>('default')
+  const [openKey,  setOpenKey]  = useState<string | null>(null)
+  const [compareKeys, setCompareKeys] = useState<string[]>([])
+  const [showCompare, setShowCompare] = useState(false)
   const [brand,    setBrand]    = useState<string | null>(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -43,13 +51,22 @@ export function CatalogPage() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return entries.filter(e =>
+    return catalogService.sort(entries, sort).filter(e =>
       (filter === 'all' || e.group === filter) &&
       (!brand || e.brand === brand) &&
       catalogService.inPriceRange(e, minPrice, maxPrice) &&
       (!q || `${e.title} ${e.subtitle} ${e.details.join(' ')}`.toLowerCase().includes(q)),
     )
-  }, [entries, filter, brand, search, minPrice, maxPrice])
+  }, [entries, filter, brand, search, minPrice, maxPrice, sort])
+
+  const opened         = entries.find(e => e.key === openKey) ?? null
+  const compareEntries = compareKeys
+    .map(k => entries.find(e => e.key === k))
+    .filter((e): e is CatalogEntry => !!e)
+
+  function toggleCompare(key: string) {
+    setCompareKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+  }
 
   const qtyInCart = (key: string) => cart.lines.find(l => l.key === key)?.quantity ?? 0
 
@@ -138,10 +155,13 @@ export function CatalogPage() {
           </div>
         )}
 
-        <PriceFilter
-          min={minPrice} max={maxPrice}
-          onChange={(lo, hi) => { setMinPrice(lo); setMaxPrice(hi) }}
-        />
+        <div className="flex items-center gap-x-6 gap-y-3 flex-wrap">
+          <PriceFilter
+            min={minPrice} max={maxPrice}
+            onChange={(lo, hi) => { setMinPrice(lo); setMaxPrice(hi) }}
+          />
+          <SortSelect value={sort} onChange={setSort} />
+        </div>
 
         {isLoading && (
           <div className="flex justify-center py-16">
@@ -165,12 +185,47 @@ export function CatalogPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[18px]">
           {visible.map(e => (
-            <CatalogItemCard key={e.key} entry={e} inCartQty={qtyInCart(e.key)} onAdd={() => cart.add(e)} />
+            <CatalogItemCard
+              key={e.key} entry={e} inCartQty={qtyInCart(e.key)} onAdd={() => cart.add(e)}
+              onOpen={() => setOpenKey(e.key)}
+              compare={e.kind === 'device' ? {
+                active:   compareKeys.includes(e.key),
+                disabled: compareKeys.length >= 3,
+                onToggle: () => toggleCompare(e.key),
+              } : null}
+            />
           ))}
         </div>
       </section>
 
-      <CatalogInfo />
+      <CatalogInfo store={store} />
+
+      <WhatsAppButton number={store?.whatsapp ?? ''} />
+
+      {compareEntries.length > 0 && (
+        <div className="fixed bottom-5 right-1/2 translate-x-1/2 z-40 bg-slate-900 text-white rounded-full shadow-lg pl-2 pr-5 h-12 flex items-center gap-3 text-sm">
+          <span>{compareEntries.length} للمقارنة</span>
+          <button onClick={() => setShowCompare(true)} disabled={compareEntries.length < 2}
+            className="h-8 px-4 rounded-full bg-blue-600 disabled:bg-slate-600 font-semibold">
+            {compareEntries.length < 2 ? 'اختار موبايل تاني' : 'قارن'}
+          </button>
+          <button onClick={() => setCompareKeys([])} className="h-8 px-3 text-slate-300">مسح</button>
+        </div>
+      )}
+
+      {opened && (
+        <CatalogDetailModal
+          entry={opened}
+          inCartQty={qtyInCart(opened.key)}
+          whatsapp={store?.whatsapp ?? ''}
+          onAdd={() => cart.add(opened)}
+          onClose={() => setOpenKey(null)}
+        />
+      )}
+
+      {showCompare && compareEntries.length >= 2 && (
+        <CompareModal entries={compareEntries} onClose={() => setShowCompare(false)} />
+      )}
 
       {showCart && cart.lines.length > 0 && (
         <CartPanel

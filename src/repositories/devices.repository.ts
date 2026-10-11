@@ -138,10 +138,13 @@ export const devicesRepository = {
     return data as MobileModel
   },
 
-  updateModelImage: async (modelId: string, imageUrl: string | null): Promise<void> => {
+  updateModelCatalog: async (
+    modelId: string,
+    patch: { image_url?: string | null; show_in_catalog?: boolean },
+  ): Promise<void> => {
     const { error } = await supabase
       .from('mobile_models')
-      .update({ image_url: imageUrl } as never)
+      .update(patch as never)
       .eq('id', modelId)
     if (error) throw error
   },

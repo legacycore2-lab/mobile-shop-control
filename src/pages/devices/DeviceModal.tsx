@@ -6,7 +6,7 @@ import { BarcodeLabelModal } from '@/components/shared/BarcodeLabelModal'
 import { ImageField } from '@/components/shared/ImageField'
 import {
   useUpdateDevice,
-  useBrands, useModelsByBrand, useCreateBrand, useCreateModel, useUpdateModelImage,
+  useBrands, useModelsByBrand, useCreateBrand, useCreateModel, useUpdateModelCatalog,
 } from '@/hooks/useDevices'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useAuth } from '@/lib/auth'
@@ -43,7 +43,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
   const updateMutation      = useUpdateDevice()
   const createBrandMutation = useCreateBrand()
   const createModelMutation = useCreateModel()
-  const updateModelImage     = useUpdateModelImage()
+  const updateModelCatalog   = useUpdateModelCatalog()
 
   const [form, setForm] = useState<FormState>(
     device
@@ -303,14 +303,25 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
               </div>
             </div>
 
-            {form.model_id && (
-              <ImageField
-                label="صورة الموديل (تظهر في الكتالوج لكل أجهزة الموديل ده)"
-                folder="models"
-                value={allModels.find(m => m.id === form.model_id)?.image_url ?? null}
-                onChange={url => updateModelImage.mutate({ modelId: form.model_id, imageUrl: url })}
-              />
-            )}
+            {form.model_id && (() => {
+              const model = allModels.find(m => m.id === form.model_id)
+              return (
+                <div className="space-y-3">
+                  <ImageField
+                    label="صورة الموديل (تظهر في الكتالوج لكل أجهزة الموديل ده)"
+                    folder="models"
+                    value={model?.image_url ?? null}
+                    onChange={url => updateModelCatalog.mutate({ modelId: form.model_id, patch: { image_url: url } })}
+                  />
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={model?.show_in_catalog ?? true}
+                      onChange={e => updateModelCatalog.mutate({ modelId: form.model_id, patch: { show_in_catalog: e.target.checked } })}
+                      className="w-4 h-4 accent-blue-600 cursor-pointer" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">الموديل ده يظهر في كتالوج العملاء</span>
+                  </label>
+                </div>
+              )
+            })()}
 
             {/* Specs */}
             <div>

@@ -13,7 +13,7 @@ export function useCatalogEntries() {
     () => (query.data ? catalogService.toEntries(query.data) : []),
     [query.data],
   )
-  return { entries, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch }
+  return { entries, store: query.data?.store ?? null, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch }
 }
 
 export function useSubmitCatalogOrder() {

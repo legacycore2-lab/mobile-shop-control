@@ -20,14 +20,14 @@ interface FormState {
   product_type: ProductType; cost_price: string; selling_price: string
   stock_qty: string; reorder_level: string; unit: string
   default_supplier_id: string; is_active: boolean; notes: string
-  image_url: string | null
+  image_url: string | null; show_in_catalog: boolean
 }
 
 const EMPTY_FORM: FormState = {
   category_id: '', name: '', sku: '', barcode: '',
   product_type: 'accessory', cost_price: '', selling_price: '',
   stock_qty: '0', reorder_level: '5', unit: 'قطعة',
-  default_supplier_id: '', is_active: true, notes: '', image_url: null,
+  default_supplier_id: '', is_active: true, notes: '', image_url: null, show_in_catalog: true,
 }
 
 // ── Quick Stock Add Card ───────────────────────────────────────────────────────
@@ -159,6 +159,7 @@ export function ProductModal({ product, onClose }: {
           is_active:           product.is_active,
           notes:               product.notes ?? '',
           image_url:           product.image_url,
+          show_in_catalog:     product.show_in_catalog,
         }
       : EMPTY_FORM
   )
@@ -217,6 +218,7 @@ export function ProductModal({ product, onClose }: {
       is_active:           matchedProduct.is_active,
       notes:               matchedProduct.notes ?? '',
       image_url:           matchedProduct.image_url,
+      show_in_catalog:     matchedProduct.show_in_catalog,
     })
     setMatchedProduct(null)
     setShowForm(true)
@@ -520,6 +522,12 @@ export function ProductModal({ product, onClose }: {
                       ))}
                     </select>
                   </div>
+                  <label className="flex items-center gap-3 cursor-pointer sm:col-span-2">
+                    <input type="checkbox" checked={form.show_in_catalog}
+                      onChange={e => set('show_in_catalog', e.target.checked)}
+                      className="w-4 h-4 accent-blue-600 cursor-pointer" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">يظهر في كتالوج العملاء</span>
+                  </label>
                   <div className="sm:col-span-2">
                     <ImageField
                       label="صورة المنتج (تظهر في الكتالوج)"

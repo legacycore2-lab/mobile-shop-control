@@ -18,6 +18,7 @@ export const catalogRepository = {
     if (error) throw error
     const raw = data as PublicCatalog
     return {
+      store:    raw.store,
       products: raw.products.map(p => ({ ...p, selling_price: n(p.selling_price), stock_qty: n(p.stock_qty) })),
       devices:  raw.devices.map(d => ({ ...d, selling_price: n(d.selling_price) })),
     }

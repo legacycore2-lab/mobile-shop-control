@@ -126,11 +126,11 @@ export function useCreateModel() {
   })
 }
 
-export function useUpdateModelImage() {
+export function useUpdateModelCatalog() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ modelId, imageUrl }: { modelId: string; imageUrl: string | null }) =>
-      devicesService.updateModelImage(modelId, imageUrl),
+    mutationFn: ({ modelId, patch }: { modelId: string; patch: { image_url?: string | null; show_in_catalog?: boolean } }) =>
+      devicesService.updateModelCatalog(modelId, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['mobile_models'] }),
   })
 }

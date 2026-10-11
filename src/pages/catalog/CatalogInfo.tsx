@@ -1,6 +1,7 @@
 // src/pages/catalog/CatalogInfo.tsx
 // أسفل الصفحة: مميزات + إزاي أطلب + فوتر
-import { CircleDollarSign, RefreshCw, PhoneCall } from 'lucide-react'
+import { CircleDollarSign, RefreshCw, PhoneCall, MapPin, Clock, Phone } from 'lucide-react'
+import type { StoreInfo } from '@/types/database'
 
 const TRUST: { icon: React.ElementType; title: string; sub: string }[] = [
   { icon: CircleDollarSign, title: 'أسعار واضحة',     sub: 'من غير مفاجآت'        },
@@ -14,7 +15,8 @@ const STEPS: { title: string; sub: string }[] = [
   { title: 'استنى مكالمتنا', sub: 'بنأكّد معاك ونجهّز الطلب.'     },
 ]
 
-export function CatalogInfo() {
+export function CatalogInfo({ store }: { store: StoreInfo | null }) {
+  const hasContact = !!store && !!(store.address || store.phone || store.working_hours)
   return (
     <>
       <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-11">
@@ -47,8 +49,27 @@ export function CatalogInfo() {
       </section>
 
       <footer className="bg-slate-900 text-slate-300">
-        <div className="max-w-6xl mx-auto px-4 sm:px-7 py-7 text-sm font-semibold text-white">
-          الشافعي ستور
+        <div className="max-w-6xl mx-auto px-4 sm:px-7 py-8 space-y-4">
+          <p className="text-base font-bold text-white">الشافعي ستور</p>
+          {hasContact && store && (
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-8 gap-y-3 text-sm">
+              {store.address && (
+                <p className="flex items-center gap-2"><MapPin size={15} className="text-slate-400" />
+                  {store.map_url
+                    ? <a href={store.map_url} target="_blank" rel="noreferrer" className="underline underline-offset-4">{store.address}</a>
+                    : store.address}
+                </p>
+              )}
+              {store.phone && (
+                <p className="flex items-center gap-2"><Phone size={15} className="text-slate-400" />
+                  <a href={`tel:${store.phone}`} dir="ltr">{store.phone}</a>
+                </p>
+              )}
+              {store.working_hours && (
+                <p className="flex items-center gap-2"><Clock size={15} className="text-slate-400" />{store.working_hours}</p>
+              )}
+            </div>
+          )}
         </div>
       </footer>
     </>

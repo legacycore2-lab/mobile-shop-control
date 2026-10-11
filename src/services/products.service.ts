@@ -17,6 +17,7 @@ export interface ProductFormData {
   is_active: boolean
   notes: string
   image_url: string | null
+  show_in_catalog: boolean
   created_by: string
 }
 
@@ -115,6 +116,7 @@ export const productsService = {
       is_active:           form.is_active ?? true,
       notes:               form.notes?.trim()         || null,
       image_url:           form.image_url             || null,
+      show_in_catalog:     form.show_in_catalog,
       created_by:          form.created_by,
     })
   },
@@ -136,6 +138,7 @@ export const productsService = {
     if (form.is_active           !== undefined) payload['is_active']           = form.is_active
     if (form.notes               !== undefined) payload['notes']               = form.notes?.trim() || null
     if (form.image_url           !== undefined) payload['image_url']           = form.image_url || null
+    if (form.show_in_catalog     !== undefined) payload['show_in_catalog']     = form.show_in_catalog
     return productsRepository.update(id, payload as Parameters<typeof productsRepository.update>[1])
   },
 
