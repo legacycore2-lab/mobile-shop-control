@@ -8,10 +8,11 @@ const KEYS = {
   newCount: ['catalog_orders', 'new']   as const,
 }
 
-export function useCatalogOrders() {
+export function useCatalogOrders(enabled = true) {
   return useQuery({
     queryKey:        KEYS.all,
     queryFn:         catalogOrdersService.getAll,
+    enabled,
     refetchInterval: 30_000,
   })
 }

@@ -8,13 +8,13 @@ import {
   UserCheck, LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
   Menu, X, Store, Sun, Moon, Tag, Shield, ShieldCheck,
-  BookOpen, FileUp, Receipt, Bell, RefreshCw, Home, ClipboardList,
+  BookOpen, FileUp, Receipt, RefreshCw, Home, ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
-import { useLowStockProducts } from '@/hooks/useProducts'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useNewOrdersCount } from '@/hooks/useCatalogOrders'
+import { NotificationsBell } from '@/components/notifications/NotificationsBell'
 import type { Resource } from '@/lib/permissions'
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
@@ -114,124 +114,6 @@ function TabBar({
           )
         })}
       </div>
-    </div>
-  )
-}
-
-// ── Notifications bell ────────────────────────────────────────────────────────
-function NotificationsBell() {
-  const { data: lowStock = [] } = useLowStockProducts()
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const count = lowStock.length
-
-  useEffect(() => {
-    if (!open) return
-    function onDown(e: MouseEvent | TouchEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('touchstart', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('touchstart', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  function goToProducts() {
-    setOpen(false)
-    navigate('/products')
-  }
-
-  return (
-    <div ref={wrapRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-label="الإشعارات"
-        aria-expanded={open}
-        className={cn(
-          'relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors',
-          count > 0
-            ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-            : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
-          open && 'bg-gray-100 dark:bg-gray-800',
-        )}
-      >
-        <Bell size={18} />
-        {count > 0 && (
-          <span className="absolute -top-0.5 -left-0.5 min-w-[16px] h-[16px] px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-            {count > 99 ? '99+' : count}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div
-          className={cn(
-            'z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl overflow-hidden',
-            'fixed top-14 inset-x-3',
-            'sm:absolute sm:top-full sm:inset-x-auto sm:left-0 sm:mt-2 sm:w-80',
-          )}
-          dir="rtl"
-        >
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">الإشعارات</span>
-            {count > 0 && (
-              <span className="text-xs text-gray-400">{count} تنبيه</span>
-            )}
-          </div>
-
-          {count === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">لا توجد إشعارات</div>
-          ) : (
-            <ul className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
-              {lowStock.map(item => (
-                <li key={item.product_id}>
-                  <button
-                    type="button"
-                    onClick={goToProducts}
-                    className="w-full text-right px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {item.product_name}
-                      </span>
-                      <span
-                        className={cn(
-                          'flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full',
-                          item.stock_qty === 0
-                            ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                            : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-                        )}
-                      >
-                        {item.stock_qty === 0 ? 'نفد المخزون' : `متبقي ${item.stock_qty}`}
-                      </span>
-                    </div>
-                    {item.category_name && (
-                      <div className="text-xs text-gray-400 mt-0.5">{item.category_name}</div>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button
-            type="button"
-            onClick={goToProducts}
-            className="w-full px-4 py-2.5 text-xs font-medium text-blue-600 dark:text-blue-400 border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
-          >
-            فتح صفحة المنتجات
-          </button>
-        </div>
-      )}
     </div>
   )
 }
@@ -430,7 +312,7 @@ export function AppShell() {
           </div>
 
           {/* Alert bell */}
-          <NotificationsBell />
+          <NotificationsBell includeOrders={perm.canView('orders')} />
 
           {/* Refresh */}
           <button
