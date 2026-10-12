@@ -6,21 +6,19 @@ interface Props {
   onHowTo:  () => void
 }
 
-// تلاشي حافة الصورة ناحية النص عشان ما يبانش خط فاصل
-const FADE_TO_TEXT = 'linear-gradient(to left, transparent 0, #000 16%)'
-
 export function CatalogHero({ onBrowse, onHowTo }: Props) {
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-5">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#EEF1F7] to-[#E6EBF4] dark:from-gray-900 dark:to-gray-800 border border-slate-200/70 dark:border-gray-800 xl:grid xl:grid-cols-[38%_62%]">
-        <div className="flex flex-col justify-center px-6 sm:px-10 xl:pl-4 pt-8 pb-6 xl:py-8">
-          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-bold px-4 py-1.5 mb-4 self-start">
+      {/* خلفية البانر بتطابق ألوان حواف الصورة عشان ما يبانش خط فاصل */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#F0F3F8] to-[#E9EDF3] dark:from-gray-900 dark:to-gray-800 border border-slate-200/70 dark:border-gray-800 xl:grid xl:grid-cols-[44%_56%]">
+        <div className="flex flex-col justify-center px-6 sm:px-10 pt-8 pb-6 xl:py-6 xl:pl-4">
+          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-bold px-4 py-1.5 mb-3 self-start">
             <Tag size={14} /> معرض الشافعي ستور
           </span>
-          <h1 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold leading-[1.3] text-[#0F2552] dark:text-white mb-3">
+          <h1 className="text-3xl sm:text-4xl xl:text-[42px] font-extrabold leading-[1.3] text-[#0F2552] dark:text-white mb-2.5">
             أحدث الموبايلات<br />بأفضل الأسعار
           </h1>
-          <p className="text-sm sm:text-lg leading-8 text-slate-600 dark:text-gray-300 mb-6 max-w-md">
+          <p className="text-sm sm:text-lg xl:text-base leading-7 sm:leading-8 xl:leading-7 text-slate-600 dark:text-gray-300 mb-5 max-w-md">
             اختار موبايلك بسهولة، وقارن بين الموديلات، واطلب أونلاين بكل أمان.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -41,7 +39,6 @@ export function CatalogHero({ onBrowse, onHowTo }: Props) {
             alt=""
             aria-hidden="true"
             className="absolute inset-0 w-full h-full object-cover object-left"
-            style={{ maskImage: FADE_TO_TEXT, WebkitMaskImage: FADE_TO_TEXT }}
           />
         </div>
       </div>

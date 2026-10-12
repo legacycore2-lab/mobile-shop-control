@@ -12,7 +12,7 @@ export function BrandStrip({ brands, onPickBrand }: Props) {
   if (brands.length === 0) return null
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-5">
-      <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-[repeat(auto-fit,minmax(130px,1fr))] md:overflow-visible">
+      <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-flow-col md:auto-cols-fr md:overflow-visible">
         {brands.map(b => {
           const logo = getBrandLogo(b.brand)
           return (
@@ -20,7 +20,7 @@ export function BrandStrip({ brands, onPickBrand }: Props) {
               key={b.brand}
               onClick={() => onPickBrand(b.brand)}
               aria-label={`${b.brand}، ${b.count} متاح`}
-              className="flex-none w-32 md:w-auto h-14 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-amber-400 hover:shadow-sm flex items-center justify-center px-4 transition-colors"
+              className="flex-none w-32 md:w-auto md:min-w-0 h-14 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-amber-400 hover:shadow-sm flex items-center justify-center px-4 transition-colors"
             >
               {logo
                 ? <img src={logo} alt={b.brand} className="max-h-9 max-w-full object-contain" />
