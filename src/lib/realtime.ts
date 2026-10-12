@@ -7,13 +7,14 @@ import type { QueryClient } from '@tanstack/react-query'
 // Tables → query keys to invalidate
 const TABLE_KEYS: Record<string, string[][]> = {
   mobile_devices:           [['devices'], ['reports']],
-  purchase_invoices:        [['purchases'], ['reports'], ['ledger', 'suppliers']],
+  purchase_invoices:        [['purchases'], ['reports'], ['ledger', 'suppliers'], ['daily_close']],
   purchase_invoice_devices: [['purchases']],
   purchase_invoice_products:[['purchases']],
-  sale_invoices:            [['sales'], ['pos'], ['reports'], ['ledger', 'customers']],
+  sale_invoices:            [['sales'], ['pos'], ['reports'], ['ledger', 'customers'], ['daily_close']],
   sale_invoice_devices:     [['sales'], ['pos']],
   sale_invoice_products:    [['sales'], ['pos']],
-  payments:                 [['payments'], ['ledger', 'suppliers'], ['ledger', 'customers'], ['purchases'], ['sales']],
+  payments:                 [['payments'], ['ledger', 'suppliers'], ['ledger', 'customers'], ['purchases'], ['sales'], ['daily_close']],
+  expenses:                 [['expenses'], ['daily_close']],
   products:                 [['products'], ['reports']],
   product_categories:       [['categories']],
   suppliers:                [['suppliers'], ['ledger', 'suppliers']],
