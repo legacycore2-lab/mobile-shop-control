@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function NotificationsBell({ includeOrders }: Props) {
-  const { items, unreadCount, markRead, markAllRead } = useNotificationCenter(includeOrders)
+  const { items, unreadCount, markRead, markAllRead, soundEnabled, toggleSound } = useNotificationCenter(includeOrders)
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -79,6 +79,8 @@ export function NotificationsBell({ includeOrders }: Props) {
             showTabs={includeOrders}
             onSelect={handleSelect}
             onMarkAll={markAllRead}
+            soundEnabled={soundEnabled}
+            onToggleSound={toggleSound}
           />
         </div>
       )}
