@@ -6,15 +6,18 @@ interface Props {
   onHowTo:  () => void
 }
 
+// تلاشي حافة الصورة ناحية النص عشان ما يبانش خط فاصل
+const FADE_TO_TEXT = 'linear-gradient(to left, transparent 0, #000 16%)'
+
 export function CatalogHero({ onBrowse, onHowTo }: Props) {
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-5">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#EEF1F7] to-[#E6EBF4] dark:from-gray-900 dark:to-gray-800 border border-slate-200/70 dark:border-gray-800 md:min-h-[370px] flex flex-col md:block">
-        <div className="relative md:absolute md:inset-y-0 md:right-0 md:w-[48%] md:flex md:flex-col md:justify-center px-6 sm:px-10 pt-8 pb-6 md:py-0">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#EEF1F7] to-[#E6EBF4] dark:from-gray-900 dark:to-gray-800 border border-slate-200/70 dark:border-gray-800 xl:grid xl:grid-cols-[38%_62%]">
+        <div className="flex flex-col justify-center px-6 sm:px-10 xl:pl-4 pt-8 pb-6 xl:py-8">
           <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-bold px-4 py-1.5 mb-4 self-start">
             <Tag size={14} /> معرض الشافعي ستور
           </span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold leading-[1.3] text-[#0F2552] dark:text-white mb-3">
+          <h1 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold leading-[1.3] text-[#0F2552] dark:text-white mb-3">
             أحدث الموبايلات<br />بأفضل الأسعار
           </h1>
           <p className="text-sm sm:text-lg leading-8 text-slate-600 dark:text-gray-300 mb-6 max-w-md">
@@ -32,12 +35,15 @@ export function CatalogHero({ onBrowse, onHowTo }: Props) {
           </div>
         </div>
 
-        <img
-          src={`${import.meta.env.BASE_URL}catalog/hero-phones.png`}
-          alt=""
-          aria-hidden="true"
-          className="w-full h-auto md:absolute md:inset-y-0 md:left-0 md:h-full md:w-[52%] md:object-cover md:object-left"
-        />
+        <div className="relative aspect-[751/355] xl:aspect-auto xl:min-h-[300px]">
+          <img
+            src={`${import.meta.env.BASE_URL}catalog/hero-phones.png`}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover object-left"
+            style={{ maskImage: FADE_TO_TEXT, WebkitMaskImage: FADE_TO_TEXT }}
+          />
+        </div>
       </div>
     </section>
   )
