@@ -12,8 +12,8 @@ export function BrandStrip({ brands, onPickBrand }: Props) {
   if (brands.length === 0) return null
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-5">
-      <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-6 md:overflow-visible">
-        {brands.slice(0, 6).map(b => {
+      <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-[repeat(auto-fit,minmax(130px,1fr))] md:overflow-visible">
+        {brands.map(b => {
           const logo = getBrandLogo(b.brand)
           return (
             <button
