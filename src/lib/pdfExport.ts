@@ -308,5 +308,6 @@ export function exportDailyClosePdf(d: DailyClose, output: PdfOutput) {
   ${d.receivables.topDebtors.map(r => `<tr><td>${r.name}</td><td>${r.phone ?? '—'}</td><td>${fmt(r.balance)} ج</td></tr>`).join('')}
   </tbody></table>` : ''}</div>`
 
-  openWindow(html, `إقفال-يوم-${d.date}`, output)
+  const page = `<style>.dc{max-width:800px;margin:0 auto} .dc table.kv td:first-child{width:60%;color:#374151}</style><div class="dc">${html.replace(/<table( style="margin-top:8px")?><tbody>/g, (_m, st) => `<table class="kv"${st ?? ''}><tbody>`)}</div>`
+  openWindow(page, `إقفال-يوم-${d.date}`, output)
 }
