@@ -16,6 +16,7 @@ function invalidateSaleRelated(qc: ReturnType<typeof useQueryClient>, id?: strin
   void qc.invalidateQueries({ queryKey: KEYS.inStock })
   void qc.invalidateQueries({ queryKey: ['devices'] })
   void qc.invalidateQueries({ queryKey: ['products'] })
+  void qc.invalidateQueries({ queryKey: ['catalog_orders'] })
   // Ledger — customer side
   void qc.invalidateQueries({ queryKey: ['ledger', 'customers'] })
   void qc.invalidateQueries({ queryKey: ['ledger'] })
