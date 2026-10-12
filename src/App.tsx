@@ -22,6 +22,7 @@ const SuppliersPage      = lazy(() => import('@/pages/suppliers/SuppliersPage').
 const CustomersPage      = lazy(() => import('@/pages/customers/CustomersPage').then(m => ({ default: m.CustomersPage })))
 const ProductsPage       = lazy(() => import('@/pages/products/ProductsPage').then(m => ({ default: m.ProductsPage })))
 const ReportsPage        = lazy(() => import('@/pages/reports/ReportsPage').then(m => ({ default: m.ReportsPage })))
+const DailyClosePage     = lazy(() => import('@/pages/daily-close/DailyClosePage').then(m => ({ default: m.DailyClosePage })))
 const SettingsPage       = lazy(() => import('@/pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const AuditLogsPage      = lazy(() => import('@/pages/audit/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })))
 const LedgerPage         = lazy(() => import('@/pages/payments/LedgerPage').then(m => ({ default: m.LedgerPage })))
@@ -166,6 +167,7 @@ function Guard() {
               <Route path="/customers"   element={<PageErrorBoundary><ProtectedRoute resource="customers"><CustomersPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/products"    element={<PageErrorBoundary><ProtectedRoute resource="products"><ProductsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/reports"     element={<PageErrorBoundary><ProtectedRoute resource="reports"><ReportsPage /></ProtectedRoute></PageErrorBoundary>} />
+              <Route path="/daily-close" element={<PageErrorBoundary><ProtectedRoute resource="reports"><DailyClosePage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/audit"       element={<PageErrorBoundary><ProtectedRoute resource="audit"><AuditLogsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/ledger"      element={<PageErrorBoundary><ProtectedRoute resource="ledger"><LedgerPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/ledger/:type/:id" element={<PageErrorBoundary><ProtectedRoute resource="ledger"><PartyStatementPage /></ProtectedRoute></PageErrorBoundary>} />

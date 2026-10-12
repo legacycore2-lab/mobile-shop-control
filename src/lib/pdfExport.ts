@@ -3,6 +3,9 @@
 // jsPDF was replaced because it doesn't support Arabic without font embedding
 
 import { fmt } from '@/lib/fmt'
+import { formatDateKeyAr } from '@/lib/dateKey'
+import { CASH_METHOD_LABELS } from '@/constants/paymentMethods'
+import type { DailyClose } from '@/types/dailyClose'
 
 export type PdfOutput = 'download' | 'preview'
 
@@ -251,4 +254,59 @@ export function exportAlertsPdf(alerts: AlertRow[], output: PdfOutput) {
   <tr class="tot"><td colspan="7"><strong>إجمالي قيمة المخزون المنخفض</strong></td><td>${fmt(alerts.reduce((s,r)=>s+r.stock_value,0))} ج</td></tr>
   </tbody></table></div>`
   openWindow(html, `تقرير-تنبيهات-${new Date().toISOString().split('T')[0]}`, output)
+}
+
+// ── Daily close ───────────────────────────────────────────────────────────────
+export function exportDailyClosePdf(d: DailyClose, output: PdfOutput) {
+  const profitColor = d.netProfit >= 0 ? 'green' : 'red'
+  const cashColor   = d.cash.net   >= 0 ? 'green' : 'red'
+
+  let html = buildHeader('إقفال اليوم', 'ملخص النقدية والمبيعات والأرباح والمتبقي عند العملاء', formatDateKeyAr(d.date))
+  html += kpiGrid([
+    { label: 'صافي النقدية',      value: `${fmt(d.cash.net)} ج`,                    color: cashColor   },
+    { label: 'إجمالي المبيعات',   value: `${fmt(d.sales.revenue)} ج`,               color: 'blue'      },
+    { label: 'صافي الربح',        value: `${fmt(d.netProfit)} ج`,                   color: profitColor },
+    { label: 'المتبقي عند العملاء', value: `${fmt(d.receivables.totalOutstanding)} ج`, color: 'amber'  },
+  ])
+
+  html += `<div class="sec"><div class="sec-title">حركة النقدية</div>
+  <table><thead><tr><th>الوسيلة</th><th>داخل</th><th>خارج</th><th>الصافي</th></tr></thead><tbody>
+  ${d.cash.byMethod.map(r => `<tr><td>${CASH_METHOD_LABELS[r.method]}</td><td>${fmt(r.cashIn)} ج</td><td>${fmt(r.cashOut)} ج</td><td>${fmt(r.net)} ج</td></tr>`).join('')}
+  <tr class="tot"><td>الإجمالي</td><td>${fmt(d.cash.totalIn)} ج</td><td>${fmt(d.cash.totalOut)} ج</td><td>${fmt(d.cash.net)} ج</td></tr>
+  </tbody></table>
+  <table style="margin-top:8px"><tbody>
+    <tr><td>محصّل من مبيعات اليوم</td><td>${fmt(d.cash.fromTodaySales)} ج</td></tr>
+    <tr><td>محصّل من فواتير سابقة</td><td>${fmt(d.cash.fromOlderInvoices)} ج</td></tr>
+    <tr><td>مدفوع للموردين</td><td>${fmt(d.cash.toSuppliers)} ج</td></tr>
+    <tr><td>مصروفات</td><td>${fmt(d.cash.expenses)} ج</td></tr>
+  </tbody></table></div>`
+
+  html += `<div class="sec"><div class="sec-title">المبيعات والأرباح</div>
+  <table><tbody>
+    <tr><td>عدد فواتير البيع</td><td>${d.sales.invoiceCount}</td></tr>
+    <tr><td>إجمالي المبيعات (بعد الخصم)</td><td>${fmt(d.sales.revenue)} ج</td></tr>
+    <tr><td>الخصومات</td><td>${fmt(d.sales.discount)} ج</td></tr>
+    <tr><td>تكلفة البضاعة المباعة</td><td>${fmt(d.sales.costOfGoods)} ج</td></tr>
+    <tr><td>مجمل الربح (${d.sales.marginPct}%)</td><td>${fmt(d.sales.grossProfit)} ج</td></tr>
+    <tr><td>المصروفات</td><td>${fmt(d.expenses.total)} ج</td></tr>
+    <tr class="tot"><td>صافي الربح</td><td>${fmt(d.netProfit)} ج</td></tr>
+  </tbody></table></div>`
+
+  if (d.expenses.byCategory.length > 0) {
+    html += `<div class="sec"><div class="sec-title">المصروفات حسب البند</div>
+    <table><thead><tr><th>البند</th><th>المبلغ</th></tr></thead><tbody>
+    ${d.expenses.byCategory.map(c => `<tr><td>${c.name}</td><td>${fmt(c.amount)} ج</td></tr>`).join('')}
+    </tbody></table></div>`
+  }
+
+  html += `<div class="sec"><div class="sec-title">المتبقي عند العملاء</div>
+  <table><tbody>
+    <tr><td>إجمالي المتبقي</td><td>${fmt(d.receivables.totalOutstanding)} ج (${d.receivables.debtorCount} عميل)</td></tr>
+    <tr><td>آجل جديد اليوم</td><td>${fmt(d.receivables.newToday)} ج</td></tr>
+  </tbody></table>
+  ${d.receivables.topDebtors.length > 0 ? `<table style="margin-top:8px"><thead><tr><th>العميل</th><th>الهاتف</th><th>المتبقي</th></tr></thead><tbody>
+  ${d.receivables.topDebtors.map(r => `<tr><td>${r.name}</td><td>${r.phone ?? '—'}</td><td>${fmt(r.balance)} ج</td></tr>`).join('')}
+  </tbody></table>` : ''}</div>`
+
+  openWindow(html, `إقفال-يوم-${d.date}`, output)
 }

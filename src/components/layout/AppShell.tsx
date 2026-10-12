@@ -8,7 +8,7 @@ import {
   UserCheck, LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
   Menu, X, Store, Sun, Moon, Tag, Shield, ShieldCheck,
-  BookOpen, FileUp, Receipt, RefreshCw, Home, ClipboardList,
+  BookOpen, FileUp, CalendarCheck, Receipt, RefreshCw, Home, ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
@@ -30,6 +30,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/expenses',    icon: Receipt,         label: 'المصروفات',                    resource: 'expenses'    },
   { to: '/attendance',  icon: UserCheck,       label: 'الحضور والانصراف',             resource: 'attendance'  },
   { to: '/reports',     icon: BarChart3,       label: 'التقارير',                     resource: 'reports'     },
+  { to: '/daily-close', icon: CalendarCheck,  label: 'إقفال اليوم',                  resource: 'reports'     },
   { to: '/ledger',      icon: BookOpen,        label: 'الحسابات',                     resource: 'ledger'      },
   { to: '/audit',       icon: Shield,          label: 'سجل العمليات',                 resource: 'audit'       },
   { to: '/import',      icon: FileUp,          label: 'استيراد البيانات',             resource: 'import'      },
