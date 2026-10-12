@@ -239,3 +239,10 @@ export function installmentPlan(price: number, months: number, store: StoreInfo)
   const monthly   = Math.ceil((financed + interest) / months)
   return { down, monthly, total: down + monthly * months }
 }
+
+// أقل قسط شهري متاح (أطول مدة) — للعرض على كارت الموبايل. null = التقسيط مش متاح للصنف
+export function installmentFrom(entry: CatalogEntry, store: StoreInfo | null): number | null {
+  if (!store?.installment_enabled || entry.kind !== 'device' || entry.maxQty < 1) return null
+  const longest = INSTALLMENT_MONTHS[INSTALLMENT_MONTHS.length - 1]
+  return installmentPlan(entry.price, longest, store).monthly
+}

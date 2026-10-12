@@ -4,7 +4,7 @@ import { Store } from 'lucide-react'
 
 export function BrandBanner() {
   return (
-    <div className="bg-gradient-to-b from-slate-950 to-slate-800 flex flex-col items-center px-4 pt-5 pb-4 sm:pt-6">
+    <div className="bg-[#0F2552] flex flex-col items-center px-4 pt-5 pb-4 sm:pt-6">
       <div className="flex items-center gap-3 sm:gap-4">
         <Store size={26} className="text-amber-400 hidden sm:block" />
         <div

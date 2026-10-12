@@ -7,6 +7,7 @@ import { useCatalogEntries, useCatalogAnalytics } from '@/hooks/useCatalog'
 import { useCart } from '@/hooks/useCart'
 import { CatalogHeader } from './CatalogHeader'
 import { CatalogHero } from './CatalogHero'
+import { BrandStrip } from './BrandStrip'
 import { CatalogItemCard } from './CatalogItemCard'
 import { CatalogInfo } from './CatalogInfo'
 import { CartPanel } from './CartPanel'
@@ -23,7 +24,7 @@ import { TrackOrderModal } from './TrackOrderModal'
 import { ReviewsSection } from './ReviewsSection'
 import { useFavorites } from '@/hooks/useFavorites'
 import { readJson, writeJson } from '@/lib/clientStorage'
-import { catalogService, type CatalogGroup, type CatalogSort, type CatalogEntry } from '@/services/catalog.service'
+import { catalogService, installmentFrom, type CatalogGroup, type CatalogSort, type CatalogEntry } from '@/services/catalog.service'
 import type { CatalogOrderResult } from '@/types/database'
 
 type Filter = 'all' | 'favorites' | CatalogGroup
@@ -137,9 +138,9 @@ export function CatalogPage() {
         onTrack={() => setTrack({ number: '' })}
       />
 
+      <BrandStrip brands={brands} onPickBrand={handlePickBrand} />
+
       <CatalogHero
-        brands={brands}
-        onPickBrand={handlePickBrand}
         onBrowse={() => scrollToId('catalog')}
         onHowTo={() => scrollToId('how')}
       />
@@ -147,13 +148,18 @@ export function CatalogPage() {
       <PaymentMethods store={store} />
 
       <section id="catalog" className="max-w-6xl mx-auto px-4 sm:px-7 pt-9 space-y-5 scroll-mt-20">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F2552] dark:text-white">البضاعة المتاحة</h2>
+          <div className="w-14 h-1 rounded-full bg-amber-500 mt-2" />
+        </div>
+
         <div className="flex gap-3 overflow-x-auto pb-1">
           {FILTERS.map(f => (
             <button key={f.id} onClick={() => handleFilter(f.id)}
               className={cn(
                 'h-10 px-6 rounded-full text-sm font-medium whitespace-nowrap border transition-colors',
                 filter === f.id
-                  ? 'bg-blue-600 text-white border-blue-600 font-semibold'
+                  ? 'bg-[#0F2552] text-white border-[#0F2552] font-semibold'
                   : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-slate-200 dark:border-gray-700',
               )}>
               {f.label}
@@ -213,7 +219,7 @@ export function CatalogPage() {
           : 'flex flex-col gap-2.5'}>
           {visible.map(e => {
             const itemProps = {
-              entry: e, inCartQty: qtyInCart(e.key), onAdd: () => cart.add(e),
+              entry: e, inCartQty: qtyInCart(e.key), installmentFrom: installmentFrom(e, store), onAdd: () => cart.add(e),
               onOpen: () => handleOpen(e),
               favorite: { active: favorites.has(e.key), onToggle: () => favorites.toggle(e.key) },
               compare: e.kind === 'device' ? {

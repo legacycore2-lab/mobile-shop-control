@@ -1,61 +1,43 @@
 // src/pages/catalog/CatalogHero.tsx
-import { BrandMark } from './BrandMark'
-import type { BrandCount } from '@/services/catalog.service'
+import { Smartphone, Truck, Tag } from 'lucide-react'
 
 interface Props {
-  brands:       BrandCount[]
-  onPickBrand:  (brand: string) => void
-  onBrowse:     () => void
-  onHowTo:      () => void
+  onBrowse: () => void
+  onHowTo:  () => void
 }
 
-export function CatalogHero({ brands, onPickBrand, onBrowse, onHowTo }: Props) {
+export function CatalogHero({ onBrowse, onHowTo }: Props) {
   return (
-    <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-8 sm:pt-10">
-      <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-[#0F2A6B] px-6 py-10 sm:px-12 sm:py-14 flex flex-wrap items-center gap-10">
-        <div className="absolute -left-24 -top-24 w-80 h-80 rounded-full bg-blue-600/35" />
-        <div className="absolute left-28 -bottom-32 w-64 h-64 rounded-full bg-emerald-500/25" />
-
-        <div className="relative flex-[1_1_380px] min-w-0">
-          <span className="inline-block rounded-full bg-white/10 text-blue-100 text-xs sm:text-sm px-4 py-1.5 mb-5">
-            معرض الشافعي ستور
+    <section className="max-w-6xl mx-auto px-4 sm:px-7 pt-5">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-[#EEF1F7] to-[#E6EBF4] dark:from-gray-900 dark:to-gray-800 border border-slate-200/70 dark:border-gray-800 md:min-h-[370px] flex flex-col md:block">
+        <div className="relative md:absolute md:inset-y-0 md:right-0 md:w-[48%] md:flex md:flex-col md:justify-center px-6 sm:px-10 pt-8 pb-6 md:py-0">
+          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-bold px-4 py-1.5 mb-4 self-start">
+            <Tag size={14} /> معرض الشافعي ستور
           </span>
-          <h1 className="text-3xl sm:text-5xl font-bold leading-[1.35] text-white mb-4">
-            موبايلك وإكسسواراته<br />بأسعار واضحة وتوفر لحظي
+          <h1 className="text-3xl sm:text-5xl font-extrabold leading-[1.3] text-[#0F2552] dark:text-white mb-3">
+            أحدث الموبايلات<br />بأفضل الأسعار
           </h1>
-          <p className="text-base sm:text-lg leading-8 text-blue-100/90 max-w-lg mb-7">
-            اختار من البضاعة المتاحة وابعت طلبك أونلاين. هنتواصل معاك نأكّده.
+          <p className="text-sm sm:text-lg leading-8 text-slate-600 dark:text-gray-300 mb-6 max-w-md">
+            اختار موبايلك بسهولة، وقارن بين الموديلات، واطلب أونلاين بكل أمان.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button onClick={onBrowse} className="h-12 px-7 rounded-xl bg-white text-[#0F2A6B] font-bold text-base hover:bg-blue-50 transition-colors">
-              تصفّح البضاعة
+            <button onClick={onBrowse}
+              className="h-12 px-6 rounded-xl bg-[#0F2552] hover:bg-[#0B1B3F] text-white font-bold text-sm sm:text-base flex items-center gap-2.5 transition-colors">
+              <Smartphone size={18} /> تصفّح الموبايلات
             </button>
-            <button onClick={onHowTo} className="h-12 px-6 rounded-xl border border-white/35 text-white font-medium text-base hover:bg-white/10 transition-colors">
-              إزاي أطلب
+            <button onClick={onHowTo}
+              className="h-12 px-6 rounded-xl border border-amber-500 text-amber-700 dark:text-amber-400 font-bold text-sm sm:text-base flex items-center gap-2.5 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+              <Truck size={18} /> اعرف إزاي أطلب
             </button>
           </div>
         </div>
 
-        {brands.length > 0 && (
-          <div className="relative flex-[1_1_300px] min-w-0 w-full max-w-md mx-auto">
-            <p className="text-sm text-blue-100/90 mb-3">تصفّح حسب الماركة</p>
-            <div className="grid grid-cols-2 gap-3">
-              {brands.slice(0, 6).map(b => (
-                <button
-                  key={b.brand}
-                  onClick={() => onPickBrand(b.brand)}
-                  className="bg-white hover:bg-blue-50 rounded-[18px] px-4 py-3.5 flex items-center gap-3 text-right shadow-[0_16px_32px_rgba(6,18,60,.3)] transition-colors"
-                >
-                  <BrandMark brand={b.brand} size="md" />
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-sm text-slate-900 truncate" dir="ltr">{b.brand}</span>
-                    <span className="block text-xs text-slate-500">{b.count} متاح</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <img
+          src={`${import.meta.env.BASE_URL}catalog/hero-phones.png`}
+          alt=""
+          aria-hidden="true"
+          className="w-full h-auto md:absolute md:inset-y-0 md:left-0 md:h-full md:w-[52%] md:object-cover md:object-left"
+        />
       </div>
     </section>
   )

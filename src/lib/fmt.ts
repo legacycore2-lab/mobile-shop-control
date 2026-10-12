@@ -21,3 +21,13 @@ export function fmt(value: number | string | null | undefined): string {
 export function fmtCurrency(value: number | string | null | undefined): string {
   return `${fmt(value)} ج`
 }
+
+/**
+ * سعر بالأرقام العربية (للواجهة العامة للكتالوج): ٣٤,٩٩٩ ج.م
+ */
+export function fmtPriceAr(value: number | string | null | undefined): string {
+  const num = Number(value ?? 0)
+  const safe = isNaN(num) ? 0 : num
+  const digits = safe.toLocaleString('ar-EG', { maximumFractionDigits: 0 }).replace(/٬/g, ',')
+  return `${digits} ج.م`
+}

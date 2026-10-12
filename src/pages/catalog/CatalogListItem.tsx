@@ -2,7 +2,7 @@
 // عرض المنتج كسطر في قائمة: صورة صغيرة + الاسم والسعر والمواصفات + زر الإضافة
 import { Smartphone, Package, Wrench, Plus, Check, Heart, GitCompareArrows } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { fmt } from '@/lib/fmt'
+import { fmtPriceAr } from '@/lib/fmt'
 import { ConditionBadge } from './ConditionBadge'
 import { catalogService, type CatalogEntry, type CatalogGroup } from '@/services/catalog.service'
 
@@ -15,13 +15,14 @@ const GROUP_STYLE: Record<CatalogGroup, { icon: React.ElementType; label: string
 interface Props {
   entry:     CatalogEntry
   inCartQty: number
+  installmentFrom: number | null
   onAdd:     () => void
   onOpen:    () => void
   favorite:  { active: boolean; onToggle: () => void }
   compare:   { active: boolean; disabled: boolean; onToggle: () => void } | null
 }
 
-export function CatalogListItem({ entry, inCartQty, onAdd, onOpen, favorite, compare }: Props) {
+export function CatalogListItem({ entry, inCartQty, installmentFrom, onAdd, onOpen, favorite, compare }: Props) {
   const g          = GROUP_STYLE[entry.group]
   const Icon       = g.icon
   const soldOut    = entry.maxQty < 1
@@ -70,11 +71,16 @@ export function CatalogListItem({ entry, inCartQty, onAdd, onOpen, favorite, com
         <div className="flex items-end justify-between gap-2 mt-auto">
           <div>
             {entry.oldPrice !== null && (
-              <p className="text-xs text-slate-400 line-through">{fmt(entry.oldPrice)} ج</p>
+              <p className="text-xs text-slate-400 line-through">{fmtPriceAr(entry.oldPrice)}</p>
             )}
             <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">
-              {fmt(entry.price)} <span className="text-xs font-medium text-slate-500">ج</span>
+              {fmtPriceAr(entry.price)}
             </p>
+            {installmentFrom !== null && (
+              <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
+                قسّط من {fmtPriceAr(installmentFrom)} / شهر
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={favorite.onToggle} aria-label="المفضلة"
@@ -97,7 +103,7 @@ export function CatalogListItem({ entry, inCartQty, onAdd, onOpen, favorite, com
                   ? 'bg-slate-200 dark:bg-gray-800 text-slate-400'
                   : inCartQty > 0
                     ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 disabled:opacity-80'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white',
+                    : 'bg-[#0F2552] hover:bg-[#0B1B3F] text-white',
               )}>
               {soldOut ? 'غير متاح' : inCartQty > 0 ? <><Check size={14} /> {inCartQty}</> : <><Plus size={14} /> أضف</>}
             </button>
