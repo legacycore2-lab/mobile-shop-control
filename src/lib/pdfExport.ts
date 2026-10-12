@@ -292,6 +292,36 @@ export function exportDailyClosePdf(d: DailyClose, output: PdfOutput) {
     <tr class="tot"><td>صافي الربح</td><td>${fmt(d.netProfit)} ج</td></tr>
   </tbody></table></div>`
 
+  if (d.sales.invoices.length > 0) {
+    html += `<div class="sec"><div class="sec-title">فواتير البيع</div>
+    <table><thead><tr><th>الفاتورة</th><th>العميل</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>
+    ${d.sales.invoices.map(i => `<tr><td>${i.number}</td><td>${i.customerName ?? 'نقدي'}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td><td>${i.remaining > 0 ? `${fmt(i.remaining)} ج` : '—'}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="sec"><div class="sec-title">الأصناف المباعة (قبل الخصم)</div>
+    <table><thead><tr><th>الصنف</th><th>النوع</th><th>الكمية</th><th>المبلغ</th></tr></thead><tbody>
+    ${d.sales.items.map(it => `<tr><td>${it.name}</td><td>${it.kind === 'device' ? 'جهاز' : 'إكسسوار / قطعة'}</td><td>${fmt(it.quantity)}</td><td>${fmt(it.amount)} ج</td></tr>`).join('')}
+    <tr class="tot"><td colspan="2">أجهزة: ${fmt(d.sales.devices.quantity)} (${fmt(d.sales.devices.amount)} ج) — إكسسوارات: ${fmt(d.sales.products.quantity)} (${fmt(d.sales.products.amount)} ج)</td><td></td><td></td></tr>
+    </tbody></table></div>`
+  }
+
+  html += `<div class="sec"><div class="sec-title">المشتريات</div>
+  <table><tbody>
+    <tr><td>عدد فواتير الشراء</td><td>${d.purchases.invoiceCount}</td></tr>
+    <tr><td>إجمالي المشتريات</td><td>${fmt(d.purchases.total)} ج</td></tr>
+    <tr><td>المدفوع منها</td><td>${fmt(d.purchases.paid)} ج</td></tr>
+  </tbody></table>
+  ${d.purchases.invoices.length > 0 ? `<table style="margin-top:8px"><thead><tr><th>الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>المدفوع</th></tr></thead><tbody>
+  ${d.purchases.invoices.map(i => `<tr><td>${i.number}</td><td>${i.supplierName}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td></tr>`).join('')}
+  </tbody></table>` : ''}</div>`
+
+  html += `<div class="sec"><div class="sec-title">المستحق للموردين</div>
+  <table><tbody>
+    <tr><td>إجمالي المستحق</td><td>${fmt(d.payables.totalOutstanding)} ج (${d.payables.creditorCount} مورد)</td></tr>
+  </tbody></table>
+  ${d.payables.topCreditors.length > 0 ? `<table style="margin-top:8px"><thead><tr><th>المورد</th><th>الهاتف</th><th>المستحق</th></tr></thead><tbody>
+  ${d.payables.topCreditors.map(c => `<tr><td>${c.name}</td><td>${c.phone ?? '—'}</td><td>${fmt(c.balance)} ج</td></tr>`).join('')}
+  </tbody></table>` : ''}</div>`
+
   if (d.expenses.byCategory.length > 0) {
     html += `<div class="sec"><div class="sec-title">المصروفات حسب البند</div>
     <table><thead><tr><th>البند</th><th>المبلغ</th></tr></thead><tbody>

@@ -1,14 +1,14 @@
 // src/services/dailyClose.service.ts
 import {
   dailyCloseRepository,
-  type SaleInvoiceRow, type SaleCostLine, type PurchaseInvoiceRow,
+  type SaleInvoiceRow, type SaleLine, type PurchaseInvoiceRow,
   type PaymentRow, type InvoiceRefRow, type ExpenseRow,
 } from '@/repositories/dailyClose.repository'
 import { paymentsRepository } from '@/repositories/payments.repository'
 import { CASH_METHOD_ORDER, toCashMethod } from '@/constants/paymentMethods'
-import type { CustomerLedger } from '@/types/database'
+import type { CustomerLedger, SupplierLedger } from '@/types/database'
 import type {
-  CashMethod, CashMethodRow, DailyClose, DebtorRow, ExpenseCategoryRow,
+  CashMethod, CashMethodRow, CreditorRow, DailyClose, DebtorRow, ExpenseCategoryRow, SoldItemRow,
 } from '@/types/dailyClose'
 
 const TOP_DEBTORS = 5
@@ -16,13 +16,14 @@ const TOP_DEBTORS = 5
 export interface DailyCloseInput {
   date:             string
   saleInvoices:     SaleInvoiceRow[]
-  saleCostLines:    SaleCostLine[]
+  saleLines:        SaleLine[]
   purchaseInvoices: PurchaseInvoiceRow[]
   payments:         PaymentRow[]
   saleRefs:         InvoiceRefRow[]
   purchaseRefs:     InvoiceRefRow[]
   expenses:         ExpenseRow[]
   ledger:           CustomerLedger[]
+  supplierLedger:   SupplierLedger[]
 }
 
 const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0)
@@ -33,13 +34,27 @@ function confirmedIds(refs: InvoiceRefRow[]): Set<string> {
 
 // حساب إقفال اليوم من بيانات خام (دالة صافية بدون أي استعلامات)
 export function buildDailyClose(input: DailyCloseInput): DailyClose {
-  const { date, saleInvoices, saleCostLines, purchaseInvoices, payments, expenses, ledger } = input
+  const { date, saleInvoices, saleLines, purchaseInvoices, payments, expenses, ledger, supplierLedger } = input
 
   // ── المبيعات والأرباح ──
   const revenue     = sum(saleInvoices.map(i => i.total_amount))
   const discount    = sum(saleInvoices.map(i => i.discount))
-  const costOfGoods = sum(saleCostLines.map(l => l.quantity * l.unit_cost))
+  const costOfGoods = sum(saleLines.map(l => l.quantity * l.unit_cost))
   const grossProfit = revenue - costOfGoods
+
+  const itemMap = new Map<string, SoldItemRow>()
+  for (const l of saleLines) {
+    const key = `${l.kind}:${l.name}`
+    const cur = itemMap.get(key) ?? { kind: l.kind, name: l.name, quantity: 0, amount: 0 }
+    cur.quantity += l.quantity
+    cur.amount   += l.quantity * l.unit_price
+    itemMap.set(key, cur)
+  }
+  const items = [...itemMap.values()].sort((a, b) => b.amount - a.amount)
+  const kindTotal = (kind: SoldItemRow['kind']) => {
+    const rows = items.filter(i => i.kind === kind)
+    return { quantity: sum(rows.map(r => r.quantity)), amount: sum(rows.map(r => r.amount)) }
+  }
 
   // ── النقدية ──
   const byMethod = new Map<CashMethod, { cashIn: number; cashOut: number }>(
@@ -106,6 +121,11 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
     }))
     .sort((a, b) => b.balance - a.balance)
 
+  const creditors: CreditorRow[] = supplierLedger
+    .filter(l => l.balance > 0)
+    .map(l => ({ supplierId: l.supplier_id, name: l.supplier_name, phone: l.supplier_phone, balance: l.balance }))
+    .sort((a, b) => b.balance - a.balance)
+
   const newToday = sum(
     saleInvoices
       .filter(i => i.customer_id !== null)
@@ -121,10 +141,29 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
       costOfGoods,
       grossProfit,
       marginPct: revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0,
+      invoices: saleInvoices.map(i => ({
+        id:           i.id,
+        number:       i.invoice_number,
+        customerName: i.customer_name,
+        total:        i.total_amount,
+        paid:         i.paid_amount,
+        remaining:    Math.max(0, i.total_amount - i.paid_amount),
+      })),
+      items,
+      devices:  kindTotal('device'),
+      products: kindTotal('product'),
     },
     purchases: {
       invoiceCount: purchaseInvoices.length,
       total:        sum(purchaseInvoices.map(i => i.total_amount)),
+      paid:         sum(purchaseInvoices.map(i => i.paid_amount)),
+      invoices: purchaseInvoices.map(i => ({
+        id:           i.id,
+        number:       i.invoice_number,
+        supplierName: i.supplier_name,
+        total:        i.total_amount,
+        paid:         i.paid_amount,
+      })),
     },
     cash: {
       totalIn,
@@ -144,30 +183,36 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
       newToday,
       topDebtors:       debtors.slice(0, TOP_DEBTORS),
     },
+    payables: {
+      totalOutstanding: sum(creditors.map(c => c.balance)),
+      creditorCount:    creditors.length,
+      topCreditors:     creditors.slice(0, TOP_DEBTORS),
+    },
   }
 }
 
 export const dailyCloseService = {
   get: async (date: string): Promise<DailyClose> => {
-    const [saleInvoices, purchaseInvoices, payments, expenses, ledger] = await Promise.all([
+    const [saleInvoices, purchaseInvoices, payments, expenses, ledger, supplierLedger] = await Promise.all([
       dailyCloseRepository.getConfirmedSaleInvoices(date),
       dailyCloseRepository.getConfirmedPurchaseInvoices(date),
       dailyCloseRepository.getPaymentsByDate(date),
       dailyCloseRepository.getExpensesByDate(date),
       paymentsRepository.getCustomerLedger(),
+      paymentsRepository.getSupplierLedger(),
     ])
 
     const salePaymentIds     = [...new Set(payments.filter(p => p.payment_type === 'sale').map(p => p.invoice_id))]
     const purchasePaymentIds = [...new Set(payments.filter(p => p.payment_type === 'purchase').map(p => p.invoice_id))]
 
-    const [saleCostLines, saleRefs, purchaseRefs] = await Promise.all([
-      dailyCloseRepository.getSaleCostLines(saleInvoices.map(i => i.id)),
+    const [saleLines, saleRefs, purchaseRefs] = await Promise.all([
+      dailyCloseRepository.getSaleLines(saleInvoices.map(i => i.id)),
       dailyCloseRepository.getSaleInvoiceRefs(salePaymentIds),
       dailyCloseRepository.getPurchaseInvoiceRefs(purchasePaymentIds),
     ])
 
     return buildDailyClose({
-      date, saleInvoices, saleCostLines, purchaseInvoices, payments, saleRefs, purchaseRefs, expenses, ledger,
+      date, saleInvoices, saleLines, purchaseInvoices, payments, saleRefs, purchaseRefs, expenses, ledger, supplierLedger,
     })
   },
 }

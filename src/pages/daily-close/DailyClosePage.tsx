@@ -15,6 +15,9 @@ import { CashFlowCard } from './components/CashFlowCard'
 import { ProfitCard } from './components/ProfitCard'
 import { ExpensesCard } from './components/ExpensesCard'
 import { DebtorsCard } from './components/DebtorsCard'
+import { SalesDetailCard } from './components/SalesDetailCard'
+import { PurchasesCard } from './components/PurchasesCard'
+import { CreditorsCard } from './components/CreditorsCard'
 
 export function DailyClosePage() {
   const navigate = useNavigate()
@@ -92,6 +95,10 @@ export function DailyClosePage() {
             <ExpensesCard expenses={data.expenses} />
             <DebtorsCard receivables={data.receivables}
               onOpenCustomer={id => navigate(`/ledger/customer/${id}`)} />
+            <SalesDetailCard sales={data.sales} />
+            <PurchasesCard purchases={data.purchases} />
+            <CreditorsCard payables={data.payables}
+              onOpenSupplier={id => navigate(`/ledger/supplier/${id}`)} />
           </div>
         </>
       )}

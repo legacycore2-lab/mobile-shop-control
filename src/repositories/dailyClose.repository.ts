@@ -13,21 +13,29 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 export interface SaleInvoiceRow {
   id:           string
+  invoice_number: string
+  customer_name:  string | null
   customer_id:  string | null
   total_amount: number
   paid_amount:  number
   discount:     number
 }
 
-export interface SaleCostLine {
+export interface SaleLine {
   invoice_id: string
+  kind:       'device' | 'product'
+  name:       string
   quantity:   number
   unit_cost:  number
+  unit_price: number
 }
 
 export interface PurchaseInvoiceRow {
-  id:           string
-  total_amount: number
+  id:             string
+  invoice_number: string
+  supplier_name:  string
+  total_amount:   number
+  paid_amount:    number
 }
 
 export interface PaymentRow {
@@ -54,46 +62,69 @@ export const dailyCloseRepository = {
   getConfirmedSaleInvoices: async (date: string): Promise<SaleInvoiceRow[]> => {
     const { data, error } = await supabase
       .from('sale_invoices')
-      .select('id, customer_id, total_amount, paid_amount, discount')
+      .select('id, invoice_number, customer_id, total_amount, paid_amount, discount, customers!customer_id ( name )')
       .eq('invoice_date', date)
       .eq('status', 'confirmed')
       .limit(2000)
     if (error) throw error
-    return ((data ?? []) as Record<string, unknown>[]).map(r => ({
-      id:           String(r['id']),
-      customer_id:  (r['customer_id'] as string | null) ?? null,
-      total_amount: n(r['total_amount']),
-      paid_amount:  n(r['paid_amount']),
-      discount:     n(r['discount']),
-    }))
+    return ((data ?? []) as unknown[]).map(row => {
+      const r   = row as Record<string, unknown>
+      const cus = r['customers'] as Record<string, unknown> | null
+      return {
+        id:             String(r['id']),
+        invoice_number: String(r['invoice_number']),
+        customer_name:  cus ? String(cus['name']) : null,
+        customer_id:    (r['customer_id'] as string | null) ?? null,
+        total_amount:   n(r['total_amount']),
+        paid_amount:    n(r['paid_amount']),
+        discount:       n(r['discount']),
+      }
+    })
   },
 
-  getSaleCostLines: async (invoiceIds: string[]): Promise<SaleCostLine[]> => {
-    const lines: SaleCostLine[] = []
+  getSaleLines: async (invoiceIds: string[]): Promise<SaleLine[]> => {
+    const lines: SaleLine[] = []
 
     for (const ids of chunk(invoiceIds, ID_CHUNK)) {
       const [devices, products] = await Promise.all([
         supabase
           .from('sale_invoice_devices')
-          .select('invoice_id, mobile_devices!device_id ( cost_price )')
+          .select(`invoice_id, actual_selling_price,
+            mobile_devices!device_id ( cost_price, mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) )`)
           .in('invoice_id', ids),
         supabase
           .from('sale_invoice_products')
-          .select('invoice_id, quantity, products!product_id ( cost_price )')
+          .select('invoice_id, quantity, unit_price, products!product_id ( name, cost_price )')
           .in('invoice_id', ids),
       ])
       if (devices.error)  throw devices.error
       if (products.error) throw products.error
 
       for (const row of (devices.data ?? []) as unknown[]) {
-        const r   = row as Record<string, unknown>
-        const dev = r['mobile_devices'] as Record<string, unknown> | null
-        lines.push({ invoice_id: String(r['invoice_id']), quantity: 1, unit_cost: n(dev?.['cost_price']) })
+        const r     = row as Record<string, unknown>
+        const dev   = r['mobile_devices']    as Record<string, unknown> | null
+        const model = dev?.['mobile_models'] as Record<string, unknown> | null
+        const brand = model?.['mobile_brands'] as Record<string, unknown> | null
+        lines.push({
+          invoice_id: String(r['invoice_id']),
+          kind:       'device',
+          name:       `${String(brand?.['name'] ?? '')} ${String(model?.['name'] ?? '—')}`.trim(),
+          quantity:   1,
+          unit_cost:  n(dev?.['cost_price']),
+          unit_price: n(r['actual_selling_price']),
+        })
       }
       for (const row of (products.data ?? []) as unknown[]) {
         const r   = row as Record<string, unknown>
         const prd = r['products'] as Record<string, unknown> | null
-        lines.push({ invoice_id: String(r['invoice_id']), quantity: n(r['quantity']), unit_cost: n(prd?.['cost_price']) })
+        lines.push({
+          invoice_id: String(r['invoice_id']),
+          kind:       'product',
+          name:       String(prd?.['name'] ?? '—'),
+          quantity:   n(r['quantity']),
+          unit_cost:  n(prd?.['cost_price']),
+          unit_price: n(r['unit_price']),
+        })
       }
     }
     return lines
@@ -102,15 +133,22 @@ export const dailyCloseRepository = {
   getConfirmedPurchaseInvoices: async (date: string): Promise<PurchaseInvoiceRow[]> => {
     const { data, error } = await supabase
       .from('purchase_invoices')
-      .select('id, total_amount')
+      .select('id, invoice_number, total_amount, paid_amount, suppliers!supplier_id ( name )')
       .eq('invoice_date', date)
       .eq('status', 'confirmed')
       .limit(2000)
     if (error) throw error
-    return ((data ?? []) as Record<string, unknown>[]).map(r => ({
-      id:           String(r['id']),
-      total_amount: n(r['total_amount']),
-    }))
+    return ((data ?? []) as unknown[]).map(row => {
+      const r   = row as Record<string, unknown>
+      const sup = r['suppliers'] as Record<string, unknown> | null
+      return {
+        id:             String(r['id']),
+        invoice_number: String(r['invoice_number']),
+        supplier_name:  String(sup?.['name'] ?? '—'),
+        total_amount:   n(r['total_amount']),
+        paid_amount:    n(r['paid_amount']),
+      }
+    })
   },
 
   getPaymentsByDate: async (date: string): Promise<PaymentRow[]> => {
