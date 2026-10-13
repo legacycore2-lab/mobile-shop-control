@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { DeviceFormData } from '@/services/devices.service'
 import type { ProductFormData } from '@/services/products.service'
 import { useAuth } from '@/lib/auth'
+import { InvoicePaymentsEditor } from './components/InvoicePaymentsEditor'
 import { cn } from '@/lib/cn'
 
 import { fmt } from '@/lib/fmt'
@@ -521,7 +522,7 @@ export function EditPurchaseModal({
         } as never)
         .eq('id', invoiceId)
 
-      // الدفعات لا تُعدَّل من هنا — تتعدل من صفحة الحسابات فقط
+      // الدفعات بتتعدل فورًا من InvoicePaymentsEditor (مش جزء من زر الحفظ)
 
       // 10. Invalidate queries — full sync across all affected screens
       await qc.invalidateQueries({ queryKey: ['purchases'] })
@@ -607,13 +608,17 @@ export function EditPurchaseModal({
                 <label className={labelCls}>تاريخ الفاتورة <span className="text-red-500">*</span></label>
                 <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>إجمالي المدفوع</label>
-                <div className="h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center justify-between select-none">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{fmt(actualPaid)} ج</span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">من صفحة الحسابات</span>
+              {detail && detail.invoice.status === 'confirmed' ? (
+                <InvoicePaymentsEditor invoiceId={invoiceId} invoiceNumber={detail.invoice.invoice_number}
+                  supplierId={supplierId} paidTotal={actualPaid} />
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>إجمالي المدفوع</label>
+                  <div className="h-10 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">{fmt(actualPaid)} ج</span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex flex-col gap-1.5">
                 <label className={labelCls}>الخصم (ج.م)</label>
                 <input type="number" min="0" step="0.01" value={discount} onChange={e => setDiscount(e.target.value)} placeholder="0.00" className={inputCls} />
