@@ -4,7 +4,7 @@ import { Suspense, useState, lazy } from 'react'
 import {
   TrendingUp, Package, Truck, Users,
   DollarSign, BarChart2, AlertTriangle,
-  RefreshCw, Download, Calendar, X, Printer, Tag,
+  RefreshCw, Download, Calendar, X, Printer, Tag, Award,
 } from 'lucide-react'
 import {
   useReportSummary, useDeviceSalesReport, useStockValueReport,
@@ -40,6 +40,7 @@ const BrandsTabContent        = lazy(() => import('./tabs/BrandsTab').then(m    
 const ExpensesReportTabContent = lazy(() => import('./tabs/ExpensesReportTab').then(m => ({ default: m.ExpensesReportTabContent })))
 const CashierTabContent       = lazy(() => import('./tabs/CashierTab').then(m       => ({ default: m.CashierTabContent })))
 const PriceListTabContent     = lazy(() => import('./tabs/PriceListTab').then(m     => ({ default: m.PriceListTabContent })))
+const TopProfitTabContent     = lazy(() => import('./tabs/TopProfitTab').then(m     => ({ default: m.TopProfitTabContent })))
 import type { Tab } from './types'
 
 // ── Tab config ────────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ const TABS: { value: Tab; label: string; icon: React.ElementType }[] = [
   { value: 'expenses',   label: 'المصروفات',            icon: DollarSign     },
   { value: 'cashier',    label: 'أداء الكاشير',         icon: Users          },
   { value: 'pricelist',  label: 'قائمة الأسعار',        icon: Tag            },
+  { value: 'topprofit',  label: 'الأكثر ربحاً',          icon: Award          },
 ]
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -220,6 +222,7 @@ export function ReportsPage() {
       {tab === 'expenses'  && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><ExpensesReportTabContent {...tabProps} /></Suspense>}
       {tab === 'cashier'   && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><CashierTabContent        {...tabProps} /></Suspense>}
       {tab === 'pricelist' && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><PriceListTabContent                    /></Suspense>}
+      {tab === 'topprofit' && <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}><TopProfitTabContent from={filterFrom || undefined} to={filterTo || undefined} /></Suspense>}
     </div>
   )
 }
