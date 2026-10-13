@@ -122,7 +122,7 @@ export function PermissionsPage() {
     })
   }, [])
 
-  const save = async () => {
+  const save = useCallback(async () => {
     if (!matrix) return
     setSaveStatus('saving')
     setErrorMsg('')
@@ -134,7 +134,14 @@ export function PermissionsPage() {
       setErrorMsg(e instanceof Error ? e.message : 'حدث خطأ')
       setSaveStatus('error')
     }
-  }
+  }, [matrix, saveMut])
+
+  // حفظ تلقائي بعد نص ثانية من آخر تعديل — الصلاحيات بتوصل لكل المستخدمين لحظياً
+  useEffect(() => {
+    if (!isDirty || saveStatus === 'saving') return
+    const timer = setTimeout(() => { void save() }, 500)
+    return () => clearTimeout(timer)
+  }, [isDirty, matrix, saveStatus, save])
 
   const ACTION_COLORS: Record<Action, string> = {
     view:   'bg-blue-500',
@@ -204,7 +211,7 @@ export function PermissionsPage() {
       {/* Unsaved changes */}
       {isDirty && saveStatus !== 'saving' && (
         <div className="flex items-center justify-between gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <span className="flex items-center gap-2"><AlertCircle size={15} /> فيه تغييرات لسه ماتحفظتش — اضغط «حفظ» عشان تتطبق</span>
+          <span className="flex items-center gap-2"><AlertCircle size={15} /> جاري حفظ التغييرات تلقائياً...</span>
           <button onClick={save} className="h-8 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">حفظ الآن</button>
         </div>
       )}
@@ -318,7 +325,7 @@ export function PermissionsPage() {
         <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
           <p className="font-semibold">ملاحظات:</p>
           <p>• الحفظ فوري — مفيش deploy</p>
-          <p>• المستخدم هيشوف الصلاحيات الجديدة بعد تسجيل دخول من جديد أو refresh</p>
+          <p>• التغييرات بتتحفظ تلقائياً وبتوصل لكل المستخدمين لحظياً من غير refresh</p>
           <p>• المالك (owner) دايماً full access ومش ممكن يتغير</p>
         </div>
       </div>

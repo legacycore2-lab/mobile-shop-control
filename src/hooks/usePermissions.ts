@@ -39,7 +39,7 @@ export function usePermissions() {
     queryKey:  KEYS.role(role as UserRole),
     queryFn:   () => role ? fetchPermissionsForRole(role as UserRole) : Promise.resolve([]),
     enabled:   !!role,
-    staleTime: 1000 * 60 * 5,  // 5 دقايق cache
+    staleTime: 1000 * 60 * 5,  // التحديث بيوصل لحظياً من Realtime
   })
 
   const map = buildMap(rows)
