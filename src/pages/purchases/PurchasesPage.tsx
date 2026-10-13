@@ -187,7 +187,7 @@ export function PurchasesPage() {
                         inv.remaining > 0 ? 'text-red-600 dark:text-red-400' :
                         inv.remaining < 0 ? 'text-blue-600 dark:text-blue-400' :
                         'text-gray-400 dark:text-gray-600')}>
-                        {inv.remaining < 0 ? `رصيد دائن ${fmt(Math.abs(inv.remaining))} ج` : `${fmt(inv.remaining)} ج`}
+                        <Sensitive kind="cost">{inv.remaining < 0 ? `رصيد دائن ${fmt(Math.abs(inv.remaining))} ج` : `${fmt(inv.remaining)} ج`}</Sensitive>
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -209,7 +209,7 @@ export function PurchasesPage() {
                           <button title="تسجيل دفعة" onClick={() => setPayInvoice(inv)}
                             className="h-7 px-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors flex items-center gap-1 whitespace-nowrap">
                             <Banknote size={12} />
-                            {fmt(inv.remaining)} ج
+                            <Sensitive kind="cost" fallback="دفع">{fmt(inv.remaining)} ج</Sensitive>
                           </button>
                         )}
                         {inv.status === 'draft' && (

@@ -83,7 +83,7 @@ export function DeviceDrawer({ device, onClose }: { device: MobileDeviceView; on
               {[
                 ['العميل', device.customer_name],
                 ['تليفون', device.customer_phone],
-                ['سعر البيع الفعلي', device.actual_selling_price ? `${device.actual_selling_price.toLocaleString('ar-EG')} ج.م` : null],
+                ['سعر البيع الفعلي', device.actual_selling_price ? (vis.revenue ? `${device.actual_selling_price.toLocaleString('ar-EG')} ج.م` : '•••') : null],
                 ['تاريخ البيع', device.sold_at ? new Date(device.sold_at).toLocaleDateString('ar-EG') : null],
               ].map(([label, value]) =>
                 value ? (

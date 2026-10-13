@@ -21,6 +21,7 @@ import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { StoreInfoSection } from './StoreInfoSection'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 
 const ROLE_MAP: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'neutral' }> = {
@@ -54,6 +55,7 @@ function StatRow({ label, value, color }: { label: string; value: string | numbe
 }
 
 export function SettingsPage() {
+  const vis = useNumberVisibility()
   const { profile, session } = useAuth()
   const { isDark, toggle }   = useTheme()
   const [tab, setTab]        = useState<Tab>('profile')
@@ -366,8 +368,8 @@ export function SettingsPage() {
                 <StatRow label="مباع"                  value={fmt(deviceStats?.sold             ?? 0)} color="text-green-600 dark:text-green-400" />
                 <StatRow label="في الصيانة"            value={fmt(deviceStats?.repair           ?? 0)} color="text-amber-600 dark:text-amber-400" />
                 <StatRow label="تالف"                  value={fmt(deviceStats?.defective        ?? 0)} color="text-red-600 dark:text-red-400" />
-                <StatRow label="قيمة المخزون (تكلفة)" value={`${fmt(deviceStats?.totalCostValue    ?? 0)} ج`} color="text-purple-600 dark:text-purple-400" />
-                <StatRow label="قيمة المخزون (بيع)"   value={`${fmt(deviceStats?.totalSellingValue ?? 0)} ج`} color="text-teal-600 dark:text-teal-400" />
+                {vis.cost && <StatRow label="قيمة المخزون (تكلفة)" value={`${fmt(deviceStats?.totalCostValue    ?? 0)} ج`} color="text-purple-600 dark:text-purple-400" />}
+                {vis.cost && <StatRow label="قيمة المخزون (بيع)"   value={`${fmt(deviceStats?.totalSellingValue ?? 0)} ج`} color="text-teal-600 dark:text-teal-400" />}
               </div>
             </Section>
             <Section title="إحصائيات المنتجات" sub="الإكسسوارات وقطع الغيار">
@@ -376,8 +378,8 @@ export function SettingsPage() {
                 <StatRow label="إكسسوارات"            value={fmt(productStats?.accessories     ?? 0)} />
                 <StatRow label="قطع غيار"             value={fmt(productStats?.spareParts      ?? 0)} />
                 <StatRow label="مخزون منخفض"          value={fmt(productStats?.lowStock        ?? 0)} color={(productStats?.lowStock ?? 0) > 0 ? 'text-red-600 dark:text-red-400' : undefined} />
-                <StatRow label="قيمة المخزون (تكلفة)" value={`${fmt(productStats?.totalCostValue    ?? 0)} ج`} />
-                <StatRow label="قيمة المخزون (بيع)"   value={`${fmt(productStats?.totalSellingValue ?? 0)} ج`} />
+                {vis.cost && <StatRow label="قيمة المخزون (تكلفة)" value={`${fmt(productStats?.totalCostValue    ?? 0)} ج`} />}
+                {vis.cost && <StatRow label="قيمة المخزون (بيع)"   value={`${fmt(productStats?.totalSellingValue ?? 0)} ج`} />}
               </div>
             </Section>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

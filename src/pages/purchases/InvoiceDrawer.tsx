@@ -113,7 +113,7 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                     className="w-full mt-1 h-9 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
                   >
                     <CreditCard size={13} />
-                    تسجيل دفعة — المتبقي {fmt(inv.remaining)} ج
+                    تسجيل دفعة{vis.cost ? ` — المتبقي ${fmt(inv.remaining)} ج` : ''}
                   </button>
                 )}
 

@@ -214,7 +214,7 @@ export function PosPage() {
                   <td className="px-4 py-3 text-center">
                     <span className={cn('text-sm font-bold whitespace-nowrap',
                       inv.remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-600')}>
-                      {fmt(inv.remaining)} ج
+                      <Sensitive kind="revenue">{fmt(inv.remaining)} ج</Sensitive>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -228,7 +228,7 @@ export function PosPage() {
                         disabled={inv.status !== 'confirmed' || inv.remaining <= 0}
                         className="h-8 px-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 hover:border-green-200 dark:hover:border-green-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
                         <Banknote size={12} />
-                        {inv.remaining > 0 ? `${inv.remaining.toLocaleString('ar-EG')} ج` : 'مسدد'}
+                        {inv.remaining > 0 ? <Sensitive kind="revenue" fallback="دفع">{`${inv.remaining.toLocaleString('ar-EG')} ج`}</Sensitive> : 'مسدد'}
                       </button>
                       <button title="عرض" onClick={() => setDetailId(inv.id)}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
