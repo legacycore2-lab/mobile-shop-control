@@ -154,7 +154,7 @@ export function OverviewTabContent(props: Record<string, any>) {
 
             {/* Activity chart */}
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">نشاط الأجهزة — آخر 30 يوf</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">نشاط الأجهزة — آخر 30 يوم</h3>
               {actLoad ? <div className="h-36 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"/> : (
                 <BarChart data={activity as unknown as ({[key:string]:unknown})[]} valueKey="devices_sold" labelKey="date" color="green" height={140}/>
               )}

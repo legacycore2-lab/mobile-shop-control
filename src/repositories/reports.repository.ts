@@ -1,5 +1,6 @@
 // src/repositories/reports.repository.ts
 import { supabase } from '@/lib/supabase'
+import { toDateKey } from '@/lib/dateKey'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -294,20 +295,23 @@ export const reportsRepository = {
   // ── نشاط الأجهزة آخر 30 يوم ──────────────────────────────────────────────
   getDailyActivity: async (): Promise<DailyActivity[]> => {
     const since = new Date(); since.setDate(since.getDate() - 29)
-    const sinceStr = since.toISOString().split('T')[0]
+    const sinceStr = toDateKey(since)
+    // أجهزة اتضافت أو اتباعت في آخر 30 يوم (الجهاز القديم المباع حديثاً لازم يتحسب)
     const { data, error } = await supabase
-      .from('mobile_devices').select('created_at, sold_at, status').gte('created_at', sinceStr)
+      .from('mobile_devices')
+      .select('created_at, sold_at, status')
+      .or(`created_at.gte.${sinceStr},sold_at.gte.${sinceStr}`)
     if (error) throw error
 
     const map = new Map<string, { added: number; sold: number }>()
     for (let i = 0; i < 30; i++) {
       const d = new Date(); d.setDate(d.getDate() - (29 - i))
-      map.set(d.toISOString().split('T')[0], { added: 0, sold: 0 })
+      map.set(toDateKey(d), { added: 0, sold: 0 })
     }
     for (const row of (data ?? []) as unknown[]) {
       const r = row as Record<string, unknown>
-      const addedOn = String(r['created_at'] ?? '').split('T')[0]
-      const soldOn  = r['sold_at'] ? String(r['sold_at']).split('T')[0] : null
+      const addedOn = r['created_at'] ? toDateKey(new Date(String(r['created_at']))) : ''
+      const soldOn  = r['sold_at']    ? toDateKey(new Date(String(r['sold_at'])))    : null
       if (map.has(addedOn)) map.get(addedOn)!.added++
       if (soldOn && map.has(soldOn)) map.get(soldOn)!.sold++
     }
@@ -399,7 +403,7 @@ export const reportsRepository = {
     for (const row of (saleLines ?? []) as unknown[]) {
       const r   = row as Record<string, unknown>
       const inv = r['sale_invoices'] as Record<string, unknown> | null
-      if (!inv || inv['status'] === 'cancelled') continue
+      if (!inv || inv['status'] !== 'confirmed') continue
       const pid = String(r['product_id'])
       soldMap.set(pid, (soldMap.get(pid) ?? 0) + Number(r['quantity'] ?? 0))
     }
@@ -408,7 +412,7 @@ export const reportsRepository = {
     for (const row of (purchLines ?? []) as unknown[]) {
       const r   = row as Record<string, unknown>
       const inv = r['purchase_invoices'] as Record<string, unknown> | null
-      if (!inv || inv['status'] === 'cancelled') continue
+      if (!inv || inv['status'] !== 'confirmed') continue
       const pid = String(r['product_id'])
       purchMap.set(pid, (purchMap.get(pid) ?? 0) + Number(r['quantity'] ?? 0))
     }
@@ -500,7 +504,7 @@ export const reportsRepository = {
     const { data: allDevices, error: allErr } = await supabase
       .from('mobile_devices')
       .select(`
-        status, cost_price, created_at, sold_at,
+        status, cost_price, created_at, purchase_date, sold_at,
         mobile_models!model_id ( name, mobile_brands!brand_id ( name ) )
       `)
     if (allErr) throw allErr
@@ -544,7 +548,7 @@ export const reportsRepository = {
       const mname  = String(model?.['name'] ?? '—')
       const key    = `${bname}::${mname}`
       const status = String(r['status'] ?? '')
-      const createdOn = String(r['created_at'] ?? '').split('T')[0]
+      const createdOn = String(r['purchase_date'] ?? r['created_at'] ?? '').split('T')[0]
 
       if (!map.has(key)) {
         map.set(key, {
