@@ -50,7 +50,7 @@ export function ProductSalesTabContent({ from, to }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                  {['#', 'الصنف', 'التصنيف', 'وحدات', 'إجمالي التكلفة', 'إجمالي الإيرادات', 'صافي الربح', 'هامش %'].map(h => (
+                  {['#', 'الصنف', 'التصنيف', 'وحدات', 'سعر البيع للوحدة', 'إجمالي التكلفة', 'إجمالي الإيرادات', 'صافي الربح', 'هامش %'].map(h => (
                     <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -62,6 +62,7 @@ export function ProductSalesTabContent({ from, to }: Props) {
                     <td dir="auto" className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.name}</td>
                     <td dir="auto" className="px-3 py-2.5 text-gray-500 dark:text-gray-400">{r.subtitle}</td>
                     <td className="px-3 py-2.5 font-bold text-blue-600 dark:text-blue-400">{fmt(r.units)}</td>
+                    <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{fmt(r.units > 0 ? r.revenue / r.units : 0)} ج</td>
                     <td className="px-3 py-2.5 text-red-600 dark:text-red-400">{fmt(r.cost)} ج</td>
                     <td className="px-3 py-2.5 text-green-600 dark:text-green-400">{fmt(r.revenue)} ج</td>
                     <td className={cn('px-3 py-2.5 font-bold', r.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
@@ -75,6 +76,7 @@ export function ProductSalesTabContent({ from, to }: Props) {
                 <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800 font-bold">
                   <td colSpan={3} className="px-3 py-2.5 text-xs text-blue-700 dark:text-blue-400">الإجمالي</td>
                   <td className="px-3 py-2.5 text-gray-900 dark:text-white">{fmt(totals.units)}</td>
+                  <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{fmt(totals.units > 0 ? totals.revenue / totals.units : 0)} ج</td>
                   <td className="px-3 py-2.5 text-red-600">{fmt(totals.cost)} ج</td>
                   <td className="px-3 py-2.5 text-green-600">{fmt(totals.revenue)} ج</td>
                   <td className="px-3 py-2.5 text-green-600">{fmt(totals.profit)} ج</td>

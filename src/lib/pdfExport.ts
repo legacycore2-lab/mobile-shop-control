@@ -172,9 +172,9 @@ export function exportOverviewPdf(opts: Pick<PdfReportOptions, 'output' | 'dateR
     const c = productSales.reduce((t,r)=>t+r.cost,0)
     const pf = productSales.reduce((t,r)=>t+r.profit,0)
     html += `<div class="sec"><div class="sec-title">مبيعات المنتجات حسب الصنف</div>
-    <table><thead><tr><th>#</th><th>الصنف</th><th>التصنيف</th><th>وحدات</th><th>التكلفة</th><th>الإيرادات</th><th>الربح</th><th>هامش %</th></tr></thead><tbody>
-    ${productSales.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.subtitle}</td><td>${fmt(r.units)}</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct.toFixed(1)}%</td></tr>`).join('')}
-    <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(u)}</td><td>${fmt(c)} ج</td><td>${fmt(rv)} ج</td><td>${fmt(pf)} ج</td><td>${c > 0 ? ((pf / c) * 100).toFixed(1) : '0.0'}%</td></tr>
+    <table><thead><tr><th>#</th><th>الصنف</th><th>التصنيف</th><th>وحدات</th><th>سعر البيع للوحدة</th><th>التكلفة</th><th>الإيرادات</th><th>الربح</th><th>هامش %</th></tr></thead><tbody>
+    ${productSales.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.subtitle}</td><td>${fmt(r.units)}</td><td>${fmt(r.units > 0 ? r.revenue / r.units : 0)} ج</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct.toFixed(1)}%</td></tr>`).join('')}
+    <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(u)}</td><td>${fmt(u > 0 ? rv / u : 0)} ج</td><td>${fmt(c)} ج</td><td>${fmt(rv)} ج</td><td>${fmt(pf)} ج</td><td>${c > 0 ? ((pf / c) * 100).toFixed(1) : '0.0'}%</td></tr>
     </tbody></table></div>`
   }
 
@@ -364,9 +364,9 @@ export function exportProductSalesPdf(rows: ProductSalesPdfRow[], totals: TopPro
     { label: 'صافي الربح',      value: `${fmt(totals.profit)} ج`,  color: 'green' },
   ])
   html += `<div class="sec"><div class="sec-title">مبيعات المنتجات حسب الصنف</div>
-  <table><thead><tr><th>#</th><th>الصنف</th><th>التصنيف</th><th>وحدات</th><th>التكلفة</th><th>الإيرادات</th><th>الربح</th><th>هامش %</th></tr></thead><tbody>
-  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.subtitle}</td><td>${fmt(r.units)}</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct.toFixed(1)}%</td></tr>`).join('')}
-  <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(totals.units)}</td><td>${fmt(totals.cost)} ج</td><td>${fmt(totals.revenue)} ج</td><td>${fmt(totals.profit)} ج</td><td>${totals.margin_pct.toFixed(1)}%</td></tr>
+  <table><thead><tr><th>#</th><th>الصنف</th><th>التصنيف</th><th>وحدات</th><th>سعر البيع للوحدة</th><th>التكلفة</th><th>الإيرادات</th><th>الربح</th><th>هامش %</th></tr></thead><tbody>
+  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.subtitle}</td><td>${fmt(r.units)}</td><td>${fmt(r.units > 0 ? r.revenue / r.units : 0)} ج</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct.toFixed(1)}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(totals.units)}</td><td>${fmt(totals.units > 0 ? totals.revenue / totals.units : 0)} ج</td><td>${fmt(totals.cost)} ج</td><td>${fmt(totals.revenue)} ج</td><td>${fmt(totals.profit)} ج</td><td>${totals.margin_pct.toFixed(1)}%</td></tr>
   </tbody></table></div>`
   openWindow(html, `تقرير-مبيعات-المنتجات-${new Date().toISOString().split('T')[0]}`, output)
 }
