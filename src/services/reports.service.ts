@@ -82,6 +82,51 @@ export const reportsService = {
   },
 }
 
+export interface BrandSalesRow  { brand: string; units: number; revenue: number; cost: number; profit: number }
+export interface BrandStockRow  { brand: string; count: number; cost_value: number; sell_value: number }
+export interface ExpenseCategoryRow { name: string; total: number; count: number }
+export interface ExpenseLike { category_name?: string | null; amount?: number | string | null }
+
+export const reportAggregates = {
+
+  salesByBrand: (sales: DeviceSalesSummary[]): BrandSalesRow[] => {
+    const map = new Map<string, BrandSalesRow>()
+    for (const r of sales) {
+      const e = map.get(r.brand_name) ?? { brand: r.brand_name, units: 0, revenue: 0, cost: 0, profit: 0 }
+      e.units   += Number(r.total_units)
+      e.revenue += Number(r.total_revenue)
+      e.cost    += Number(r.total_cost)
+      e.profit  += Number(r.profit)
+      map.set(r.brand_name, e)
+    }
+    return [...map.values()].sort((a, b) => b.units - a.units)
+  },
+
+  stockByBrand: (stock: StockValueRow[]): BrandStockRow[] => {
+    const map = new Map<string, BrandStockRow>()
+    for (const r of stock) {
+      const e = map.get(r.brand_name) ?? { brand: r.brand_name, count: 0, cost_value: 0, sell_value: 0 }
+      e.count      += Number(r.count)
+      e.cost_value += Number(r.total_cost)
+      e.sell_value += Number(r.total_selling)
+      map.set(r.brand_name, e)
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count)
+  },
+
+  expensesByCategory: (expenses: ExpenseLike[]): ExpenseCategoryRow[] => {
+    const map = new Map<string, ExpenseCategoryRow>()
+    for (const e of expenses) {
+      const name = e.category_name ?? 'غير محدد'
+      const cur  = map.get(name) ?? { name, total: 0, count: 0 }
+      cur.total += Number(e.amount ?? 0)
+      cur.count++
+      map.set(name, cur)
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total)
+  },
+}
+
 export type { CashierPerformanceRow } from '@/repositories/reports.repository'
 
 export const cashierReportService = {

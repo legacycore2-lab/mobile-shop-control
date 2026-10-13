@@ -11,12 +11,14 @@ import {
 import { useSupplierLedger } from '@/hooks/usePayments'
 import { useExpenses } from '@/hooks/useExpenses'
 import { useProfitability } from '@/hooks/useProfitability'
+import { reportAggregates } from '@/services/reports.service'
 import { profitabilityService, type ProfitKind } from '@/services/profitability.service'
 import { fmt } from '@/lib/fmt'
 import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
 import {
   exportOverviewPdf, exportSalesPdf, exportStockPdf,
   exportSuppliersPdf, exportCustomersPdf, exportAlertsPdf, exportTopProfitPdf,
+  exportProfitPdf, exportBrandsPdf, exportExpensesPdf, exportCashierPdf,
   type PdfOutput,
 } from '@/lib/pdfExport'
 import {
@@ -42,7 +44,7 @@ const TopProfitTabContent     = lazy(() => import('./tabs/TopProfitTab').then(m 
 import type { Tab } from './types'
 
 const PROFIT_KIND_LABELS: Record<ProfitKind, string> = { all: 'الأجهزة والمنتجات', device: 'الأجهزة', product: 'المنتجات' }
-const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'customers', 'alerts', 'movement', 'topprofit']
+const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'customers', 'alerts', 'movement', 'topprofit', 'profit', 'brands', 'expenses', 'cashier']
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -117,6 +119,10 @@ export function ReportsPage() {
         case 'customers':  exportCustomersPdf(customers, mode, dateRange); break
         case 'alerts':     exportAlertsPdf(lowStock, mode); break
         case 'movement':   printMovement(movType, prodMovement, devMovement, movFrom, movTo); break
+        case 'profit':     exportProfitPdf(sales, summary?.totalExpenses ?? 0, mode, dateRange); break
+        case 'brands':     exportBrandsPdf(reportAggregates.salesByBrand(sales), reportAggregates.stockByBrand(stock), mode, dateRange); break
+        case 'expenses':   exportExpensesPdf(reportAggregates.expensesByCategory(expenses), mode); break
+        case 'cashier':    exportCashierPdf(cashierData, mode, dateRange); break
         case 'topprofit': {
           const rows = profitabilityService.select(profitRows, profitKind)
           exportTopProfitPdf(rows, profitabilityService.totals(rows), PROFIT_KIND_LABELS[profitKind], mode, dateRange); break

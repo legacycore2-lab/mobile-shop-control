@@ -1,11 +1,12 @@
 // src/pages/reports/tabs/PriceListTab.tsx
 // تقرير أسعار الأجهزة — سعر الشراء والبيع لكل جهاز على حدة
 import { useState, useMemo } from 'react'
-import { Search, Download } from 'lucide-react'
+import { Search, Download, FileText } from 'lucide-react'
 import { useDevicePriceList } from '@/hooks/useReports'
 import { DEVICE_STATUS_MAP } from '@/constants/statusMaps'
 import { Badge } from '@/components/ui/Badge'
 import { fmt } from '@/lib/fmt'
+import { exportPriceListPdf } from '@/lib/pdfExport'
 import { cn } from '@/lib/cn'
 
 const STATUS_OPTIONS = [
@@ -130,6 +131,23 @@ export function PriceListTabContent() {
         >
           <Download size={14} />
           تصدير CSV
+        </button>
+        <button
+          onClick={() => exportPriceListPdf(
+            filtered.map(r => ({
+              brand_name: r.brand_name, model_name: r.model_name, imei1: r.imei1,
+              storage: r.storage, color: r.color,
+              status_label: DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]?.label ?? r.status,
+              cost_price: r.cost_price, selling_price: r.selling_price, profit: r.profit,
+            })),
+            [brand, model, STATUS_OPTIONS.find(o => o.value === status)?.label].filter(Boolean).join(' · ') || 'كل الأجهزة',
+            'download',
+          )}
+          disabled={filtered.length === 0}
+          className="h-9 px-4 flex items-center gap-2 rounded-lg bg-[#0F2552] hover:bg-[#0B1B3F] disabled:opacity-50 text-white text-sm font-medium transition-colors"
+        >
+          <FileText size={14} />
+          PDF
         </button>
       </div>
 

@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { KpiCard, BarChart } from '../components/ReportWidgets'
+import { reportAggregates } from '@/services/reports.service'
 import { TrendingDown, DollarSign, Calendar, Tag, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,17 +30,7 @@ export function ExpensesReportTabContent(props: Record<string, any>) {
   }, [expenses])
 
   // تجميع حسب الفئة
-  const byCategory = useMemo(() => {
-    const map = new Map<string, { name: string; total: number; count: number }>()
-    for (const e of expenses) {
-      const cat = e.category_name ?? 'غير محدد'
-      const cur = map.get(cat) ?? { name: cat, total: 0, count: 0 }
-      cur.total += Number(e.amount ?? 0)
-      cur.count++
-      map.set(cat, cur)
-    }
-    return [...map.values()].sort((a: any, b: any) => b.total - a.total)
-  }, [expenses])
+  const byCategory = useMemo(() => reportAggregates.expensesByCategory(expenses), [expenses])
 
   // KPIs
   const totalAll    = expenses.reduce((s: number, e: any) => s + Number(e.amount ?? 0), 0)

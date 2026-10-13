@@ -198,6 +198,132 @@ export function exportTopProfitPdf(rows: TopProfitPdfRow[], totals: TopProfitPdf
   openWindow(html, `تقرير-الأكثر-ربحا-${new Date().toISOString().split('T')[0]}`, output)
 }
 
+// ── Profitability ─────────────────────────────────────────────────────────────
+export type ProfitPdfRow = { brand_name: string; model_name: string; total_units: number; total_cost: number; total_revenue: number; profit: number; margin_pct: number }
+
+export function exportProfitPdf(sales: ProfitPdfRow[], totalExpenses: number, output: PdfOutput, dateRange: string) {
+  const units  = sales.reduce((s, r) => s + Number(r.total_units), 0)
+  const cost   = sales.reduce((s, r) => s + Number(r.total_cost), 0)
+  const rev    = sales.reduce((s, r) => s + Number(r.total_revenue), 0)
+  const gross  = sales.reduce((s, r) => s + Number(r.profit), 0)
+  const net    = gross - totalExpenses
+  const margin = rev > 0 ? (net / rev) * 100 : 0
+  let html = buildHeader('تقرير الربحية التفصيلية', 'الربح حسب الموديل وصافي الربح', dateRange)
+  html += kpiGrid([
+    { label: 'الوحدات المباعة',  value: fmt(units),                color: 'blue'  },
+    { label: 'التكلفة',          value: `${fmt(cost)} ج` },
+    { label: 'المصروفات',        value: `${fmt(totalExpenses)} ج`, color: 'red'   },
+    { label: 'صافي الربح',       value: `${fmt(net)} ج`,           color: net >= 0 ? 'green' : 'red' },
+  ])
+  html += `<div class="sec"><div class="sec-title">تفاصيل الربحية حسب الموديل</div>
+  <table><thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>وحدات</th><th>تكلفة الوحدة</th><th>سعر البيع</th><th>ربح الوحدة</th><th>إجمالي الربح</th><th>هامش %</th></tr></thead><tbody>
+  ${sales.map((r,i)=>{
+    const u = Number(r.total_units)
+    const uc = u > 0 ? Number(r.total_cost) / u : 0
+    const ur = u > 0 ? Number(r.total_revenue) / u : 0
+    return `<tr><td>${i+1}</td><td>${r.brand_name}</td><td>${r.model_name}</td><td>${u}</td><td>${fmt(uc)} ج</td><td>${fmt(ur)} ج</td><td>${fmt(ur-uc)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct}%</td></tr>`
+  }).join('')}
+  <tr class="tot"><td colspan="3"><strong>الربح الإجمالي</strong></td><td>${fmt(units)}</td><td colspan="3"></td><td>${fmt(gross)} ج</td><td></td></tr>
+  <tr class="tot"><td colspan="7"><strong>مطروحاً: المصروفات</strong></td><td>− ${fmt(totalExpenses)} ج</td><td></td></tr>
+  <tr class="tot"><td colspan="7"><strong>صافي الربح النهائي</strong></td><td>${fmt(net)} ج</td><td>${margin.toFixed(1)}%</td></tr>
+  </tbody></table></div>`
+  openWindow(html, `تقرير-الربحية-${new Date().toISOString().split('T')[0]}`, output)
+}
+
+// ── Brands ────────────────────────────────────────────────────────────────────
+export type BrandSalesPdfRow = { brand: string; units: number; revenue: number; cost: number; profit: number }
+export type BrandStockPdfRow = { brand: string; count: number; cost_value: number; sell_value: number }
+
+export function exportBrandsPdf(sales: BrandSalesPdfRow[], stock: BrandStockPdfRow[], output: PdfOutput, dateRange: string) {
+  const units  = sales.reduce((s, r) => s + r.units, 0)
+  const rev    = sales.reduce((s, r) => s + r.revenue, 0)
+  const profit = sales.reduce((s, r) => s + r.profit, 0)
+  const stockUnits = stock.reduce((s, r) => s + r.count, 0)
+  const stockCost  = stock.reduce((s, r) => s + r.cost_value, 0)
+  const stockSell  = stock.reduce((s, r) => s + r.sell_value, 0)
+  const pct = (v: number, t: number) => (t > 0 ? ((v / t) * 100).toFixed(1) : '0')
+  let html = buildHeader('تقرير تحليل البراندات', 'المبيعات والمخزون حسب البراند', dateRange)
+  html += kpiGrid([
+    { label: 'براندات مباعة',     value: String(sales.length) },
+    { label: 'الوحدات المباعة',   value: fmt(units),         color: 'blue'  },
+    { label: 'الإيرادات',         value: `${fmt(rev)} ج`,    color: 'green' },
+    { label: 'صافي الربح',        value: `${fmt(profit)} ج`, color: 'green' },
+  ])
+  html += `<div class="sec"><div class="sec-title">أداء البراندات — المبيعات</div>
+  <table><thead><tr><th>#</th><th>البراند</th><th>وحدات</th><th>إيرادات</th><th>ربح</th><th>حصة %</th></tr></thead><tbody>
+  ${sales.map((r,i)=>`<tr><td>${i+1}</td><td>${r.brand}</td><td>${fmt(r.units)}</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td><td>${pct(r.units, units)}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="2"><strong>الإجمالي</strong></td><td>${fmt(units)}</td><td>${fmt(rev)} ج</td><td>${fmt(profit)} ج</td><td></td></tr>
+  </tbody></table></div>`
+  html += `<div class="sec"><div class="sec-title">البراندات — المخزون الحالي</div>
+  <table><thead><tr><th>#</th><th>البراند</th><th>وحدات</th><th>قيمة التكلفة</th><th>قيمة البيع</th><th>حصة %</th></tr></thead><tbody>
+  ${stock.map((r,i)=>`<tr><td>${i+1}</td><td>${r.brand}</td><td>${fmt(r.count)}</td><td>${fmt(r.cost_value)} ج</td><td>${fmt(r.sell_value)} ج</td><td>${pct(r.count, stockUnits)}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="2"><strong>الإجمالي</strong></td><td>${fmt(stockUnits)}</td><td>${fmt(stockCost)} ج</td><td>${fmt(stockSell)} ج</td><td></td></tr>
+  </tbody></table></div>`
+  openWindow(html, `تقرير-البراندات-${new Date().toISOString().split('T')[0]}`, output)
+}
+
+// ── Expenses ──────────────────────────────────────────────────────────────────
+export type ExpenseCategoryPdfRow = { name: string; total: number; count: number }
+
+export function exportExpensesPdf(byCategory: ExpenseCategoryPdfRow[], output: PdfOutput) {
+  const total = byCategory.reduce((s, r) => s + r.total, 0)
+  const count = byCategory.reduce((s, r) => s + r.count, 0)
+  let html = buildHeader('تقرير المصروفات', 'المصروفات حسب الفئة', 'كل الفترات')
+  html += kpiGrid([
+    { label: 'إجمالي المصروفات', value: `${fmt(total)} ج`, color: 'red' },
+    { label: 'عدد المصروفات',    value: fmt(count) },
+    { label: 'عدد الفئات',       value: String(byCategory.length) },
+  ])
+  html += `<div class="sec"><div class="sec-title">المصروفات حسب الفئة</div>
+  <table><thead><tr><th>#</th><th>الفئة</th><th>العدد</th><th>الإجمالي</th><th>النسبة %</th></tr></thead><tbody>
+  ${byCategory.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${fmt(r.count)}</td><td>${fmt(r.total)} ج</td><td>${total > 0 ? ((r.total / total) * 100).toFixed(1) : '0'}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="2"><strong>الإجمالي</strong></td><td>${fmt(count)}</td><td>${fmt(total)} ج</td><td></td></tr>
+  </tbody></table></div>`
+  openWindow(html, `تقرير-المصروفات-${new Date().toISOString().split('T')[0]}`, output)
+}
+
+// ── Cashier ───────────────────────────────────────────────────────────────────
+export type CashierPdfRow = { cashier_name: string; invoice_count: number; total_devices: number; total_products: number; total_revenue: number; avg_invoice: number }
+
+export function exportCashierPdf(rows: CashierPdfRow[], output: PdfOutput, dateRange: string) {
+  const rev      = rows.reduce((s, r) => s + r.total_revenue, 0)
+  const invoices = rows.reduce((s, r) => s + r.invoice_count, 0)
+  let html = buildHeader('تقرير أداء الكاشير', 'أداء الموظفين في المبيعات', dateRange)
+  html += kpiGrid([
+    { label: 'عدد الكاشيرات',    value: String(rows.length) },
+    { label: 'إجمالي الفواتير',  value: fmt(invoices),    color: 'blue'  },
+    { label: 'إجمالي الإيرادات', value: `${fmt(rev)} ج`,  color: 'green' },
+    { label: 'الأفضل أداءً',     value: rows[0]?.cashier_name ?? '—' },
+  ])
+  html += `<div class="sec"><div class="sec-title">أداء الكاشيرات التفصيلي</div>
+  <table><thead><tr><th>#</th><th>الموظف</th><th>فواتير</th><th>أجهزة</th><th>منتجات</th><th>الإيرادات</th><th>متوسط الفاتورة</th><th>الحصة %</th></tr></thead><tbody>
+  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.cashier_name}</td><td>${fmt(r.invoice_count)}</td><td>${fmt(r.total_devices)}</td><td>${fmt(r.total_products)}</td><td>${fmt(r.total_revenue)} ج</td><td>${fmt(r.avg_invoice)} ج</td><td>${rev > 0 ? ((r.total_revenue / rev) * 100).toFixed(1) : '0'}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="2"><strong>الإجمالي</strong></td><td>${fmt(invoices)}</td><td colspan="2"></td><td>${fmt(rev)} ج</td><td colspan="2"></td></tr>
+  </tbody></table></div>`
+  openWindow(html, `تقرير-الكاشير-${new Date().toISOString().split('T')[0]}`, output)
+}
+
+// ── Device price list ─────────────────────────────────────────────────────────
+export type PriceListPdfRow = { brand_name: string; model_name: string; imei1: string; storage: string; color: string; status_label: string; cost_price: number; selling_price: number; profit: number }
+
+export function exportPriceListPdf(rows: PriceListPdfRow[], scope: string, output: PdfOutput) {
+  const cost = rows.reduce((s, r) => s + r.cost_price, 0)
+  const sell = rows.reduce((s, r) => s + r.selling_price, 0)
+  let html = buildHeader('قائمة أسعار الأجهزة', scope)
+  html += kpiGrid([
+    { label: 'عدد الأجهزة',        value: fmt(rows.length) },
+    { label: 'إجمالي سعر الشراء',  value: `${fmt(cost)} ج` },
+    { label: 'إجمالي سعر البيع',   value: `${fmt(sell)} ج`, color: 'green' },
+    { label: 'إجمالي الفرق',       value: `${fmt(sell - cost)} ج`, color: 'green' },
+  ])
+  html += `<div class="sec"><div class="sec-title">قائمة الأجهزة</div>
+  <table><thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>IMEI</th><th>التخزين</th><th>اللون</th><th>الحالة</th><th>سعر الشراء</th><th>سعر البيع</th><th>الفرق</th></tr></thead><tbody>
+  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.brand_name}</td><td>${r.model_name}</td><td>${r.imei1}</td><td>${r.storage}</td><td>${r.color}</td><td>${r.status_label}</td><td>${fmt(r.cost_price)} ج</td><td>${fmt(r.selling_price)} ج</td><td>${fmt(r.profit)} ج</td></tr>`).join('')}
+  <tr class="tot"><td colspan="7"><strong>الإجمالي</strong></td><td>${fmt(cost)} ج</td><td>${fmt(sell)} ج</td><td>${fmt(sell - cost)} ج</td></tr>
+  </tbody></table></div>`
+  openWindow(html, `قائمة-أسعار-الأجهزة-${new Date().toISOString().split('T')[0]}`, output)
+}
+
 // ── Stock ─────────────────────────────────────────────────────────────────────
 export function exportStockPdf(stock: StockRow[], output: PdfOutput) {
   let html = buildHeader('تقرير مخزون الأجهزة', 'الأجهزة المتاحة وقيمتها')

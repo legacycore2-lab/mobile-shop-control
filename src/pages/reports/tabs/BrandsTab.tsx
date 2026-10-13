@@ -5,38 +5,15 @@ import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard, BarChart } from '../components/ReportWidgets'
+import { reportAggregates } from '@/services/reports.service'
 import { Smartphone, TrendingUp, DollarSign, Award, Package } from 'lucide-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function BrandsTabContent(props: Record<string, any>) {
   const { sales = [], stock = [], saleLoad, stckLoad } = props
 
-  // تجميع مبيعات حسب البراند
-  const brandSales = useMemo(() => {
-    const map = new Map<string, { brand: string; units: number; revenue: number; cost: number; profit: number }>()
-    for (const r of sales) {
-      const e = map.get(r.brand_name) ?? { brand: r.brand_name, units: 0, revenue: 0, cost: 0, profit: 0 }
-      e.units   += r.total_units
-      e.revenue += r.total_revenue
-      e.cost    += r.total_cost
-      e.profit  += r.profit
-      map.set(r.brand_name, e)
-    }
-    return [...map.values()].sort((a: any, b: any) => b.units - a.units)
-  }, [sales])
-
-  // تجميع مخزون حسب البراند
-  const brandStock = useMemo(() => {
-    const map = new Map<string, { brand: string; count: number; cost_value: number; sell_value: number }>()
-    for (const r of stock) {
-      const e = map.get(r.brand_name) ?? { brand: r.brand_name, count: 0, cost_value: 0, sell_value: 0 }
-      e.count      += r.count
-      e.cost_value += r.total_cost
-      e.sell_value += r.total_selling
-      map.set(r.brand_name, e)
-    }
-    return [...map.values()].sort((a: any, b: any) => b.count - a.count)
-  }, [stock])
+  const brandSales = useMemo(() => reportAggregates.salesByBrand(sales), [sales])
+  const brandStock = useMemo(() => reportAggregates.stockByBrand(stock), [stock])
 
   const totalUnitsSold  = brandSales.reduce((s: number, r: any) => s + Number(r.units),   0)
   const totalRevenue    = brandSales.reduce((s: number, r: any) => s + Number(r.revenue),  0)
