@@ -63,7 +63,7 @@ export function ReportsPage() {
     : filterFrom ? `من ${filterFrom}` : filterTo ? `إلى ${filterTo}` : 'كل البيانات'
 
   // ── Data hooks ────────────────────────────────────────────────────────────
-  const { data: summary,      isLoading: sumLoad  } = useReportSummary()
+  const { data: summary,      isLoading: sumLoad  } = useReportSummary(filterFrom || undefined, filterTo || undefined)
   const { data: sales = [],   isLoading: saleLoad } = useDeviceSalesReport(filterFrom || undefined, filterTo || undefined)
   const { data: stock = [],   isLoading: stckLoad } = useStockValueReport()
   const { data: suppliers = [], isLoading: supLoad } = useSupplierPurchasesReport(filterFrom || undefined, filterTo || undefined)

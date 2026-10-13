@@ -1,6 +1,7 @@
 // src/services/reports.service.ts
 import { reportsRepository, cashierReportRepository } from '@/repositories/reports.repository'
 import { expensesRepository } from '@/repositories/expenses.repository'
+import { profitabilityService } from '@/services/profitability.service'
 import type {
   DeviceSalesSummary, StockValueRow, SupplierPurchaseSummary,
   DeviceStatusCount, DailyActivity, ProductStockAlert, TopCustomer,
@@ -46,18 +47,20 @@ export const reportsService = {
   getDevicePriceList: (): Promise<DevicePriceRow[]> =>
     reportsRepository.getDevicePriceList(),
 
-  getSummary: async (): Promise<ReportSummary> => {
-    const [sales, stock, lowStock, invoiceRevenue, expenseStats] = await Promise.all([
-      reportsRepository.getDeviceSalesSummary(undefined, undefined),
+  // المبيعات والمصروفات بتتقيد بالفترة، والمخزون لقطة حالية
+  getSummary: async (from?: string, to?: string): Promise<ReportSummary> => {
+    const [sales, stock, lowStock, invoiceRevenue, totalExpenses, soldRows] = await Promise.all([
+      reportsRepository.getDeviceSalesSummary(from, to),
       reportsRepository.getStockValue(),
       reportsRepository.getLowStockDetailed(),
-      reportsRepository.getConfirmedInvoicesRevenue(),
-      expensesRepository.getStats(),
+      reportsRepository.getConfirmedInvoicesRevenue(from, to),
+      expensesRepository.getTotalInRange(from, to),
+      profitabilityService.getRows(from, to),
     ])
     const totalRevenue    = invoiceRevenue
-    const totalCostSold   = sales.reduce((s, r) => s + r.total_cost,    0)
+    // تكلفة البضاعة المباعة = أجهزة + منتجات (نفس أساس الإيراد)
+    const totalCostSold   = profitabilityService.totals(soldRows).cost
     const totalProfit     = totalRevenue - totalCostSold
-    const totalExpenses   = expenseStats.total
     const netProfit       = totalProfit - totalExpenses
     const totalUnits      = sales.reduce((s, r) => s + r.total_units,   0)
     const stockDevices    = stock.reduce((s, r) => s + r.count,         0)

@@ -121,6 +121,15 @@ export const expensesRepository = {
     if (error) throw error
   },
 
+  getTotalInRange: async (from?: string, to?: string): Promise<number> => {
+    let query = supabase.from('expenses').select('amount')
+    if (from) query = query.gte('expense_date', from)
+    if (to)   query = query.lte('expense_date', to)
+    const { data, error } = await query
+    if (error) throw error
+    return ((data ?? []) as { amount: unknown }[]).reduce((sum, r) => sum + n(r.amount), 0)
+  },
+
   getStats: async (): Promise<ExpenseStats> => {
     const { data, error } = await supabase
       .from('expenses')

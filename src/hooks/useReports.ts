@@ -17,8 +17,8 @@ const KEYS = {
 
 const OPTS = { staleTime: 2 * 60_000 }
 
-export function useReportSummary() {
-  return useQuery({ queryKey: KEYS.summary,       queryFn: reportsService.getSummary,           ...OPTS })
+export function useReportSummary(from?: string, to?: string) {
+  return useQuery({ queryKey: [...KEYS.summary, from, to], queryFn: () => reportsService.getSummary(from, to), ...OPTS })
 }
 export function useDeviceSalesReport(from?: string, to?: string) {
   return useQuery({ queryKey: [...KEYS.deviceSales, from, to],   queryFn: () => reportsService.getDeviceSalesSummary(from, to), ...OPTS })

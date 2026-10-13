@@ -121,7 +121,7 @@ export interface PdfReportOptions {
   suppliers: SupplierRow[]
   customers: CustomerRow[]
   alerts:    AlertRow[]
-  summary:   { totalSoldDevices: number; totalRevenue: number; totalCostSold: number; totalProfit: number; avgMargin: number; stockDevices: number } | null
+  summary:   { totalSoldDevices: number; totalRevenue: number; totalCostSold: number; totalProfit: number; totalExpenses: number; netProfit: number; netMargin: number; avgMargin: number; stockDevices: number } | null
 }
 
 // ── Overview ──────────────────────────────────────────────────────────────────
@@ -132,15 +132,21 @@ export function exportOverviewPdf(opts: Pick<PdfReportOptions, 'output' | 'dateR
   let html = buildHeader('تقرير نظرة عامة — ملخص شامل', 'الشافعي ستور', dateRange)
 
   if (summary) {
+    const productStockValue = productStock.reduce((t, r) => t + r.stock_value, 0)
+    const deviceStockCost   = stock.reduce((t, r) => t + r.total_cost, 0)
     html += kpiGrid([
-      { label: 'إجمالي الإيرادات',       value: `${fmt(summary.totalRevenue)} ج`,  color: 'green' },
-      { label: 'إجمالي التكاليف',         value: `${fmt(summary.totalCostSold)} ج`, color: 'red'   },
-      { label: 'صافي الربح',              value: `${fmt(summary.totalProfit)} ج`,   color: summary.totalProfit >= 0 ? 'green' : 'red' },
-      { label: 'هامش الربح',              value: `${summary.avgMargin?.toFixed(1)}%`, color: 'blue' },
-      { label: 'أجهزة مباعة',            value: String(summary.totalSoldDevices) },
-      { label: 'في المخزون',              value: String(summary.stockDevices),      color: 'blue'  },
-      { label: 'قيمة المخزون (تكلفة)',    value: `${fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج`,    color: 'amber' },
-      { label: 'ربح متوقع من المخزون',   value: `${fmt(stock.reduce((s,r)=>s+r.total_selling-r.total_cost,0))} ج`, color: 'green' },
+      { label: 'إجمالي الإيرادات',        value: `${fmt(summary.totalRevenue)} ج`,   color: 'green' },
+      { label: 'تكلفة البضاعة المباعة',   value: `${fmt(summary.totalCostSold)} ج`,  color: 'red'   },
+      { label: 'إجمالي الربح',            value: `${fmt(summary.totalProfit)} ج`,    color: summary.totalProfit >= 0 ? 'green' : 'red' },
+      { label: 'المصروفات',               value: `${fmt(summary.totalExpenses)} ج`,  color: 'red'   },
+      { label: 'صافي الربح',              value: `${fmt(summary.netProfit)} ج`,      color: summary.netProfit >= 0 ? 'green' : 'red' },
+      { label: 'هامش الربح الصافي',       value: `${summary.netMargin.toFixed(1)}%`, color: 'blue'  },
+      { label: 'أجهزة مباعة',             value: String(summary.totalSoldDevices) },
+      { label: 'أجهزة في المخزون',        value: String(summary.stockDevices),       color: 'blue'  },
+      { label: 'قيمة مخزون الأجهزة (تكلفة)', value: `${fmt(deviceStockCost)} ج`,     color: 'amber' },
+      { label: 'قيمة مخزون المنتجات (تكلفة)', value: `${fmt(productStockValue)} ج`,  color: 'amber' },
+      { label: 'إجمالي قيمة المخزون',     value: `${fmt(deviceStockCost + productStockValue)} ج`, color: 'amber' },
+      { label: 'ربح متوقع من الأجهزة',    value: `${fmt(stock.reduce((t,r)=>t+r.total_selling-r.total_cost,0))} ج`, color: 'green' },
     ])
   }
 
