@@ -71,6 +71,8 @@ export function PermissionsPage() {
     if (rows.length > 0) setMatrix(rowsToMatrix(rows))
   }, [rows])
 
+  const isDirty = matrix !== null && JSON.stringify(matrix) !== JSON.stringify(rowsToMatrix(rows))
+
   const reset = () => {
     setMatrix(rowsToMatrix(rows))
     setSaveStatus('idle')
@@ -173,8 +175,8 @@ export function PermissionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={reset}
-            className="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <button onClick={reset} disabled={!isDirty}
+            className="disabled:opacity-40 h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <RotateCcw size={15} /> إلغاء التغييرات
           </button>
           <button
@@ -198,6 +200,14 @@ export function PermissionsPage() {
           </button>
         </div>
       </div>
+
+      {/* Unsaved changes */}
+      {isDirty && saveStatus !== 'saving' && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <span className="flex items-center gap-2"><AlertCircle size={15} /> فيه تغييرات لسه ماتحفظتش — اضغط «حفظ» عشان تتطبق</span>
+          <button onClick={save} className="h-8 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">حفظ الآن</button>
+        </div>
+      )}
 
       {/* Error */}
       {saveStatus === 'error' && errorMsg && (
