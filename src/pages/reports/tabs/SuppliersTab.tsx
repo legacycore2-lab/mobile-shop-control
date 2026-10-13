@@ -54,9 +54,10 @@ export function SuppliersTabContent(props: Record<string, any>) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard label="عدد الموردين"       value={suppliers.length}                                          icon={Truck}      color="blue"  />
             <KpiCard label="إجمالي الأجهزة"     value={suppliers.reduce((s: number, r: any) => s + Number(r.total_devices),0)}            icon={Smartphone} color="teal"  />
+            <KpiCard label="وحدات المنتجات"     value={suppliers.reduce((s: number, r: any) => s + Number(r.total_products),0)}           icon={Package}    color="purple" />
             <KpiCard label="إجمالي المشتريات"   value={`${fmt(suppliers.reduce((s: number, r: any) => s + Number(r.total_cost),0))} ج`}  icon={DollarSign} color="red"   />
           </div>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
@@ -67,13 +68,13 @@ export function SuppliersTabContent(props: Record<string, any>) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                    {['#','المورد','عدد الأجهزة','إجمالي التكلفة','النسبة','متوسط سعر الجهاز'].map(h=>(
+                    {['#','المورد','عدد الأجهزة','تكلفة الأجهزة','وحدات المنتجات','تكلفة المنتجات','الإجمالي','النسبة'].map(h=>(
                       <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {supLoad ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                  {supLoad ? <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
                   : suppliers.map((r: any, i: number) =>{
                     const total = suppliers.reduce((s: number, x: any) =>s+x.total_cost,0)
                     return (
@@ -81,12 +82,12 @@ export function SuppliersTabContent(props: Record<string, any>) {
                         <td className="px-3 py-2.5 text-xs text-gray-400">{i+1}</td>
                         <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.supplier_name}</td>
                         <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.total_devices}</td>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{fmt(r.devices_cost)} ج</td>
+                        <td className="px-3 py-2.5 text-center font-bold text-purple-600 dark:text-purple-400">{r.total_products}</td>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{fmt(r.products_cost)} ج</td>
                         <td className="px-3 py-2.5 font-semibold text-red-600 dark:text-red-400">{fmt(r.total_cost)} ج</td>
                         <td className="px-3 py-2.5 text-center">
                           <Badge variant="info">{total>0?((r.total_cost/total)*100).toFixed(1):0}%</Badge>
-                        </td>
-                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
-                          {fmt(r.total_devices>0?r.total_cost/r.total_devices:0)} ج
                         </td>
                       </tr>
                     )

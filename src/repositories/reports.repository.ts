@@ -25,7 +25,10 @@ export interface SupplierPurchaseSummary {
   supplier_id:   string
   supplier_name: string
   total_devices: number
-  total_cost:    number
+  devices_cost:  number
+  total_products: number   // وحدات المنتجات المشتراة
+  products_cost:  number
+  total_cost:    number    // أجهزة + منتجات
 }
 
 export interface DeviceStatusCount {
@@ -224,26 +227,55 @@ export const reportsRepository = {
 
   // ── مشتريات الموردين ──────────────────────────────────────────────────────
   getSupplierPurchases: async (from?: string, to?: string): Promise<SupplierPurchaseSummary[]> => {
-    let query = supabase
+    let devQuery = supabase
       .from('mobile_devices')
       .select('cost_price, purchase_date, suppliers!supplier_id ( id, name )')
-    if (from) query = query.gte('purchase_date', from)
-    if (to)   query = query.lte('purchase_date', to)
-    const { data, error } = await query
+    if (from) devQuery = devQuery.gte('purchase_date', from)
+    if (to)   devQuery = devQuery.lte('purchase_date', to)
+    const { data, error } = await devQuery
     if (error) throw error
 
+    let prodQuery = supabase
+      .from('purchase_invoice_products')
+      .select('quantity, subtotal, purchase_invoices!invoice_id!inner ( invoice_date, status, suppliers!supplier_id ( id, name ) )')
+      .eq('purchase_invoices.status', 'confirmed')
+    if (from) prodQuery = prodQuery.gte('purchase_invoices.invoice_date', from)
+    if (to)   prodQuery = prodQuery.lte('purchase_invoices.invoice_date', to)
+    const { data: prodData, error: prodErr } = await prodQuery
+    if (prodErr) throw prodErr
+
     const map = new Map<string, SupplierPurchaseSummary>()
+    const entry = (id: string, name: string): SupplierPurchaseSummary => {
+      const found = map.get(id)
+      if (found) return found
+      const created: SupplierPurchaseSummary = {
+        supplier_id: id, supplier_name: name,
+        total_devices: 0, devices_cost: 0, total_products: 0, products_cost: 0, total_cost: 0,
+      }
+      map.set(id, created)
+      return created
+    }
+
     for (const row of (data ?? []) as unknown[]) {
       const r   = row as Record<string, unknown>
       const sup = r['suppliers'] as Record<string, unknown> | null
       if (!sup) continue
-      const id   = String(sup['id'])
-      const name = String(sup['name'])
-      if (!map.has(id)) map.set(id, { supplier_id: id, supplier_name: name, total_devices: 0, total_cost: 0 })
-      const e = map.get(id)!
+      const e = entry(String(sup['id']), String(sup['name']))
       e.total_devices++
-      e.total_cost += Number(r['cost_price'] ?? 0)
+      e.devices_cost += Number(r['cost_price'] ?? 0)
     }
+
+    for (const row of (prodData ?? []) as unknown[]) {
+      const r   = row as Record<string, unknown>
+      const inv = r['purchase_invoices'] as Record<string, unknown> | null
+      const sup = inv?.['suppliers'] as Record<string, unknown> | null
+      if (!sup) continue
+      const e = entry(String(sup['id']), String(sup['name']))
+      e.total_products += Number(r['quantity'] ?? 0)
+      e.products_cost  += Number(r['subtotal'] ?? 0)
+    }
+
+    for (const e of map.values()) e.total_cost = e.devices_cost + e.products_cost
     return Array.from(map.values()).sort((a, b) => b.total_cost - a.total_cost)
   },
 

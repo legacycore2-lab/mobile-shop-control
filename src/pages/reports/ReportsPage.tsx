@@ -110,7 +110,11 @@ export function ReportsPage() {
     setPdfLoading(true)
     try {
       switch (tab) {
-        case 'overview':   exportOverviewPdf({ output: mode, dateRange, sales, stock, summary: summary ?? null }); break
+        case 'overview':   exportOverviewPdf({
+          output: mode, dateRange, sales, stock, summary: summary ?? null,
+          productSales: profitabilityService.select(profitRows, 'product').sort((a, b) => b.units - a.units),
+          productStock: prodMovement.filter(p => p.current_stock > 0),
+        }); break
         case 'sales':      exportSalesPdf(sales, mode, dateRange); break
         case 'stock':      exportStockPdf(stock, mode); break
         case 'suppliers': {

@@ -145,11 +145,12 @@ export function printOverview(summary: Record<string, number> | undefined, sales
     <div class="section">
       <div class="section-title">🏭 الموردون</div>
       <table>
-        <thead><tr><th>#</th><th>المورد</th><th>عدد الأجهزة</th><th>إجمالي التكلفة</th><th>النسبة</th></tr></thead>
+        <thead><tr><th>#</th><th>المورد</th><th>عدد الأجهزة</th><th>وحدات المنتجات</th><th>إجمالي التكلفة</th><th>النسبة</th></tr></thead>
         <tbody>
-          ${(suppliers as {supplier_name:string;total_devices:number;total_cost:number}[]).map((r,i)=>`
+          ${(suppliers as {supplier_name:string;total_devices:number;total_products:number;total_cost:number}[]).map((r,i)=>`
             <tr><td>${i+1}</td><td>${r.supplier_name}</td>
             <td style="text-align:center">${r.total_devices}</td>
+            <td style="text-align:center">${r.total_products}</td>
             <td>${fmt(r.total_cost)} ج</td>
             <td style="text-align:center">${((r.total_cost/(suppliers as {total_cost:number}[]).reduce((s,x)=>s+x.total_cost,1))*100).toFixed(1)}%</td>
             </tr>`).join('')}

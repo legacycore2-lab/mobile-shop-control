@@ -125,8 +125,10 @@ export interface PdfReportOptions {
 }
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-export function exportOverviewPdf(opts: Pick<PdfReportOptions, 'output' | 'dateRange' | 'sales' | 'stock' | 'summary'>) {
-  const { output, dateRange, sales, stock, summary } = opts
+export type ProductStockPdfRow = { name: string; category_name: string; current_stock: number; cost_price: number; stock_value: number }
+
+export function exportOverviewPdf(opts: Pick<PdfReportOptions, 'output' | 'dateRange' | 'sales' | 'stock' | 'summary'> & { productSales: ProductSalesPdfRow[]; productStock: ProductStockPdfRow[] }) {
+  const { output, dateRange, sales, stock, summary, productSales, productStock } = opts
   let html = buildHeader('تقرير نظرة عامة — ملخص شامل', 'الشافعي ستور', dateRange)
 
   if (summary) {
@@ -155,6 +157,26 @@ export function exportOverviewPdf(opts: Pick<PdfReportOptions, 'output' | 'dateR
     <table><thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>الكمية</th><th>قيمة التكلفة</th><th>قيمة البيع</th><th>الربح المتوقع</th></tr></thead><tbody>
     ${stock.map((r,i)=>`<tr><td>${i+1}</td><td>${r.brand_name}</td><td>${r.model_name}</td><td>${r.count}</td><td>${fmt(r.total_cost)} ج</td><td>${fmt(r.total_selling)} ج</td><td>${fmt(r.total_selling-r.total_cost)} ج</td></tr>`).join('')}
     <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${stock.reduce((s,r)=>s+r.count,0)}</td><td>${fmt(stock.reduce((s,r)=>s+r.total_cost,0))} ج</td><td>${fmt(stock.reduce((s,r)=>s+r.total_selling,0))} ج</td><td>${fmt(stock.reduce((s,r)=>s+r.total_selling-r.total_cost,0))} ج</td></tr>
+    </tbody></table></div>`
+  }
+
+  if (productSales.length > 0) {
+    const u = productSales.reduce((t,r)=>t+r.units,0)
+    const rv = productSales.reduce((t,r)=>t+r.revenue,0)
+    const c = productSales.reduce((t,r)=>t+r.cost,0)
+    const pf = productSales.reduce((t,r)=>t+r.profit,0)
+    html += `<div class="sec"><div class="sec-title">مبيعات المنتجات حسب الصنف</div>
+    <table><thead><tr><th>#</th><th>الصنف</th><th>التصنيف</th><th>وحدات</th><th>التكلفة</th><th>الإيرادات</th><th>الربح</th></tr></thead><tbody>
+    ${productSales.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.subtitle}</td><td>${fmt(r.units)}</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td></tr>`).join('')}
+    <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(u)}</td><td>${fmt(c)} ج</td><td>${fmt(rv)} ج</td><td>${fmt(pf)} ج</td></tr>
+    </tbody></table></div>`
+  }
+
+  if (productStock.length > 0) {
+    html += `<div class="sec"><div class="sec-title">مخزون المنتجات</div>
+    <table><thead><tr><th>#</th><th>المنتج</th><th>الفئة</th><th>الرصيد</th><th>سعر الشراء</th><th>قيمة المخزون</th></tr></thead><tbody>
+    ${productStock.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.category_name}</td><td>${fmt(r.current_stock)}</td><td>${fmt(r.cost_price)} ج</td><td>${fmt(r.stock_value)} ج</td></tr>`).join('')}
+    <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(productStock.reduce((t,r)=>t+r.current_stock,0))}</td><td></td><td>${fmt(productStock.reduce((t,r)=>t+r.stock_value,0))} ج</td></tr>
     </tbody></table></div>`
   }
 

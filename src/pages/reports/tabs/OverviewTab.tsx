@@ -12,7 +12,7 @@ import {
 
 export function OverviewTabContent(props: Record<string, any>) {
   const {
-    summary, sales, stock, activity,
+    summary, sales, stock, activity, prodMovement = [],
     sumLoad, actLoad, filterFrom, filterTo,
   } = props
 
@@ -20,6 +20,8 @@ export function OverviewTabContent(props: Record<string, any>) {
   const deviceTotals  = profitabilityService.totals(profitabilityService.select(soldRows, 'device'))
   const productRows   = profitabilityService.select(soldRows, 'product')
   const productTotals = profitabilityService.totals(productRows)
+  const productStockUnits = (prodMovement as { current_stock: number }[]).reduce((t, r) => t + Number(r.current_stock), 0)
+  const productStockValue = (prodMovement as { stock_value: number }[]).reduce((t, r) => t + Number(r.stock_value), 0)
 
   return (
     <>
@@ -111,6 +113,14 @@ export function OverviewTabContent(props: Record<string, any>) {
               <KpiCard label="وحدات منتجات مباعة"    value={fmt(productTotals.units)}             icon={Package}    color="blue"   />
               <KpiCard label="إيراد المنتجات"        value={`${fmt(productTotals.revenue)} ج`}   icon={DollarSign} color="green"  />
               <KpiCard label="ربح المنتجات"          value={`${fmt(productTotals.profit)} ج`}    icon={TrendingUp} color={productTotals.profit >= 0 ? 'green' : 'red'} />
+            </div>
+
+            {/* Row 5 — Total stock */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <KpiCard label="وحدات المنتجات في المخزون" value={fmt(productStockUnits)}                         icon={Package}    color="purple" />
+              <KpiCard label="قيمة مخزون المنتجات"        value={`${fmt(productStockValue)} ج`}                  icon={DollarSign} color="amber"  />
+              <KpiCard label="قيمة مخزون الأجهزة"         value={`${fmt(summary.stockCostValue)} ج`}             icon={Smartphone} color="blue"   />
+              <KpiCard label="إجمالي قيمة المخزون"        value={`${fmt(summary.stockCostValue + productStockValue)} ج`} icon={Layers} color="green" />
             </div>
 
             {/* Devices vs products */}
