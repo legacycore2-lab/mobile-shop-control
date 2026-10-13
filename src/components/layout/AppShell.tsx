@@ -25,6 +25,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/pos',         icon: ShoppingCart,    label: 'نقطة البيع',                   resource: 'pos'         },
   { to: '/purchases',   icon: Package,         label: 'المشتريات',                    resource: 'purchases'   },
   { to: '/orders',      icon: ClipboardList,   label: 'طلبات العملاء',                resource: 'orders'      },
+  { to: '/product-images', icon: Images,     label: 'صور المنتجات',                 resource: 'products'    },
   { to: '/products',    icon: Tag,             label: 'المنتجات',                     resource: 'products'    },
   { to: '/suppliers',   icon: Truck,           label: 'الموردين',                     resource: 'suppliers'   },
   { to: '/customers',   icon: Users,           label: 'العملاء',                      resource: 'customers'   },

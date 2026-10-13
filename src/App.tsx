@@ -23,6 +23,7 @@ const CustomersPage      = lazy(() => import('@/pages/customers/CustomersPage').
 const ProductsPage       = lazy(() => import('@/pages/products/ProductsPage').then(m => ({ default: m.ProductsPage })))
 const ReportsPage        = lazy(() => import('@/pages/reports/ReportsPage').then(m => ({ default: m.ReportsPage })))
 const DailyClosePage     = lazy(() => import('@/pages/daily-close/DailyClosePage').then(m => ({ default: m.DailyClosePage })))
+const ProductImagesPage  = lazy(() => import('@/pages/product-images/ProductImagesPage').then(m => ({ default: m.ProductImagesPage })))
 const ModelImagesPage    = lazy(() => import('@/pages/model-images/ModelImagesPage').then(m => ({ default: m.ModelImagesPage })))
 const SettingsPage       = lazy(() => import('@/pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const AuditLogsPage      = lazy(() => import('@/pages/audit/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })))
@@ -169,6 +170,7 @@ function Guard() {
               <Route path="/products"    element={<PageErrorBoundary><ProtectedRoute resource="products"><ProductsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/reports"     element={<PageErrorBoundary><ProtectedRoute resource="reports"><ReportsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/daily-close" element={<PageErrorBoundary><ProtectedRoute resource="reports"><DailyClosePage /></ProtectedRoute></PageErrorBoundary>} />
+              <Route path="/product-images" element={<PageErrorBoundary><ProtectedRoute resource="products"><ProductImagesPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/model-images" element={<PageErrorBoundary><ProtectedRoute resource="devices"><ModelImagesPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/audit"       element={<PageErrorBoundary><ProtectedRoute resource="audit"><AuditLogsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/ledger"      element={<PageErrorBoundary><ProtectedRoute resource="ledger"><LedgerPage /></ProtectedRoute></PageErrorBoundary>} />
