@@ -70,7 +70,7 @@ export const catalogService = {
       title:    p.name,
       subtitle: p.category,
       details:  [],
-      note:     null,
+      note:     p.notes?.trim() || null,
       condition: null,
       price:    p.selling_price,
       oldPrice: catalogService.validOldPrice(p.selling_price, p.old_price),

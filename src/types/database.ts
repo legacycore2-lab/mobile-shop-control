@@ -243,6 +243,7 @@ export interface CatalogOrderItem {
 export interface CatalogProduct {
   id: string; name: string; category: string; product_type: ProductType
   selling_price: number; old_price: number | null; stock_qty: number; unit: string; image_url: string | null
+  notes: string | null
 }
 
 export interface CatalogDevice {
