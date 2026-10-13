@@ -20,6 +20,7 @@ export interface CatalogEntry {
   oldPrice: number | null     // السعر قبل الخصم (null = مفيش عرض)
   maxQty:   number            // 0 = نفد
   image:    string | null
+  image2:   string | null     // صورة تانية (الموبايلات فقط)
   specs:    { label: string; value: string }[]   // للمقارنة (الموبايلات فقط)
 }
 
@@ -75,6 +76,7 @@ export const catalogService = {
       oldPrice: catalogService.validOldPrice(p.selling_price, p.old_price),
       maxQty:   Math.max(p.stock_qty, 0),
       image:    p.image_url,
+      image2:   null,
       specs:    [],
     }))
 
@@ -115,6 +117,7 @@ export const catalogService = {
         oldPrice: catalogService.validOldPrice(d.selling_price, d.old_price),
         maxQty:   1,
         image:    d.image_url,
+        image2:   d.image_url_2 ?? null,
         specs,
       })
     }

@@ -12,9 +12,9 @@ export function ModelImagesPage() {
   const setImage = useSetModelImage()
   const [onlyMissing, setOnlyMissing] = useState(true)
 
-  const withImage = data.filter(m => m.imageUrl).length
+  const withImage = data.filter(m => m.imageUrl && m.imageUrl2).length
   const visible   = useMemo(
-    () => (onlyMissing ? data.filter(m => !m.imageUrl) : data),
+    () => (onlyMissing ? data.filter(m => !m.imageUrl || !m.imageUrl2) : data),
     [data, onlyMissing],
   )
 
@@ -24,12 +24,12 @@ export function ModelImagesPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">صور الموديلات</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            الصورة بتظهر في الكتالوج لكل أجهزة الموديل — {withImage} من {data.length} موديل ليه صورة
+            الصورة بتظهر في الكتالوج لكل أجهزة الموديل — {withImage} من {data.length} موديل ليه الصورتين
           </p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant={onlyMissing ? 'primary' : 'secondary'} onClick={() => setOnlyMissing(true)}>
-            بدون صورة
+            ناقص صور
           </Button>
           <Button size="sm" variant={!onlyMissing ? 'primary' : 'secondary'} onClick={() => setOnlyMissing(false)}>
             الكل
@@ -58,7 +58,7 @@ export function ModelImagesPage() {
       {!isLoading && !isError && visible.length === 0 && (
         <Card>
           <p className="text-sm text-center text-gray-500 dark:text-gray-400 py-6">
-            {data.length === 0 ? 'مفيش أجهزة في المخزون' : 'كل الموديلات ليها صور'}
+            {data.length === 0 ? 'مفيش أجهزة في المخزون' : 'كل الموديلات ليها الصورتين'}
           </p>
         </Card>
       )}
@@ -71,12 +71,20 @@ export function ModelImagesPage() {
               <p className="text-base font-bold text-gray-900 dark:text-white truncate" dir="auto">{m.name}</p>
               <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">{m.inStock} في المخزون</p>
             </div>
-            <ImageField
-              value={m.imageUrl}
-              folder="models"
-              label="الصورة"
-              onChange={url => setImage.mutate({ modelId: m.id, imageUrl: url })}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <ImageField
+                value={m.imageUrl}
+                folder="models"
+                label="الصورة الأولى"
+                onChange={url => setImage.mutate({ modelId: m.id, slot: 1, imageUrl: url })}
+              />
+              <ImageField
+                value={m.imageUrl2}
+                folder="models"
+                label="الصورة التانية"
+                onChange={url => setImage.mutate({ modelId: m.id, slot: 2, imageUrl: url })}
+              />
+            </div>
           </Card>
         ))}
       </div>

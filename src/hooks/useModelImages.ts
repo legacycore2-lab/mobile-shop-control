@@ -11,8 +11,8 @@ export function useModelImages() {
 export function useSetModelImage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ modelId, imageUrl }: { modelId: string; imageUrl: string | null }) =>
-      modelImagesService.setImage(modelId, imageUrl),
+    mutationFn: ({ modelId, slot, imageUrl }: { modelId: string; slot: 1 | 2; imageUrl: string | null }) =>
+      modelImagesService.setImage(modelId, slot, imageUrl),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: KEY })
       void qc.invalidateQueries({ queryKey: ['mobile_models'] })

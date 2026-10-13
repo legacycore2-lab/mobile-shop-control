@@ -1,4 +1,5 @@
 // src/pages/catalog/CatalogDetailModal.tsx
+import { useState } from 'react'
 import { X, Share2, MessageCircle, Phone, Plus, Check, Smartphone, Package, Wrench } from 'lucide-react'
 import { fmt } from '@/lib/fmt'
 import { whatsappUrl } from '@/lib/whatsapp'
@@ -25,6 +26,9 @@ export function CatalogDetailModal({ entry, inCartQty, store, onAdd, onClose }: 
   const soldOut    = entry.maxQty < 1
   const reachedMax = inCartQty >= entry.maxQty
   const text       = catalogService.shareText(entry, pageUrl())
+  const images     = [entry.image, entry.image2].filter((src): src is string => !!src)
+  const [imageIndex, setImageIndex] = useState(0)
+  const shownImage = images[imageIndex] ?? null
 
   async function share() {
     if (typeof navigator.share === 'function') {
@@ -38,9 +42,24 @@ export function CatalogDetailModal({ entry, inCartQty, store, onAdd, onClose }: 
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div dir="rtl" className="bg-white dark:bg-gray-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto">
         <div className="relative h-64 bg-slate-50 dark:bg-gray-800 flex items-center justify-center rounded-t-3xl">
-          {entry.image
-            ? <img src={entry.image} alt={entry.title} className="max-h-full max-w-full object-contain p-5" />
+          {shownImage
+            ? <img src={shownImage} alt={entry.title} className="max-h-full max-w-full object-contain p-5 pb-16" />
             : <Icon size={72} strokeWidth={1.2} className="text-slate-400" />}
+          {images.length > 1 && (
+            <div className="absolute bottom-3 right-1/2 translate-x-1/2 flex gap-2">
+              {images.map((src, i) => (
+                <button
+                  key={src}
+                  onClick={() => setImageIndex(i)}
+                  aria-label={`صورة ${i + 1}`}
+                  aria-pressed={i === imageIndex}
+                  className={`w-12 h-12 rounded-lg bg-white border-2 overflow-hidden ${i === imageIndex ? 'border-[#0F2552]' : 'border-slate-200'}`}
+                >
+                  <img src={src} alt="" className="w-full h-full object-contain p-1" />
+                </button>
+              ))}
+            </div>
+          )}
           <button onClick={onClose} aria-label="إغلاق"
             className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white/90 dark:bg-gray-900/90 flex items-center justify-center text-gray-600">
             <X size={16} />

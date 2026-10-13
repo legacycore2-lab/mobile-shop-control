@@ -53,7 +53,7 @@ export interface Product {
 export interface MobileBrand { id: string; name: string; created_at: string }
 
 export interface MobileModel {
-  id: string; brand_id: string; name: string; image_url: string | null; show_in_catalog: boolean; created_at: string
+  id: string; brand_id: string; name: string; image_url: string | null; image_url_2: string | null; show_in_catalog: boolean; created_at: string
 }
 
 export interface MobileDevice {
@@ -249,7 +249,7 @@ export interface CatalogDevice {
   condition: string; selling_price: number; old_price: number | null
   battery_health: number | null; warranty_months: number
   notes: string | null
-  image_url: string | null
+  image_url: string | null; image_url_2: string | null
 }
 
 export interface StoreInfo {

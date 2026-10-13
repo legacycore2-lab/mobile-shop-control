@@ -5,5 +5,6 @@ export interface ModelImageRow {
   brand:     string
   name:      string
   imageUrl:  string | null
+  imageUrl2: string | null
   inStock:   number
 }

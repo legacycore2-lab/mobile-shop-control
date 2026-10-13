@@ -52,10 +52,21 @@ export function CatalogItemCard({ entry, inCartQty, installmentFrom, onAdd, onOp
         </button>
       </div>
 
-      <div onClick={onOpen} className="relative h-28 sm:h-36 flex items-center justify-center cursor-pointer">
+      <div onClick={onOpen} className="group relative h-28 sm:h-36 flex items-center justify-center cursor-pointer">
         {entry.image
-          ? <img src={entry.image} alt={entry.title} loading="lazy" className="max-h-full max-w-full object-contain" />
+          ? <img src={entry.image} alt={entry.title} loading="lazy"
+              className={cn('max-h-full max-w-full object-contain transition-opacity duration-200', entry.image2 && 'group-hover:opacity-0')} />
           : <Icon size={56} strokeWidth={1.2} className="text-slate-300 dark:text-gray-600" />}
+        {entry.image && entry.image2 && (
+          <>
+            <img src={entry.image2} alt="" loading="lazy" aria-hidden="true"
+              className="absolute inset-0 m-auto max-h-full max-w-full object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+            <span aria-hidden="true" className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0F2552] group-hover:bg-slate-300" />
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-[#0F2552]" />
+            </span>
+          </>
+        )}
         {compare && (
           <button
             onClick={e => { e.stopPropagation(); compare.onToggle() }}
