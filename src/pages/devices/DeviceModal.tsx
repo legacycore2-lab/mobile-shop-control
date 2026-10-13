@@ -20,6 +20,7 @@ interface FormState {
   supplier_id: string; purchase_date: string
   cost_price: string; selling_price: string; old_price: string
   warranty_months: string; location: string; notes: string
+  image_url: string | null; image_url_2: string | null
 }
 
 const EMPTY_FORM: FormState = {
@@ -29,6 +30,7 @@ const EMPTY_FORM: FormState = {
   supplier_id: '', purchase_date: new Date().toISOString().split('T')[0],
   cost_price: '', selling_price: '', old_price: '',
   warranty_months: '12', location: '', notes: '',
+  image_url: null, image_url_2: null,
 }
 
 export function DeviceModal({ device, onClose, initImei = '' }: {
@@ -65,6 +67,8 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
           warranty_months: String(device.warranty_months),
           location:        device.location        ?? '',
           notes:           device.notes           ?? '',
+          image_url:       device.image_url,
+          image_url_2:     device.image_url_2,
         }
       : { ...EMPTY_FORM, imei1: initImei }
   )
@@ -310,11 +314,20 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
               return (
                 <div className="space-y-3">
                   <ImageField
-                    label="صورة الموديل (تظهر في الكتالوج لكل أجهزة الموديل ده)"
+                    label="صورة الموديل الافتراضية (لأي جهاز ملوش صورة خاصة)"
                     folder="models"
                     value={model?.image_url ?? null}
                     onChange={url => updateModelCatalog.mutate({ modelId: form.model_id, patch: { image_url: url } })}
                   />
+                  <div className="rounded-xl border border-blue-200 dark:border-blue-800 p-3 space-y-3">
+                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">صور الجهاز ده بس (بتتقدم على صورة الموديل في الكتالوج)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <ImageField label="صورة 1" folder="devices" value={form.image_url}
+                        onChange={url => setForm(f => ({ ...f, image_url: url }))} />
+                      <ImageField label="صورة 2" folder="devices" value={form.image_url_2}
+                        onChange={url => setForm(f => ({ ...f, image_url_2: url }))} />
+                    </div>
+                  </div>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={model?.show_in_catalog ?? true}
                       onChange={e => updateModelCatalog.mutate({ modelId: form.model_id, patch: { show_in_catalog: e.target.checked } })}

@@ -83,7 +83,7 @@ export const catalogService = {
     const grouped = new Map<string, CatalogEntry>()
     for (const d of catalog.devices) {
       const note = d.notes?.trim() || null
-      const key = ['d', d.brand, d.model, d.storage, d.color, d.condition, d.selling_price, d.old_price, d.battery_health, d.warranty_months, note].join('|')
+      const key = ['d', d.brand, d.model, d.storage, d.color, d.condition, d.selling_price, d.old_price, d.battery_health, d.warranty_months, note, d.image_url, d.image_url_2].join('|')
       const existing = grouped.get(key)
       if (existing) {
         existing.ids.push(d.id)

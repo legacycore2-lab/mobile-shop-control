@@ -30,7 +30,7 @@ async function compress(file: File): Promise<Blob> {
 }
 
 export const imagesService = {
-  upload: async (file: File, folder: 'products' | 'models'): Promise<string> => {
+  upload: async (file: File, folder: 'products' | 'models' | 'devices'): Promise<string> => {
     if (!ACCEPTED.includes(file.type)) throw new Error('الصيغة المسموحة: JPG أو PNG أو WebP')
     if (file.size > MAX_INPUT)         throw new Error('حجم الصورة كبير (الحد الأقصى 10MB)')
     const blob = await compress(file)

@@ -5,7 +5,7 @@ import { useImageUpload } from '@/hooks/useImageUpload'
 
 interface Props {
   value:    string | null
-  folder:   'products' | 'models'
+  folder:   'products' | 'models' | 'devices'
   label:    string
   onChange: (url: string | null) => void
 }

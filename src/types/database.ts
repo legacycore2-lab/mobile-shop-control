@@ -66,6 +66,7 @@ export interface MobileDevice {
   sold_at: string | null; warranty_months: number; warranty_expires_at: string | null
   old_price: number | null
   battery_health: number | null; status: DeviceStatus; location: string | null; notes: string | null
+  image_url: string | null; image_url_2: string | null
   added_by: string; sold_by: string | null; created_at: string; updated_at: string
 }
 

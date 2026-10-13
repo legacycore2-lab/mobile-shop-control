@@ -20,6 +20,8 @@ export interface DeviceFormData {
   warranty_months: number
   location:        string
   notes:           string
+  image_url?:      string | null
+  image_url_2?:    string | null
   added_by:        string
   /** إلزامي — الجهاز لا يدخل المخزون إلا عبر فاتورة شراء */
   purchase_invoice_id: string
@@ -145,6 +147,8 @@ export const devicesService = {
       status:               'in_stock',
       location:             form.location?.trim() || null,
       notes:                form.notes?.trim()    || null,
+      image_url:            form.image_url   ?? null,
+      image_url_2:          form.image_url_2 ?? null,
       added_by:             form.added_by,
       sold_by:              null,
     })
@@ -174,6 +178,8 @@ export const devicesService = {
     if (form.warranty_months !== undefined) payload.warranty_months = Number(form.warranty_months) || 0
     if (form.location      !== undefined) payload.location      = form.location?.trim()      || null
     if (form.notes         !== undefined) payload.notes         = form.notes?.trim()         || null
+    if (form.image_url     !== undefined) payload.image_url     = form.image_url   || null
+    if (form.image_url_2   !== undefined) payload.image_url_2   = form.image_url_2 || null
     return devicesRepository.update(id, payload)
   },
 
