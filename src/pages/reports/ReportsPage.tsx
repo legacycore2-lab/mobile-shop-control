@@ -10,11 +10,13 @@ import {
 } from '@/hooks/useReports'
 import { useSupplierLedger } from '@/hooks/usePayments'
 import { useExpenses } from '@/hooks/useExpenses'
+import { useProfitability } from '@/hooks/useProfitability'
+import { profitabilityService, type ProfitKind } from '@/services/profitability.service'
 import { fmt } from '@/lib/fmt'
 import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/exportUtils'
 import {
   exportOverviewPdf, exportSalesPdf, exportStockPdf,
-  exportSuppliersPdf, exportCustomersPdf, exportAlertsPdf,
+  exportSuppliersPdf, exportCustomersPdf, exportAlertsPdf, exportTopProfitPdf,
   type PdfOutput,
 } from '@/lib/pdfExport'
 import {
@@ -39,6 +41,9 @@ const PriceListTabContent     = lazy(() => import('./tabs/PriceListTab').then(m 
 const TopProfitTabContent     = lazy(() => import('./tabs/TopProfitTab').then(m     => ({ default: m.TopProfitTabContent })))
 import type { Tab } from './types'
 
+const PROFIT_KIND_LABELS: Record<ProfitKind, string> = { all: 'الأجهزة والمنتجات', device: 'الأجهزة', product: 'المنتجات' }
+const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'customers', 'alerts', 'movement', 'topprofit']
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function ReportsPage() {
@@ -48,6 +53,7 @@ export function ReportsPage() {
   const [filterTo,   setFilterTo]   = useState<string>('')
   const [showPdfModal, setShowPdfModal] = useState(false)
   const [pdfLoading,   setPdfLoading]   = useState(false)
+  const [profitKind,   setProfitKind]   = useState<ProfitKind>('all')
 
   const dateRange = filterFrom && filterTo
     ? `من ${filterFrom} إلى ${filterTo}`
@@ -66,6 +72,8 @@ export function ReportsPage() {
   const { data: cashierData = [],  isLoading: cashierLoad } = useCashierPerformance(
     filterFrom || undefined, filterTo || undefined
   )
+
+  const { data: profitRows = [] } = useProfitability(filterFrom || undefined, filterTo || undefined)
 
   const today        = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
@@ -109,6 +117,10 @@ export function ReportsPage() {
         case 'customers':  exportCustomersPdf(customers, mode, dateRange); break
         case 'alerts':     exportAlertsPdf(lowStock, mode); break
         case 'movement':   printMovement(movType, prodMovement, devMovement, movFrom, movTo); break
+        case 'topprofit': {
+          const rows = profitabilityService.select(profitRows, profitKind)
+          exportTopProfitPdf(rows, profitabilityService.totals(rows), PROFIT_KIND_LABELS[profitKind], mode, dateRange); break
+        }
       }
     } finally { setPdfLoading(false) }
   }
@@ -124,11 +136,11 @@ export function ReportsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">تحليل المبيعات والمخزون والأداء</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowPdfModal(true)} disabled={pdfLoading}
+          {PDF_TABS.includes(tab) && <button onClick={() => setShowPdfModal(true)} disabled={pdfLoading}
             className="h-9 px-4 text-sm font-semibold rounded-lg bg-[#0F2552] hover:bg-[#0B1B3F] text-white transition-colors flex items-center gap-2 disabled:opacity-50">
             {pdfLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Download size={14} />}
             PDF
-          </button>
+          </button>}
         </div>
 
         {/* PDF Modal */}
@@ -174,7 +186,7 @@ export function ReportsPage() {
       {tab === 'expenses'  && <ExpensesReportTabContent {...tabProps} />}
       {tab === 'cashier'   && <CashierTabContent        {...tabProps} />}
       {tab === 'pricelist' && <PriceListTabContent                    />}
-      {tab === 'topprofit' && <TopProfitTabContent from={filterFrom || undefined} to={filterTo || undefined} />}
+      {tab === 'topprofit' && <TopProfitTabContent from={filterFrom || undefined} to={filterTo || undefined} kind={profitKind} onKindChange={setProfitKind} />}
       </Suspense>
     </div>
   )

@@ -1,6 +1,6 @@
 // src/pages/reports/tabs/TopProfitTab.tsx
 // الأكثر ربحاً — أجهزة / منتجات / الاتنين معاً
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Award, DollarSign, Layers, Package, Smartphone, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
@@ -9,8 +9,10 @@ import { useProfitability } from '@/hooks/useProfitability'
 import { profitabilityService, type ProfitKind, type ProfitRow } from '@/services/profitability.service'
 
 interface Props {
-  from?: string
-  to?:   string
+  from?:        string
+  to?:          string
+  kind:         ProfitKind
+  onKindChange: (kind: ProfitKind) => void
 }
 
 const FILTERS: { value: ProfitKind; label: string; icon: React.ElementType }[] = [
@@ -46,8 +48,7 @@ function KindChip({ kind }: { kind: ProfitRow['kind'] }) {
   )
 }
 
-export function TopProfitTabContent({ from, to }: Props) {
-  const [kind, setKind] = useState<ProfitKind>('all')
+export function TopProfitTabContent({ from, to, kind, onKindChange }: Props) {
   const { data: allRows = [], isLoading, isError } = useProfitability(from, to)
 
   const rows   = useMemo(() => profitabilityService.select(allRows, kind), [allRows, kind])
@@ -60,7 +61,7 @@ export function TopProfitTabContent({ from, to }: Props) {
       {/* الفلتر */}
       <div className="grid grid-cols-3 gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 sm:inline-grid sm:w-auto">
         {FILTERS.map(({ value, label, icon: Icon }) => (
-          <button key={value} onClick={() => setKind(value)}
+          <button key={value} onClick={() => onKindChange(value)}
             className={cn(
               'h-9 px-3 sm:px-5 text-xs sm:text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap',
               kind === value

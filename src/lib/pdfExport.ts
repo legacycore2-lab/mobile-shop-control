@@ -178,6 +178,26 @@ export function exportSalesPdf(sales: SalesRow[], output: PdfOutput, dateRange: 
   openWindow(html, `تقرير-مبيعات-${new Date().toISOString().split('T')[0]}`, output)
 }
 
+// ── Top profit ────────────────────────────────────────────────────────────────
+export type TopProfitPdfRow    = { kind: 'device' | 'product'; name: string; units: number; revenue: number; cost: number; profit: number; margin_pct: number }
+export type TopProfitPdfTotals = { units: number; revenue: number; cost: number; profit: number; margin_pct: number }
+
+export function exportTopProfitPdf(rows: TopProfitPdfRow[], totals: TopProfitPdfTotals, scope: string, output: PdfOutput, dateRange: string) {
+  let html = buildHeader('تقرير الأكثر ربحاً', scope, dateRange)
+  html += kpiGrid([
+    { label: 'الوحدات المباعة',     value: fmt(totals.units),            color: 'blue'  },
+    { label: 'الإيراد (بعد الخصم)', value: `${fmt(totals.revenue)} ج`,   color: 'green' },
+    { label: 'التكلفة',             value: `${fmt(totals.cost)} ج` },
+    { label: 'إجمالي الربح',        value: `${fmt(totals.profit)} ج`,    color: 'green' },
+  ])
+  html += `<div class="sec"><div class="sec-title">الترتيب حسب الربح</div>
+  <table><thead><tr><th>#</th><th>الصنف</th><th>النوع</th><th>وحدات</th><th>الإيراد</th><th>التكلفة</th><th>الربح</th><th>النسبة %</th></tr></thead><tbody>
+  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.kind === 'device' ? 'جهاز' : 'منتج'}</td><td>${fmt(r.units)}</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct.toFixed(1)}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(totals.units)}</td><td>${fmt(totals.revenue)} ج</td><td>${fmt(totals.cost)} ج</td><td>${fmt(totals.profit)} ج</td><td>${totals.margin_pct.toFixed(1)}%</td></tr>
+  </tbody></table></div>`
+  openWindow(html, `تقرير-الأكثر-ربحا-${new Date().toISOString().split('T')[0]}`, output)
+}
+
 // ── Stock ─────────────────────────────────────────────────────────────────────
 export function exportStockPdf(stock: StockRow[], output: PdfOutput) {
   let html = buildHeader('تقرير مخزون الأجهزة', 'الأجهزة المتاحة وقيمتها')
