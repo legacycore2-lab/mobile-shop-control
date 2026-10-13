@@ -324,6 +324,25 @@ export function exportPriceListPdf(rows: PriceListPdfRow[], scope: string, outpu
   openWindow(html, `قائمة-أسعار-الأجهزة-${new Date().toISOString().split('T')[0]}`, output)
 }
 
+// ── Product sales ─────────────────────────────────────────────────────────────
+export type ProductSalesPdfRow = { name: string; subtitle: string; units: number; revenue: number; cost: number; profit: number; margin_pct: number }
+
+export function exportProductSalesPdf(rows: ProductSalesPdfRow[], totals: TopProfitPdfTotals, output: PdfOutput, dateRange: string) {
+  let html = buildHeader('تقرير مبيعات المنتجات', 'إكسسوارات وقطع غيار حسب الصنف', dateRange)
+  html += kpiGrid([
+    { label: 'أصناف مباعة',     value: fmt(rows.length) },
+    { label: 'إجمالي الوحدات',  value: fmt(totals.units),          color: 'blue'  },
+    { label: 'إجمالي الإيرادات', value: `${fmt(totals.revenue)} ج`, color: 'green' },
+    { label: 'صافي الربح',      value: `${fmt(totals.profit)} ج`,  color: 'green' },
+  ])
+  html += `<div class="sec"><div class="sec-title">مبيعات المنتجات حسب الصنف</div>
+  <table><thead><tr><th>#</th><th>الصنف</th><th>التصنيف</th><th>وحدات</th><th>التكلفة</th><th>الإيرادات</th><th>الربح</th><th>هامش %</th></tr></thead><tbody>
+  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.subtitle}</td><td>${fmt(r.units)}</td><td>${fmt(r.cost)} ج</td><td>${fmt(r.revenue)} ج</td><td>${fmt(r.profit)} ج</td><td>${r.margin_pct.toFixed(1)}%</td></tr>`).join('')}
+  <tr class="tot"><td colspan="3"><strong>الإجمالي</strong></td><td>${fmt(totals.units)}</td><td>${fmt(totals.cost)} ج</td><td>${fmt(totals.revenue)} ج</td><td>${fmt(totals.profit)} ج</td><td>${totals.margin_pct.toFixed(1)}%</td></tr>
+  </tbody></table></div>`
+  openWindow(html, `تقرير-مبيعات-المنتجات-${new Date().toISOString().split('T')[0]}`, output)
+}
+
 // ── Stock ─────────────────────────────────────────────────────────────────────
 export function exportStockPdf(stock: StockRow[], output: PdfOutput) {
   let html = buildHeader('تقرير مخزون الأجهزة', 'الأجهزة المتاحة وقيمتها')

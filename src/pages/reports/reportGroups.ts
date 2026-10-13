@@ -14,6 +14,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
     tabs: [
       { value: 'overview',  label: 'نظرة عامة',         icon: BarChart2  },
       { value: 'sales',     label: 'مبيعات الأجهزة',    icon: TrendingUp },
+      { value: 'productsales', label: 'مبيعات المنتجات',  icon: Package    },
       { value: 'profit',    label: 'الربحية التفصيلية', icon: TrendingUp },
       { value: 'topprofit', label: 'الأكثر ربحاً',       icon: Award      },
       { value: 'brands',    label: 'تحليل البراندات',   icon: BarChart2  },

@@ -18,7 +18,7 @@ import { exportToExcel, SOH_PRODUCT_HEADERS, SOH_DEVICE_HEADERS } from '@/lib/ex
 import {
   exportOverviewPdf, exportSalesPdf, exportStockPdf,
   exportSuppliersPdf, exportCustomersPdf, exportAlertsPdf, exportTopProfitPdf,
-  exportProfitPdf, exportBrandsPdf, exportExpensesPdf, exportCashierPdf,
+  exportProfitPdf, exportProductSalesPdf, exportBrandsPdf, exportExpensesPdf, exportCashierPdf,
   type PdfOutput,
 } from '@/lib/pdfExport'
 import {
@@ -40,11 +40,12 @@ const BrandsTabContent        = lazy(() => import('./tabs/BrandsTab').then(m    
 const ExpensesReportTabContent = lazy(() => import('./tabs/ExpensesReportTab').then(m => ({ default: m.ExpensesReportTabContent })))
 const CashierTabContent       = lazy(() => import('./tabs/CashierTab').then(m       => ({ default: m.CashierTabContent })))
 const PriceListTabContent     = lazy(() => import('./tabs/PriceListTab').then(m     => ({ default: m.PriceListTabContent })))
+const ProductSalesTabContent  = lazy(() => import('./tabs/ProductSalesTab').then(m => ({ default: m.ProductSalesTabContent })))
 const TopProfitTabContent     = lazy(() => import('./tabs/TopProfitTab').then(m     => ({ default: m.TopProfitTabContent })))
 import type { Tab } from './types'
 
 const PROFIT_KIND_LABELS: Record<ProfitKind, string> = { all: 'الأجهزة والمنتجات', device: 'الأجهزة', product: 'المنتجات' }
-const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'customers', 'alerts', 'movement', 'topprofit', 'profit', 'brands', 'expenses', 'cashier']
+const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'customers', 'alerts', 'movement', 'topprofit', 'productsales', 'profit', 'brands', 'expenses', 'cashier']
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,10 @@ export function ReportsPage() {
         case 'customers':  exportCustomersPdf(customers, mode, dateRange); break
         case 'alerts':     exportAlertsPdf(lowStock, mode); break
         case 'movement':   printMovement(movType, prodMovement, devMovement, movFrom, movTo); break
+        case 'productsales': {
+          const rows = profitabilityService.select(profitRows, 'product').sort((a, b) => b.units - a.units)
+          exportProductSalesPdf(rows, profitabilityService.totals(rows), mode, dateRange); break
+        }
         case 'profit':     exportProfitPdf(sales, summary?.totalExpenses ?? 0, mode, dateRange); break
         case 'brands':     exportBrandsPdf(reportAggregates.salesByBrand(sales), reportAggregates.stockByBrand(stock), mode, dateRange); break
         case 'expenses':   exportExpensesPdf(reportAggregates.expensesByCategory(expenses), mode); break
@@ -192,6 +197,7 @@ export function ReportsPage() {
       {tab === 'expenses'  && <ExpensesReportTabContent {...tabProps} />}
       {tab === 'cashier'   && <CashierTabContent        {...tabProps} />}
       {tab === 'pricelist' && <PriceListTabContent                    />}
+      {tab === 'productsales' && <ProductSalesTabContent from={filterFrom || undefined} to={filterTo || undefined} />}
       {tab === 'topprofit' && <TopProfitTabContent from={filterFrom || undefined} to={filterTo || undefined} kind={profitKind} onKindChange={setProfitKind} />}
       </Suspense>
     </div>
