@@ -112,7 +112,9 @@ export function OverviewTabContent(props: Record<string, any>) {
               <KpiCard label="أصناف منتجات مباعة"   value={fmt(productRows.length)}              icon={Layers}     color="purple" />
               <KpiCard label="وحدات منتجات مباعة"    value={fmt(productTotals.units)}             icon={Package}    color="blue"   />
               <KpiCard label="إيراد المنتجات"        value={`${fmt(productTotals.revenue)} ج`}   icon={DollarSign} color="green"  />
-              <KpiCard label="ربح المنتجات"          value={`${fmt(productTotals.profit)} ج`}    icon={TrendingUp} color={productTotals.profit >= 0 ? 'green' : 'red'} />
+              <KpiCard label="ربح المنتجات"          value={`${fmt(productTotals.profit)} ج`}
+                sub={`هامش ${productTotals.margin_pct.toFixed(1)}%`}
+                icon={TrendingUp} color={productTotals.profit >= 0 ? 'green' : 'red'} />
             </div>
 
             {/* Row 5 — Total stock */}
@@ -138,7 +140,7 @@ export function OverviewTabContent(props: Record<string, any>) {
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-semibold text-gray-700 dark:text-gray-300">{label} · {fmt(totals.units)} وحدة</span>
                         <span className="text-gray-600 dark:text-gray-400">
-                          إيراد {fmt(totals.revenue)} ج · ربح {fmt(totals.profit)} ج · {share.toFixed(1)}%
+                          إيراد {fmt(totals.revenue)} ج · ربح {fmt(totals.profit)} ج · هامش {totals.margin_pct.toFixed(1)}% · حصة {share.toFixed(1)}%
                         </span>
                       </div>
                       <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
