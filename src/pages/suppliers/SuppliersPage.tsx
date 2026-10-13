@@ -15,6 +15,7 @@ import type { Supplier } from '@/types/database'
 import { cn } from '@/lib/cn'
 import { StatCard } from '@/components/shared/StatCard'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type FilterStatus = 'all' | 'active' | 'inactive'
@@ -196,6 +197,7 @@ function SupplierModal({ supplier, onClose }: {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 export function SuppliersPage() {
+  const vis = useNumberVisibility()
   const { data: suppliers = [], isLoading } = useSuppliers()
   const { data: stats } = useSupplierStats()
   const deleteMutation = useDeleteSupplier()
@@ -260,7 +262,7 @@ export function SuppliersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {STATS_CONFIG.map(s => <StatCard key={s.label} {...s} />)}
+        {STATS_CONFIG.filter(s => vis.balances || (s.label !== 'إجمالي الأرصدة')).map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* Toolbar */}

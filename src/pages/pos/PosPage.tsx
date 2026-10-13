@@ -21,8 +21,10 @@ import { fmt }            from '@/lib/fmt'
 import type { SaleInvoiceView } from '@/types/database'
 import { AddPaymentModal } from '@/pages/payments/AddPaymentModal'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function PosPage() {
+  const vis = useNumberVisibility()
   const { data: invoices = [], isLoading } = useSaleInvoices()
   const { data: stats }                    = useSaleStats()
   const cancelMutation                     = useCancelSale()
@@ -115,7 +117,7 @@ export function PosPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {STATS.map(s => <StatCard key={s.label} {...s} />)}
+        {STATS.filter(s => vis.revenue || (s.label !== 'إجمالي المبيعات' && s.label !== 'المتبقي للتحصيل')).map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">

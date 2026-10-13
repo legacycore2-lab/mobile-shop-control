@@ -19,8 +19,10 @@ import { DeviceModal }  from './DeviceModal'
 import { STATUS_MAP, CONDITION_MAP, PAGE_SIZE, type FilterStatus } from './constants'
 import type { MobileDeviceView } from '@/types/database'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function DevicesPage() {
+  const vis = useNumberVisibility()
   const { data: devices = [], isLoading } = useDevices()
   const { data: stats }                   = useDeviceStats()
 
@@ -101,7 +103,7 @@ export function DevicesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {STATS_CONFIG.map(s => <StatCard key={s.label} {...s} />)}
+        {STATS_CONFIG.filter(s => vis.cost || (s.label !== 'قيمة المخزون (شراء)')).map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* IMEI Lookup */}

@@ -23,8 +23,10 @@ import { TYPE_MAP, PAGE_SIZE, type FilterType } from './constants'
 import { fmt } from '@/lib/fmt'
 import type { ProductWithCategory } from '@/repositories/products.repository'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function ProductsPage() {
+  const vis = useNumberVisibility()
   const { data: products  = [], isLoading } = useProducts()
   const { data: stats }                     = useProductStats()
   const deleteMutation                      = useDeleteProduct()
@@ -112,7 +114,7 @@ export function ProductsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {STATS_CONFIG.map(s => <StatCard key={s.label} {...s} />)}
+        {STATS_CONFIG.filter(s => vis.cost || (s.label !== 'قيمة المخزون (شراء)')).map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* Toolbar */}

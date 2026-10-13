@@ -16,6 +16,7 @@ import type { Customer } from '@/types/database'
 import { cn } from '@/lib/cn'
 import { StatCard } from '@/components/shared/StatCard'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 type FilterStatus = 'all' | 'active' | 'inactive'
 
@@ -179,6 +180,7 @@ function CustomerModal({ customer, onClose }: {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 export function CustomersPage() {
+  const vis = useNumberVisibility()
   const { data: customers = [], isLoading } = useCustomers()
   const { data: stats } = useCustomerStats()
   const deleteMutation = useDeleteCustomer()
@@ -240,7 +242,7 @@ export function CustomersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {STATS_CONFIG.map(s => <StatCard key={s.label} {...s} />)}
+        {STATS_CONFIG.filter(s => vis.balances || (s.label !== 'إجمالي الأرصدة')).map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* Toolbar */}

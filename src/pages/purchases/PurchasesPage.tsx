@@ -19,8 +19,10 @@ import { STATUS_MAP, PAGE_SIZE, type FilterStatus } from './constants'
 import { fmt }            from '@/lib/fmt'
 import type { PurchaseInvoiceView, InvoiceStatus } from '@/types/database'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function PurchasesPage() {
+  const vis = useNumberVisibility()
   const { data: invoices = [], isLoading } = usePurchases()
   const { data: stats }                    = usePurchaseStats()
   const deleteMutation                     = useDeletePurchase()
@@ -84,7 +86,7 @@ export function PurchasesPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {STATS.map(s => <StatCard key={s.label} {...s} />)}
+        {STATS.filter(s => vis.cost || (s.label !== 'إجمالي المشتريات' && s.label !== 'المتبقي (مديونية)')).map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
