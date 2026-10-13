@@ -76,6 +76,11 @@ export function CatalogItemCard({ entry, inCartQty, installmentFrom, onAdd, onOp
         {specLine
           ? <p dir="ltr" className="text-[11px] sm:text-xs text-slate-500 dark:text-gray-400 truncate">{specLine}</p>
           : <p className="text-xs text-slate-500 dark:text-gray-400">{entry.subtitle}</p>}
+        {entry.note && (
+          <p dir="auto" className="text-[11px] sm:text-xs text-amber-700 dark:text-amber-400 line-clamp-2 break-words">
+            {entry.note}
+          </p>
+        )}
       </div>
 
       <div className="text-center mt-auto">

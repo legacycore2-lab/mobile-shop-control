@@ -64,6 +64,13 @@ export function CatalogDetailModal({ entry, inCartQty, store, onAdd, onClose }: 
             </div>
           ) : null}
 
+          {entry.note && (
+            <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 px-4 py-3">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-400 mb-1">ملاحظات</p>
+              <p dir="auto" className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-line break-words">{entry.note}</p>
+            </div>
+          )}
+
           <div className="flex items-end justify-between">
             <div>
               {entry.oldPrice !== null && (

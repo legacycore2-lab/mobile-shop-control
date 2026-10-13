@@ -14,6 +14,7 @@ export interface CatalogEntry {
   title:    string
   subtitle: string
   details:  string[]
+  note:     string | null     // ملاحظة الجهاز (الموبايلات فقط)
   condition: string | null    // new | used | refurbished (الموبايلات فقط)
   price:    number
   oldPrice: number | null     // السعر قبل الخصم (null = مفيش عرض)
@@ -68,6 +69,7 @@ export const catalogService = {
       title:    p.name,
       subtitle: p.category,
       details:  [],
+      note:     null,
       condition: null,
       price:    p.selling_price,
       oldPrice: catalogService.validOldPrice(p.selling_price, p.old_price),
@@ -78,7 +80,8 @@ export const catalogService = {
 
     const grouped = new Map<string, CatalogEntry>()
     for (const d of catalog.devices) {
-      const key = ['d', d.brand, d.model, d.storage, d.color, d.condition, d.selling_price, d.old_price, d.battery_health, d.warranty_months].join('|')
+      const note = d.notes?.trim() || null
+      const key = ['d', d.brand, d.model, d.storage, d.color, d.condition, d.selling_price, d.old_price, d.battery_health, d.warranty_months, note].join('|')
       const existing = grouped.get(key)
       if (existing) {
         existing.ids.push(d.id)
@@ -106,6 +109,7 @@ export const catalogService = {
         title:    `${d.brand} ${d.model}`,
         subtitle: 'موبايل',
         details,
+        note,
         condition: d.condition,
         price:    d.selling_price,
         oldPrice: catalogService.validOldPrice(d.selling_price, d.old_price),

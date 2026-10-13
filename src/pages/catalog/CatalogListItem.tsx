@@ -68,6 +68,12 @@ export function CatalogListItem({ entry, inCartQty, installmentFrom, onAdd, onOp
           </div>
         )}
 
+        {entry.note && (
+          <p dir="auto" className="text-[11px] sm:text-xs text-amber-700 dark:text-amber-400 line-clamp-2 break-words">
+            {entry.note}
+          </p>
+        )}
+
         <div className="flex items-end justify-between gap-2 mt-auto">
           <div>
             {entry.oldPrice !== null && (

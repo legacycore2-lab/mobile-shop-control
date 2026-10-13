@@ -248,6 +248,7 @@ export interface CatalogDevice {
   id: string; brand: string; model: string; storage: string | null; color: string | null
   condition: string; selling_price: number; old_price: number | null
   battery_health: number | null; warranty_months: number
+  notes: string | null
   image_url: string | null
 }
 

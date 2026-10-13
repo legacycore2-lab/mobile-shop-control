@@ -25,7 +25,7 @@ export const catalogRepository = {
         installment_down_percent:     n(raw.store?.installment_down_percent),
       },
       products: raw.products.map(p => ({ ...p, selling_price: n(p.selling_price), old_price: opt(p.old_price), stock_qty: n(p.stock_qty) })),
-      devices:  raw.devices.map(d => ({ ...d, selling_price: n(d.selling_price), old_price: opt(d.old_price) })),
+      devices:  raw.devices.map(d => ({ ...d, selling_price: n(d.selling_price), old_price: opt(d.old_price), notes: d.notes ?? null })),
       reviews:  raw.reviews ?? [],
     }
   },
