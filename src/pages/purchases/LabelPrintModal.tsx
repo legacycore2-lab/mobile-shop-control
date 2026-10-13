@@ -4,6 +4,7 @@ import { X, Printer, Tag, Smartphone, Package, CheckSquare, Square, ChevronDown,
 import QRCode from 'qrcode'
 import { fmt } from '@/lib/fmt'
 import type { PurchaseInvoiceDetailDevice as InvoiceDetailDevice, PurchaseInvoiceDetailProduct as InvoiceDetailProduct } from '@/types/database'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ export function LabelPrintModal({ data, onClose }: { data: LabelData; onClose: (
             <div className="flex gap-2 mt-2">
               <div className="flex-1 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg px-3 py-2 text-center">
                 <div className="text-xs text-gray-500 dark:text-gray-400">سعر الشراء</div>
-                <div className="text-base font-bold text-orange-700 dark:text-orange-400">{fmt(data.cost_price)} ج</div>
+                <div className="text-base font-bold text-orange-700 dark:text-orange-400"><Sensitive kind="cost">{fmt(data.cost_price)} ج</Sensitive></div>
               </div>
               <div className="flex-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 text-center">
                 <div className="text-xs text-gray-500 dark:text-gray-400">سعر البيع</div>
@@ -402,7 +403,7 @@ export function BulkLabelPrintModal({
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">{d.imei1}</p>
                       <div className="flex items-center gap-3 mt-1 text-xs">
-                        <span className="text-orange-600 dark:text-orange-400">{fmt(d.cost_price)} ج</span>
+                        <span className="text-orange-600 dark:text-orange-400"><Sensitive kind="cost">{fmt(d.cost_price)} ج</Sensitive></span>
                         <span className="text-green-600 dark:text-green-400">{fmt(d.selling_price)} ج</span>
                         {d.storage && <span className="text-gray-400">{d.storage}</span>}
                       </div>
@@ -447,7 +448,7 @@ export function BulkLabelPrintModal({
                       <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{p.name}</p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{p.category} · {p.quantity} {p.unit}</p>
                       <div className="flex items-center gap-3 mt-1 text-xs">
-                        <span className="text-orange-600 dark:text-orange-400">{fmt(p.cost_price)} ج</span>
+                        <span className="text-orange-600 dark:text-orange-400"><Sensitive kind="cost">{fmt(p.cost_price)} ج</Sensitive></span>
                         <span className="text-green-600 dark:text-green-400">{fmt(p.selling_price)} ج</span>
                         {p.sku && <span className="text-gray-400 font-mono">{p.sku}</span>}
                       </div>

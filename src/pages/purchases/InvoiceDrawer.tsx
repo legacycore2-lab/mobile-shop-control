@@ -9,8 +9,11 @@ import { fmt } from '@/lib/fmt'
 import { SimplePayModal } from '@/pages/payments/SimplePayModal'
 import { BulkLabelPrintModal } from './LabelPrintModal'
 import { CancelReasonModal } from './CancelReasonModal'
+import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
+  const vis = useNumberVisibility()
   const { data: detail, isLoading } = usePurchase(invoiceId)
   const confirmMutation = useConfirmPurchase()
   const cancelMutation  = useCancelPurchase()
@@ -99,7 +102,7 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                           ? 'text-green-600 dark:text-green-400'
                           : 'text-gray-900 dark:text-white'
                     )}>
-                      {value}
+                      {label === 'تاريخ الفاتورة' || vis.cost ? value : '•••'}
                     </span>
                   </div>
                 ))}
@@ -146,7 +149,7 @@ export function PurchaseInvoiceDrawer({ invoiceId, onClose }: { invoiceId: strin
                           <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">{d.imei1}</p>
                         </div>
                         <div className="text-right">
-                          <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.cost_price)} ج</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap"><Sensitive kind="cost">{fmt(d.cost_price)} ج</Sensitive></span>
                           {inv.status === 'cancelled' && (
                             <p className="text-xs text-red-400 mt-0.5">ملغي</p>
                           )}

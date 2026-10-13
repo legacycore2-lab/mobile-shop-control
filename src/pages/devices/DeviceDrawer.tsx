@@ -4,8 +4,10 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { STATUS_MAP, CONDITION_MAP } from './constants'
 import type { MobileDeviceView } from '@/types/database'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function DeviceDrawer({ device, onClose }: { device: MobileDeviceView; onClose: () => void }) {
+  const vis = useNumberVisibility()
   const status = STATUS_MAP[device.status]
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-end"
@@ -58,7 +60,7 @@ export function DeviceDrawer({ device, onClose }: { device: MobileDeviceView; on
             {[
               ['المورد', device.supplier_name],
               ['تاريخ الشراء', new Date(device.purchase_date).toLocaleDateString('ar-EG')],
-              ['سعر الشراء', `${device.cost_price.toLocaleString('ar-EG')} ج.م`],
+              ['سعر الشراء', vis.cost ? `${device.cost_price.toLocaleString('ar-EG')} ج.م` : '•••'],
               ['سعر البيع', device.selling_price ? `${device.selling_price.toLocaleString('ar-EG')} ج.م` : null],
               ['الضمان', device.warranty_months ? `${device.warranty_months} شهر` : null],
               ['انتهاء الضمان', device.warranty_expires_at

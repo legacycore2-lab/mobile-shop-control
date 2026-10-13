@@ -18,6 +18,7 @@ import { DeviceDrawer } from './DeviceDrawer'
 import { DeviceModal }  from './DeviceModal'
 import { STATUS_MAP, CONDITION_MAP, PAGE_SIZE, type FilterStatus } from './constants'
 import type { MobileDeviceView } from '@/types/database'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 export function DevicesPage() {
   const { data: devices = [], isLoading } = useDevices()
@@ -195,7 +196,7 @@ export function DevicesPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                      {d.cost_price.toLocaleString('en-US')} ج
+                      <Sensitive kind="cost">{d.cost_price.toLocaleString('en-US')} ج</Sensitive>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">

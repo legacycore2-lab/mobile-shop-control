@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
-  RESOURCES, ACTIONS, RESOURCE_LABELS, ACTION_LABELS, ROLE_LABELS,
+  RESOURCES, PAGE_RESOURCES, NUMBER_RESOURCES, ACTIONS, RESOURCE_LABELS, ACTION_LABELS, ROLE_LABELS,
   type Resource, type Action, type RolePermission,
 } from '@/lib/permissions'
 import { useAllPermissions, useSavePermissions } from '@/hooks/usePermissions'
@@ -103,8 +103,8 @@ export function PermissionsPage() {
     setMatrix(prev => {
       if (!prev) return prev
       const next: LocalMatrix = JSON.parse(JSON.stringify(prev))
-      const allOn = RESOURCES.every(res => ACTIONS.every(a => next[role][res][a]))
-      for (const res of RESOURCES) {
+      const allOn = PAGE_RESOURCES.every(res => ACTIONS.every(a => next[role][res][a]))
+      for (const res of PAGE_RESOURCES) {
         for (const a of ACTIONS) next[role][res][a] = !allOn
       }
       return next
@@ -272,7 +272,7 @@ export function PermissionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {RESOURCES.map(res => (
+              {PAGE_RESOURCES.map(res => (
                 <tr key={res} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                   <td className="px-4 py-3">
                     <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -309,6 +309,55 @@ export function PermissionsPage() {
                             )
                           })}
                         </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ظهور الأرقام */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white">ظهور الأرقام</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">اختار مين يشوف الأرقام الحساسة — الرقم بيتخفى ويظهر مكانه •••</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-800">
+                <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400">الرقم</th>
+                {ROLES.map(role => (
+                  <th key={role} className="px-2 py-3 text-center">
+                    <span className={cn('px-3 py-1.5 rounded-lg text-xs font-bold', ROLE_COLORS[role])}>{ROLE_LABELS[role]}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {NUMBER_RESOURCES.map(res => (
+                <tr key={res}>
+                  <td className="px-4 py-3 text-xs font-semibold text-gray-700 dark:text-gray-300">{RESOURCE_LABELS[res]}</td>
+                  {ROLES.map(role => {
+                    const isOwner = role === 'owner'
+                    const checked = matrix[role][res].view
+                    return (
+                      <td key={role} className="px-2 py-2.5 text-center">
+                        <button
+                          onClick={() => toggle(role, res, 'view')}
+                          disabled={isOwner}
+                          title={`${ROLE_LABELS[role]} — ${RESOURCE_LABELS[res]}`}
+                          className={cn(
+                            'w-7 h-7 rounded-lg border-2 inline-flex items-center justify-center transition-all',
+                            isOwner ? 'cursor-default opacity-60' : 'cursor-pointer hover:scale-110',
+                            checked ? 'bg-blue-500 border-transparent text-white' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-300 dark:text-gray-600'
+                          )}
+                        >
+                          {checked ? <Check size={12} /> : <X size={11} />}
+                        </button>
                       </td>
                     )
                   })}

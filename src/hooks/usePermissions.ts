@@ -8,7 +8,7 @@ import {
   saveAllPermissions,
 } from '@/repositories/permissions.repository'
 import { can as canFn, RESOURCES, ACTIONS } from '@/lib/permissions'
-import type { Resource, Action, PermissionMap, RolePermission } from '@/lib/permissions'
+import type { Resource, Action, PermissionMap, RolePermission, NumberKind } from '@/lib/permissions'
 import type { UserRole } from '@/types/database'
 
 const KEYS = {
@@ -53,6 +53,17 @@ export function usePermissions() {
     canEdit:   (resource: Resource) => canFn(map, 'edit',   resource),
     canDelete: (resource: Resource) => canFn(map, 'delete', resource),
     isReady:   rows.length > 0,
+  }
+}
+
+// ── ظهور الأرقام الحساسة للمستخدم الحالي ──────────────────────────
+export function useNumberVisibility(): Record<NumberKind, boolean> {
+  const { canView } = usePermissions()
+  return {
+    cost:     canView('num_cost'),
+    profit:   canView('num_profit'),
+    revenue:  canView('num_revenue'),
+    balances: canView('num_balances'),
   }
 }
 

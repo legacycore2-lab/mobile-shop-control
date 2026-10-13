@@ -7,6 +7,7 @@ export type Resource =
   | 'suppliers' | 'customers'| 'expenses' | 'attendance'| 'reports'
   | 'ledger'    | 'audit'    | 'import'   | 'settings'  | 'permissions'
   | 'orders'
+  | 'num_cost' | 'num_profit' | 'num_revenue' | 'num_balances'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete'
 
@@ -33,11 +34,18 @@ export function can(
   return map.get(resource)?.[action] ?? false
 }
 
-export const RESOURCES: Resource[] = [
+// صفحات النظام
+export const PAGE_RESOURCES: Resource[] = [
   'dashboard','devices','pos','purchases','products',
   'suppliers','customers','expenses','attendance',
   'reports','ledger','audit','import','settings','permissions','orders',
 ]
+
+// ظهور الأرقام الحساسة (صلاحية عرض فقط)
+export const NUMBER_RESOURCES = ['num_cost', 'num_profit', 'num_revenue', 'num_balances'] as const
+export type NumberKind = 'cost' | 'profit' | 'revenue' | 'balances'
+
+export const RESOURCES: Resource[] = [...PAGE_RESOURCES, ...NUMBER_RESOURCES]
 
 export const ACTIONS: Action[] = ['view','create','edit','delete']
 
@@ -58,6 +66,10 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   settings:    'الإعدادات',
   permissions: 'الصلاحيات',
   orders:      'طلبات العملاء',
+  num_cost:     'التكلفة وسعر الشراء',
+  num_profit:   'الأرباح والهامش',
+  num_revenue:  'الإيرادات وإجمالي المبيعات',
+  num_balances: 'أرصدة الموردين والعملاء',
 }
 
 export const ACTION_LABELS: Record<Action, string> = {

@@ -7,8 +7,10 @@ import { cn } from '@/lib/cn'
 import { TYPE_MAP } from './constants'
 import { fmt } from '@/lib/fmt'
 import type { ProductWithCategory } from '@/repositories/products.repository'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 export function ProductDrawer({ product: p, onClose }: { product: ProductWithCategory; onClose: () => void }) {
+  const vis = useNumberVisibility()
   const [showLabel, setShowLabel] = useState(false)
   const isLow = p.stock_qty <= p.reorder_level
 
@@ -19,7 +21,7 @@ export function ProductDrawer({ product: p, onClose }: { product: ProductWithCat
     { label: 'SKU',             value: p.sku ?? '—' },
     { label: 'الباركود',        value: p.barcode ?? '—' },
     { label: 'الوحدة',          value: p.unit },
-    { label: 'سعر الشراء',      value: `${fmt(p.cost_price)} ج` },
+    { label: 'سعر الشراء',      value: vis.cost ? `${fmt(p.cost_price)} ج` : '•••' },
     { label: 'سعر البيع',       value: `${fmt(p.selling_price)} ج` },
     { label: 'الكمية في المخزون', value: `${p.stock_qty} ${p.unit}` },
     { label: 'حد إعادة الطلب',  value: `${p.reorder_level} ${p.unit}` },

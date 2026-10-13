@@ -5,6 +5,7 @@ import {
   ChevronRight, ChevronLeft, FileDown, Wallet, ShoppingCart, TrendingUp, Users, AlertCircle,
 } from 'lucide-react'
 import { useDailyClose } from '@/hooks/useDailyClose'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 import { StatCard } from '@/components/shared/StatCard'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -24,6 +25,8 @@ export function DailyClosePage() {
   const [date, setDate] = useState(todayKey)
   const { data, isLoading, isError, refetch } = useDailyClose(date)
 
+  const vis = useNumberVisibility()
+  const canPdf = vis.revenue && vis.profit && vis.cost && vis.balances
   const isToday = date === todayKey()
 
   return (
@@ -50,7 +53,7 @@ export function DailyClosePage() {
             <Button size="sm" variant="ghost" onClick={() => setDate(todayKey())}>اليوم</Button>
           )}
           <Button size="sm" variant="primary" icon={<FileDown size={14} />}
-            disabled={!data} onClick={() => data && exportDailyClosePdf(data, 'preview')}>
+            disabled={!data || !canPdf} onClick={() => data && exportDailyClosePdf(data, 'preview')}>
             PDF
           </Button>
         </div>
@@ -77,28 +80,28 @@ export function DailyClosePage() {
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            <StatCard label="صافي النقدية" value={fmtCurrency(data.cash.net)}
+            {vis.revenue && <StatCard label="صافي النقدية" value={fmtCurrency(data.cash.net)}
               sub={`داخل ${fmtCurrency(data.cash.totalIn)} • خارج ${fmtCurrency(data.cash.totalOut)}`}
-              icon={Wallet} color={data.cash.net >= 0 ? 'green' : 'red'} />
-            <StatCard label="إجمالي المبيعات" value={fmtCurrency(data.sales.revenue)}
-              sub={`${data.sales.invoiceCount} فاتورة`} icon={ShoppingCart} color="blue" />
-            <StatCard label="صافي الربح" value={fmtCurrency(data.netProfit)}
-              sub={`هامش ${data.sales.marginPct}%`} icon={TrendingUp} color={data.netProfit >= 0 ? 'teal' : 'red'} />
-            <StatCard label="المتبقي عند العملاء" value={fmtCurrency(data.receivables.totalOutstanding)}
+              icon={Wallet} color={data.cash.net >= 0 ? 'green' : 'red'} />}
+            {vis.revenue && <StatCard label="إجمالي المبيعات" value={fmtCurrency(data.sales.revenue)}
+              sub={`${data.sales.invoiceCount} فاتورة`} icon={ShoppingCart} color="blue" />}
+            {vis.profit && <StatCard label="صافي الربح" value={fmtCurrency(data.netProfit)}
+              sub={`هامش ${data.sales.marginPct}%`} icon={TrendingUp} color={data.netProfit >= 0 ? 'teal' : 'red'} />}
+            {vis.balances && <StatCard label="المتبقي عند العملاء" value={fmtCurrency(data.receivables.totalOutstanding)}
               sub={`${data.receivables.debtorCount} عميل`} icon={Users} color="amber"
-              onClick={() => navigate('/ledger')} />
+              onClick={() => navigate('/ledger')} />}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <CashFlowCard cash={data.cash} />
-            <ProfitCard sales={data.sales} expenses={data.expenses.total} netProfit={data.netProfit} />
+            {vis.revenue && <CashFlowCard cash={data.cash} />}
+            {vis.profit && <ProfitCard sales={data.sales} expenses={data.expenses.total} netProfit={data.netProfit} />}
             <ExpensesCard expenses={data.expenses} />
-            <DebtorsCard receivables={data.receivables}
-              onOpenCustomer={id => navigate(`/ledger/customer/${id}`)} />
-            <SalesDetailCard sales={data.sales} />
-            <PurchasesCard purchases={data.purchases} />
-            <CreditorsCard payables={data.payables}
-              onOpenSupplier={id => navigate(`/ledger/supplier/${id}`)} />
+            {vis.balances && <DebtorsCard receivables={data.receivables}
+              onOpenCustomer={id => navigate(`/ledger/customer/${id}`)} />}
+            {vis.revenue && <SalesDetailCard sales={data.sales} />}
+            {vis.cost && <PurchasesCard purchases={data.purchases} />}
+            {vis.balances && <CreditorsCard payables={data.payables}
+              onOpenSupplier={id => navigate(`/ledger/supplier/${id}`)} />}
           </div>
         </>
       )}

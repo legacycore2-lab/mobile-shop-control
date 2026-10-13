@@ -21,6 +21,8 @@ import { QuickScanModal } from './QuickScanModal'
 import { cn } from '@/lib/cn'
 import type { MobileDeviceView } from '@/types/database'
 import { DEVICE_STATUS_MAP, fmt } from '@/constants/statusMaps'
+import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
@@ -157,7 +159,7 @@ function DeviceRow({ d }: { d: MobileDeviceView }) {
       </div>
       <div className="flex items-center gap-3 flex-shrink-0 mr-3">
         <span className="text-xs font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-          {fmt(d.cost_price)} ج
+          <Sensitive kind="cost">{fmt(d.cost_price)} ج</Sensitive>
         </span>
         <Badge variant={st.variant} dot>{st.label}</Badge>
       </div>
@@ -214,6 +216,7 @@ function MiniDonut({ paidPct, duePct }: { paidPct: number; duePct: number }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
+  const vis = useNumberVisibility()
   const navigate = useNavigate()
   const [showScan, setShowScan]   = useState(false)
   const [payModal, setPayModal]   = useState<{
@@ -318,28 +321,28 @@ export function DashboardPage() {
       <div>
         <GroupHeader icon={Activity} label="الملخص المالي الإجمالي" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard
+          {vis.revenue && <KpiCard
             label="إجمالي الإيرادات"
             value={`${fmt(revenue)} ج`}
             sub={`${saleStats?.confirmed ?? 0} فاتورة مؤكدة`}
             icon={TrendingUp} color="green"
             onClick={() => navigate('/pos')}
-          />
-          <KpiCard
+          />}
+          {vis.cost && <KpiCard
             label="إجمالي المشتريات"
             value={`${fmt(purchases)} ج`}
             sub={`${purchaseStats?.confirmed ?? 0} فاتورة مؤكدة`}
             icon={ShoppingBag} color="purple"
             onClick={() => navigate('/purchases')}
-          />
-          <KpiCard
+          />}
+          {vis.revenue && <KpiCard
             label="إجمالي المحصّل (مبيعات)"
             value={`${fmt(revPaid)} ج`}
             sub={`متبقي: ${fmt(revDue)} ج`}
             icon={Wallet} color="teal"
             trend={{ value: `${salePaidPct.toFixed(0)}% محصّل`, up: salePaidPct >= 75 }}
-          />
-          <KpiCard
+          />}
+          {vis.balances && vis.cost && <KpiCard
             label={supplierCreditBalance > 0 ? 'رصيد دائن عند الموردين' : 'مستحق للموردين'}
             value={supplierCreditBalance > 0 ? `${fmt(supplierCreditBalance)} ج` : `${fmt(purDue)} ج`}
             sub={supplierCreditBalance > 0
@@ -353,7 +356,7 @@ export function DashboardPage() {
                 ? { value: `${purPaidPct.toFixed(0)}% مدفوع`, up: purPaidPct >= 75 }
                 : { value: 'تم السداد بالكامل', up: true }
             }
-          />
+          />}
         </div>
       </div>
 
@@ -361,7 +364,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Profit Cards */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 space-y-3">
+        {vis.profit && vis.revenue && vis.cost && <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 space-y-3">
           <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <PieChart size={14} className="text-green-500" /> ربحية الأعمال
           </p>
@@ -388,10 +391,10 @@ export function DashboardPage() {
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Sales Collection Chart */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+        {vis.revenue && <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
           <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
             <ShoppingCart size={14} className="text-green-500" /> تحصيل المبيعات
           </p>
@@ -428,10 +431,10 @@ export function DashboardPage() {
           <div className="mt-4 space-y-2">
             <ProgressBar label="نسبة التحصيل" value={revPaid} max={revenue} color="bg-green-500" />
           </div>
-        </div>
+        </div>}
 
         {/* Purchases Payment Chart */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+        {vis.cost && vis.balances && <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
           <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
             <ShoppingBag size={14} className="text-purple-500" /> وضع المشتريات
           </p>
@@ -464,7 +467,7 @@ export function DashboardPage() {
               <ProgressBar label="نسبة السداد الصافية" value={purchases - purDue} max={purchases} color="bg-purple-500" />
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* ── Devices KPIs ── */}
@@ -474,7 +477,7 @@ export function DashboardPage() {
           <KpiCard
             label="في المخزون"
             value={deviceStats?.inStock ?? 0}
-            sub={`${fmt(stockValue)} ج — تكلفة`}
+            sub={vis.cost ? `${fmt(stockValue)} ج — تكلفة` : undefined}
             icon={Smartphone} color="blue"
             onClick={() => navigate('/devices')}
           />
@@ -501,20 +504,20 @@ export function DashboardPage() {
       </div>
 
       {/* ── Inventory Value ── */}
-      <div>
+      {vis.cost && <div>
         <GroupHeader icon={DollarSign} label="قيمة مخزون الأجهزة" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <KpiCard label="تكلفة المخزون"       value={`${fmt(stockValue)} ج`}      icon={DollarSign}  color="gray"  />
           <KpiCard label="سعر البيع المقترح"   value={`${fmt(stockSelling)} ج`}    icon={BarChart2}   color="teal"  />
-          <KpiCard
+          {vis.profit && <KpiCard
             label="الربح المتوقع من المخزون"
             value={`${fmt(potentialProfit)} ج`}
             sub={stockValue > 0 ? `هامش ${((potentialProfit / stockValue) * 100).toFixed(1)}%` : undefined}
             icon={TrendingUp}
             color={potentialProfit >= 0 ? 'green' : 'red'}
-          />
+          />}
         </div>
-      </div>
+      </div>}
 
       {/* ── Products + Parties ── */}
       <div>
@@ -556,7 +559,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Due Payments — side by side */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+        {vis.balances && <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">المستحقات</h2>
@@ -621,7 +624,7 @@ export function DashboardPage() {
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Recent Devices + Low Stock stacked */}
         <div className="space-y-4">

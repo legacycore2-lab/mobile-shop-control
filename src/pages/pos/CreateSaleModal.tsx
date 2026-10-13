@@ -14,6 +14,8 @@ import { fmt } from '@/lib/fmt'
 import type { SaleDeviceLine, SaleProductLine } from '@/services/pos.service'
 import type { MobileDeviceView } from '@/types/database'
 import type { ProductWithCategory } from '@/repositories/products.repository'
+import { Sensitive } from '@/components/shared/Sensitive'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 // ── Scan Preview Card ─────────────────────────────────────────────────────────
 // يظهر بعد كل مسح — بيعرض بيانات المنتج/الجهاز ويسأل "تضيفه؟"
@@ -31,6 +33,7 @@ function ScanPreviewCard({
   onAdd:     () => void
   onDismiss: () => void
 }) {
+  const vis = useNumberVisibility()
   if (preview.type === 'device' && preview.device) {
     const d = preview.device
     return (
@@ -101,7 +104,7 @@ function ScanPreviewCard({
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
             ['المخزون',      `${p.stock_qty} ${p.unit}`],
-            ['سعر الشراء',  `${fmt(p.cost_price)} ج`],
+            ['سعر الشراء',  vis.cost ? `${fmt(p.cost_price)} ج` : '•••'],
             ['سعر البيع',   `${fmt(p.selling_price)} ج`],
           ].map(([l, v]) => (
             <div key={l} className="bg-white dark:bg-gray-900 rounded-lg p-2">
@@ -562,7 +565,7 @@ export function CreateSaleModal({ onClose, initialDeviceId, initialProductId }: 
                             ) : (
                               <div className="text-left flex-shrink-0">
                                 <p className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.selling_price ?? d.cost_price)} ج</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-600">تكلفة: {fmt(d.cost_price)} ج</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-600">تكلفة: <Sensitive kind="cost">{fmt(d.cost_price)} ج</Sensitive></p>
                               </div>
                             )}
                           </div>

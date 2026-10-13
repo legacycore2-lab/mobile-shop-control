@@ -7,6 +7,7 @@ import { fmt } from '@/lib/fmt'
 import { cn } from '@/lib/cn'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ function DeviceCard({ device, onEdit, onSell, onClose }: {
       <div className="flex gap-2">
         <div className="flex-1 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl px-4 py-3 text-center">
           <div className="text-xs text-gray-500 dark:text-gray-400">سعر الشراء</div>
-          <div className="text-lg font-bold text-orange-700 dark:text-orange-400">{fmt(device.cost_price)} ج</div>
+          <div className="text-lg font-bold text-orange-700 dark:text-orange-400"><Sensitive kind="cost">{fmt(device.cost_price)} ج</Sensitive></div>
         </div>
         <div className="flex-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3 text-center">
           <div className="text-xs text-gray-500 dark:text-gray-400">سعر البيع</div>
@@ -250,7 +251,7 @@ function ProductCard({ product, onEdit }: {
       <div className="flex gap-2">
         <div className="flex-1 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl px-4 py-3 text-center">
           <div className="text-xs text-gray-500 dark:text-gray-400">سعر الشراء</div>
-          <div className="text-lg font-bold text-orange-700 dark:text-orange-400">{fmt(product.cost_price)} ج</div>
+          <div className="text-lg font-bold text-orange-700 dark:text-orange-400"><Sensitive kind="cost">{fmt(product.cost_price)} ج</Sensitive></div>
         </div>
         <div className="flex-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3 text-center">
           <div className="text-xs text-gray-500 dark:text-gray-400">سعر البيع</div>

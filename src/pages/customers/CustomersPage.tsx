@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth'
 import type { Customer } from '@/types/database'
 import { cn } from '@/lib/cn'
 import { StatCard } from '@/components/shared/StatCard'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 type FilterStatus = 'all' | 'active' | 'inactive'
 
@@ -319,7 +320,7 @@ export function CustomersPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={cn('font-semibold text-sm', (c.opening_balance ?? 0) > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-500')}>
-                      {(c.opening_balance ?? 0).toLocaleString('ar-EG')} ج
+                      <Sensitive kind="balances">{(c.opening_balance ?? 0).toLocaleString('ar-EG')} ج</Sensitive>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">

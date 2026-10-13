@@ -22,6 +22,7 @@ import { ProductDrawer } from './ProductDrawer'
 import { TYPE_MAP, PAGE_SIZE, type FilterType } from './constants'
 import { fmt } from '@/lib/fmt'
 import type { ProductWithCategory } from '@/repositories/products.repository'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 export function ProductsPage() {
   const { data: products  = [], isLoading } = useProducts()
@@ -194,7 +195,7 @@ export function ProductsPage() {
                       {p.sku ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                      {fmt(p.cost_price)} ج
+                      <Sensitive kind="cost">{fmt(p.cost_price)} ج</Sensitive>
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
                       {fmt(p.selling_price)} ج

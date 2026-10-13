@@ -43,6 +43,8 @@ const PriceListTabContent     = lazy(() => import('./tabs/PriceListTab').then(m 
 const ProductSalesTabContent  = lazy(() => import('./tabs/ProductSalesTab').then(m => ({ default: m.ProductSalesTabContent })))
 const TopProfitTabContent     = lazy(() => import('./tabs/TopProfitTab').then(m     => ({ default: m.TopProfitTabContent })))
 import type { Tab } from './types'
+import { visibleGroups } from './reportGroups'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 const PROFIT_KIND_LABELS: Record<ProfitKind, string> = { all: 'الأجهزة والمنتجات', device: 'الأجهزة', product: 'المنتجات' }
 const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'customers', 'alerts', 'movement', 'topprofit', 'productsales', 'profit', 'brands', 'expenses', 'cashier']
@@ -50,7 +52,9 @@ const PDF_TABS: readonly Tab[] = ['overview', 'sales', 'stock', 'suppliers', 'cu
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function ReportsPage() {
-  const [tab,    setTab]    = useState<Tab>('overview')
+  const [requestedTab, setTab] = useState<Tab>('overview')
+  const allowedTabs = visibleGroups(useNumberVisibility()).flatMap(g => g.tabs.map(t => t.value))
+  const tab: Tab | undefined = allowedTabs.includes(requestedTab) ? requestedTab : allowedTabs[0]
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('all')
   const [filterFrom, setFilterFrom] = useState<string>('')
   const [filterTo,   setFilterTo]   = useState<string>('')

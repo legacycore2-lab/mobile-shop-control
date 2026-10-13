@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import type { SupplierLedger, CustomerLedger } from '@/types/database'
+import { NoAccess } from '@/components/shared/NoAccess'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي', bank_transfer: 'تحويل بنكي', check: 'شيك', other: 'أخرى',
@@ -177,7 +179,7 @@ function CustomerLedgerTable({ search }: { search: string }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export function LedgerPage() {
+function LedgerPageContent() {
   const [tab,    setTab]    = useState<'suppliers' | 'customers'>('suppliers')
   const [search, setSearch] = useState('')
 
@@ -274,3 +276,7 @@ export function LedgerPage() {
   )
 }
 
+export function LedgerPage() {
+  const vis = useNumberVisibility()
+  return vis.balances ? <LedgerPageContent /> : <NoAccess />
+}

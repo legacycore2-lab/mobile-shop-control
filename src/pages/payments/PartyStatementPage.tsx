@@ -14,6 +14,8 @@ import { AddPaymentModal } from './AddPaymentModal'
 import { EditPaymentModal } from './EditPaymentModal'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
+import { NoAccess } from '@/components/shared/NoAccess'
+import { useNumberVisibility } from '@/hooks/usePermissions'
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي', bank_transfer: 'تحويل بنكي', check: 'شيك', other: 'أخرى',
@@ -302,7 +304,7 @@ function SimplePayModal({
   )
 }
 
-export function PartyStatementPage() {
+function PartyStatementPageContent() {
   const { type, id } = useParams<{ type: string; id: string }>()
   const navigate      = useNavigate()
   const isSupplier    = type === 'supplier'
@@ -644,3 +646,7 @@ export function PartyStatementPage() {
   )
 }
 
+export function PartyStatementPage() {
+  const vis = useNumberVisibility()
+  return vis.balances ? <PartyStatementPageContent /> : <NoAccess />
+}

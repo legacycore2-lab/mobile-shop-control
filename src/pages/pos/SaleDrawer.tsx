@@ -9,8 +9,11 @@ import { cn } from '@/lib/cn'
 import { STATUS_MAP } from './constants'
 import { fmt } from '@/lib/fmt'
 import { printSaleInvoice } from './SaleInvoicePrint'
+import { useNumberVisibility } from '@/hooks/usePermissions'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
+  const vis = useNumberVisibility()
   const { profile }                 = useAuth()
   const { data: detail, isLoading } = useSaleInvoice(invoiceId)
   const confirmMutation             = useConfirmSale()
@@ -131,11 +134,11 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
                     <span className="text-xs text-gray-500 dark:text-gray-400">{l}</span>
                     <span className={cn('text-sm font-bold',
                       l === 'المتبقي' && inv.remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white')}>
-                      {v}
+                      {l === 'التاريخ' || vis.revenue ? v : '•••'}
                     </span>
                   </div>
                 ))}
-                {inv.status === 'confirmed' && (
+                {inv.status === 'confirmed' && vis.profit && (
                   <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-xs text-gray-500 dark:text-gray-400">الربح</span>
                     <span className={cn('text-sm font-bold', profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
@@ -189,7 +192,7 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
                         </div>
                         <div className="text-left flex-shrink-0 mr-2">
                           <p className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmt(d.actual_selling_price)} ج</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-600">تكلفة: {fmt(d.cost_price)} ج</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-600">تكلفة: <Sensitive kind="cost">{fmt(d.cost_price)} ج</Sensitive></p>
                         </div>
                       </div>
                     ))}

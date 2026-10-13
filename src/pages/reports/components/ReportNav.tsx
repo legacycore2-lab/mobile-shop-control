@@ -1,17 +1,20 @@
 // src/pages/reports/components/ReportNav.tsx
 import { cn } from '@/lib/cn'
-import { REPORT_GROUPS, groupOfTab } from '../reportGroups'
+import { useNumberVisibility } from '@/hooks/usePermissions'
+import { visibleGroups, groupOfTab } from '../reportGroups'
 import type { Tab } from '../types'
 
 interface Props { tab: Tab; onChange: (tab: Tab) => void }
 
 export function ReportNav({ tab, onChange }: Props) {
-  const active = groupOfTab(tab)
+  const groups = visibleGroups(useNumberVisibility())
+  const active = groups.find(g => g.id === groupOfTab(tab).id) ?? groups[0]
+  if (!active) return null
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1.5">
-        {REPORT_GROUPS.map(g => {
+        {groups.map(g => {
           const Icon = g.icon
           const on   = g.id === active.id
           return (

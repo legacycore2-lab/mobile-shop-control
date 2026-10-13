@@ -18,6 +18,7 @@ import { EditPurchaseModal }     from './EditPurchaseModal'
 import { STATUS_MAP, PAGE_SIZE, type FilterStatus } from './constants'
 import { fmt }            from '@/lib/fmt'
 import type { PurchaseInvoiceView, InvoiceStatus } from '@/types/database'
+import { Sensitive } from '@/components/shared/Sensitive'
 
 export function PurchasesPage() {
   const { data: invoices = [], isLoading } = usePurchases()
@@ -174,10 +175,10 @@ export function PurchasesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                      {fmt(inv.total_amount)} ج
+                      <Sensitive kind="cost">{fmt(inv.total_amount)} ج</Sensitive>
                     </td>
                     <td className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                      {fmt(inv.paid_amount)} ج
+                      <Sensitive kind="cost">{fmt(inv.paid_amount)} ج</Sensitive>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={cn('text-sm font-bold whitespace-nowrap',
