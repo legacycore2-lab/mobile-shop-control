@@ -3,16 +3,23 @@
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/fmt'
 import { KpiCard, BarChart } from '../components/ReportWidgets'
+import { useProfitability } from '@/hooks/useProfitability'
+import { profitabilityService } from '@/services/profitability.service'
 import {
   Smartphone, Package, DollarSign, TrendingUp, BarChart2,
-  AlertTriangle, Receipt,
+  AlertTriangle, Receipt, Layers,
 } from 'lucide-react'
 
 export function OverviewTabContent(props: Record<string, any>) {
   const {
     summary, sales, stock, activity,
-    sumLoad, actLoad,
+    sumLoad, actLoad, filterFrom, filterTo,
   } = props
+
+  const { data: soldRows = [] } = useProfitability(filterFrom || undefined, filterTo || undefined)
+  const deviceTotals  = profitabilityService.totals(profitabilityService.select(soldRows, 'device'))
+  const productRows   = profitabilityService.select(soldRows, 'product')
+  const productTotals = profitabilityService.totals(productRows)
 
   return (
     <>
@@ -96,6 +103,41 @@ export function OverviewTabContent(props: Record<string, any>) {
               <KpiCard label="أجهزة مباعة"            value={fmt(summary.totalSoldDevices)}              icon={Smartphone} color="teal"  />
               <KpiCard label="في المخزون"             value={fmt(summary.stockDevices)}                  icon={Package}    color="blue"  />
               <KpiCard label="تنبيهات مخزون"          value={summary.lowStockCount}                      icon={AlertTriangle} color={summary.lowStockCount > 0 ? 'red' : 'green'} />
+            </div>
+
+            {/* Row 4 — Products sales */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <KpiCard label="أصناف منتجات مباعة"   value={fmt(productRows.length)}              icon={Layers}     color="purple" />
+              <KpiCard label="وحدات منتجات مباعة"    value={fmt(productTotals.units)}             icon={Package}    color="blue"   />
+              <KpiCard label="إيراد المنتجات"        value={`${fmt(productTotals.revenue)} ج`}   icon={DollarSign} color="green"  />
+              <KpiCard label="ربح المنتجات"          value={`${fmt(productTotals.profit)} ج`}    icon={TrendingUp} color={productTotals.profit >= 0 ? 'green' : 'red'} />
+            </div>
+
+            {/* Devices vs products */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">الأجهزة مقابل المنتجات</p>
+              <div className="space-y-3">
+                {[
+                  { label: 'الأجهزة',  totals: deviceTotals,  bar: 'bg-blue-500'   },
+                  { label: 'المنتجات', totals: productTotals, bar: 'bg-purple-500' },
+                ].map(({ label, totals, bar }) => {
+                  const all   = deviceTotals.revenue + productTotals.revenue
+                  const share = all > 0 ? (totals.revenue / all) * 100 : 0
+                  return (
+                    <div key={label}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">{label} · {fmt(totals.units)} وحدة</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          إيراد {fmt(totals.revenue)} ج · ربح {fmt(totals.profit)} ج · {share.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div className={cn('h-full rounded-full', bar)} style={{ width: `${share}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Activity chart */}
