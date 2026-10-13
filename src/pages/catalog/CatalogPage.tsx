@@ -13,6 +13,7 @@ import { CatalogInfo } from './CatalogInfo'
 import { CartPanel } from './CartPanel'
 import { BrandMark } from './BrandMark'
 import { PriceFilter } from './PriceFilter'
+import { ConditionFilter } from './ConditionFilter'
 import { SortSelect } from './SortSelect'
 import { ViewToggle, type CatalogView } from './ViewToggle'
 import { CatalogListItem } from './CatalogListItem'
@@ -55,22 +56,28 @@ export function CatalogPage() {
   const [showCompare, setShowCompare] = useState(false)
   const [track,    setTrack]    = useState<{ number: string } | null>(null)
   const [brand,    setBrand]    = useState<string | null>(null)
+  const [condition, setCondition] = useState<string | null>(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [showCart, setShowCart] = useState(false)
   const [done,     setDone]     = useState<CatalogOrderResult | null>(null)
 
   const brands = useMemo(() => catalogService.brandCounts(entries), [entries])
+  const conditions = useMemo(
+    () => [...new Set(entries.flatMap(e => (e.group === 'device' && e.condition ? [e.condition] : [])))],
+    [entries],
+  )
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
     return catalogService.sort(entries, sort).filter(e =>
       (filter === 'all' || (filter === 'favorites' ? favorites.has(e.key) : e.group === filter)) &&
       (!brand || e.brand === brand) &&
+      (filter !== 'device' || !condition || e.condition === condition) &&
       catalogService.inPriceRange(e, minPrice, maxPrice) &&
       (!q || `${e.title} ${e.subtitle} ${e.details.join(' ')}`.toLowerCase().includes(q)),
     )
-  }, [entries, filter, brand, search, minPrice, maxPrice, sort, favorites.keys])
+  }, [entries, filter, brand, search, condition, minPrice, maxPrice, sort, favorites.keys])
 
   const opened         = entries.find(e => e.key === openKey) ?? null
 
@@ -183,6 +190,10 @@ export function CatalogPage() {
               </button>
             ))}
           </div>
+        )}
+
+        {filter === 'device' && conditions.length > 1 && (
+          <ConditionFilter conditions={conditions} value={condition} onChange={setCondition} />
         )}
 
         <div className="flex items-center gap-x-6 gap-y-3 flex-wrap">
