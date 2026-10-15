@@ -8,7 +8,7 @@ import {
   UserCheck, LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
   Menu, X, Store, Sun, Moon, Tag, Shield, ShieldCheck,
-  BookOpen, FileUp, CalendarCheck, Images, Receipt, RefreshCw, Home, ClipboardList,
+  BookOpen, FileUp, CalendarCheck, Images, Receipt, RefreshCw, Home, ClipboardList, ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
@@ -27,6 +27,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/orders',      icon: ClipboardList,   label: 'طلبات العملاء',                resource: 'orders'      },
   { to: '/product-images', icon: Images,     label: 'صور المنتجات',                 resource: 'products'    },
   { to: '/products',    icon: Tag,             label: 'المنتجات',                     resource: 'products'    },
+  { to: '/stock-count', icon: ClipboardCheck,  label: 'الجرد العشوائي',               resource: 'products'    },
   { to: '/suppliers',   icon: Truck,           label: 'الموردين',                     resource: 'suppliers'   },
   { to: '/customers',   icon: Users,           label: 'العملاء',                      resource: 'customers'   },
   { to: '/expenses',    icon: Receipt,         label: 'المصروفات',                    resource: 'expenses'    },

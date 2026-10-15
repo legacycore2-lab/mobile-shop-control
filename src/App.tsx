@@ -35,6 +35,8 @@ const AttendancePage     = lazy(() => import('@/pages/attendance/AttendancePage'
 const OrdersPage         = lazy(() => import('@/pages/orders/OrdersPage').then(m => ({ default: m.OrdersPage })))
 const CatalogPage        = lazy(() => import('@/pages/catalog/CatalogPage').then(m => ({ default: m.CatalogPage })))
 const PermissionsPage    = lazy(() => import('@/pages/permissions/PermissionsPage').then(m => ({ default: m.PermissionsPage })))
+const StockCountPage      = lazy(() => import('@/pages/stock-count/StockCountPage').then(m => ({ default: m.StockCountPage })))
+const PublicStockCountPage = lazy(() => import('@/pages/stock-count/PublicStockCountPage').then(m => ({ default: m.PublicStockCountPage })))
 
 import { ScanFlashCard } from '@/components/shared/ScanFlashCard'
 import { AppErrorBoundary, PageErrorBoundary } from '@/components/shared/ErrorBoundary'
@@ -179,6 +181,7 @@ function Guard() {
               <Route path="/attendance"  element={<PageErrorBoundary><ProtectedRoute resource="attendance"><AttendancePage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/permissions" element={<PageErrorBoundary><ProtectedRoute resource="permissions"><PermissionsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/orders"      element={<PageErrorBoundary><ProtectedRoute resource="orders"><OrdersPage /></ProtectedRoute></PageErrorBoundary>} />
+              <Route path="/stock-count" element={<PageErrorBoundary><ProtectedRoute resource="products"><StockCountPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/import"      element={<PageErrorBoundary><ProtectedRoute resource="import"><ImportPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/settings"    element={<PageErrorBoundary><ProtectedRoute resource="settings"><SettingsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="*"            element={<Navigate to="/" replace />} />
@@ -205,6 +208,7 @@ export default function App() {
           <BrowserRouter basename="/mobile-shop-control">
             <Routes>
               <Route path="/catalog" element={<Suspense fallback={PageLoader}><CatalogPage /></Suspense>} />
+              <Route path="/stock-count/:token" element={<Suspense fallback={PageLoader}><PublicStockCountPage /></Suspense>} />
               <Route path="/*"       element={<Guard />} />
             </Routes>
           </BrowserRouter>

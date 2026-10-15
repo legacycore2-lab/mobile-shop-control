@@ -1,6 +1,10 @@
 // src/types/database.ts
 // ── Single source of truth for ALL entity types ───────────────────────────────
 
+import type {
+  StockCountSessionRow, StockCountItemRow, PublicStockCount, StockCountAnswer,
+} from './stockCount'
+
 export type UserRole         = 'owner' | 'manager' | 'cashier' | 'warehouse'
 export type DeviceStatus     = 'in_stock' | 'sold' | 'returned' | 'defective' | 'sent_to_repair' | 'cancelled'
 export type ProductType      = 'accessory' | 'spare_part'
@@ -432,6 +436,8 @@ export type Database = {
       employees:                 { Row: Employee;               Insert: Omit<Employee, 'id'|'created_at'|'updated_at'>;                    Update: Partial<Employee> }
       attendance_records:        { Row: AttendanceRecord;       Insert: Omit<AttendanceRecord, 'id'|'created_at'|'updated_at'>;            Update: Partial<AttendanceRecord> }
       attendance_settings:       { Row: AttendanceSettings;     Insert: Omit<AttendanceSettings, 'id'|'updated_at'>;                       Update: Partial<AttendanceSettings> }
+      stock_count_sessions:      { Row: StockCountSessionRow;   Insert: Partial<StockCountSessionRow>;                                     Update: Partial<StockCountSessionRow> }
+      stock_count_items:         { Row: StockCountItemRow;      Insert: Partial<StockCountItemRow>;                                        Update: Partial<StockCountItemRow> }
     }
     Functions: {
       lookup_device_by_imei:        { Args: { p_imei: string };      Returns: MobileDeviceView[] }
@@ -446,6 +452,9 @@ export type Database = {
       next_sale_invoice_number:     { Args: Record<never, never>;     Returns: string }
       record_attendance:            { Args: { p_employee_id: string; p_lat: number; p_lng: number; p_type: string }; Returns: RecordAttendanceResult }
       haversine_distance:           { Args: { lat1: number; lng1: number; lat2: number; lng2: number }; Returns: number }
+      create_stock_count:           { Args: { p_employee_id: string; p_products: number; p_models: number }; Returns: string }
+      get_stock_count_by_token:     { Args: { p_token: string }; Returns: PublicStockCount | null }
+      submit_stock_count:           { Args: { p_token: string; p_answers: StockCountAnswer[] }; Returns: undefined }
     }
   }
 }
