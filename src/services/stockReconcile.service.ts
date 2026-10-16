@@ -112,6 +112,9 @@ export const stockReconcileService = {
     return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, 'ar'))
   },
 
+  devicesOfGroup: (devices: ReconcileDevice[], key: string): ReconcileDevice[] =>
+    devices.filter(d => d.status === 'in_stock' && groupKey(d) === key).sort(byModel),
+
   buildCountRows: (groups: ModelGroup[], counts: Record<string, number>): ModelCountRow[] =>
     groups.map(g => {
       const counted = g.key in counts ? counts[g.key] : null

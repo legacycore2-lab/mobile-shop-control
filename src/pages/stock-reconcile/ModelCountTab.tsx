@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useNumberVisibility } from '@/hooks/usePermissions'
+import { useSellFromReconcile } from '@/hooks/useSellFromReconcile'
 import { readJson, writeJson } from '@/lib/clientStorage'
 import { exportToCsv, type ExportHeader } from '@/lib/exportUtils'
 import { friendlyDbError } from '@/lib/errors'
@@ -12,6 +14,7 @@ import { cn } from '@/lib/cn'
 import { stockReconcileService } from '@/services/stockReconcile.service'
 import type { ModelCountRow, ReconcileDevice } from '@/types/stockReconcile'
 import { CountStepper } from './CountStepper'
+import { DeviceTable } from './DeviceTable'
 
 const STORAGE_KEY = 'stock-reconcile:model-counts'
 
@@ -65,6 +68,9 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
   const [search,  setSearch]  = useState('')
   const [filter,  setFilter]  = useState<Filter>('all')
   const [confirm, setConfirm] = useState<'zero' | 'clear' | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const vis = useNumberVisibility()
+  const onSell = useSellFromReconcile()
 
   const rows = useMemo(
     () => stockReconcileService.buildCountRows(stockReconcileService.groupInStock(devices), counts),
@@ -171,15 +177,31 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
             {visible.map(r => (
-              <li key={r.key} className="px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.label}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">في النظام: {r.system_qty} جهاز</p>
+              <li key={r.key} className="px-4 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">في النظام: {r.system_qty} جهاز</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 justify-between sm:justify-end">
+                    {r.diff !== null && r.diff < 0 && (
+                      <Button size="sm" variant="secondary"
+                        onClick={() => setExpanded(e => e === r.key ? null : r.key)}>
+                        {expanded === r.key ? 'إخفاء الأجهزة' : 'اعرض الأجهزة / بيع'}
+                      </Button>
+                    )}
+                    <DiffBadge row={r} />
+                    <CountStepper value={r.counted} label={r.label} onChange={v => setCount(r.key, v)} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 justify-between sm:justify-end">
-                  <DiffBadge row={r} />
-                  <CountStepper value={r.counted} label={r.label} onChange={v => setCount(r.key, v)} />
-                </div>
+                {expanded === r.key && (
+                  <div className="mt-3 -mx-4">
+                    <p className="px-4 pb-2 text-xs text-gray-500 dark:text-gray-400">
+                      اختار الجهاز اللي اتباع (من نفس النوع) واضغط «بيع» عشان تسجل فاتورته.
+                    </p>
+                    <DeviceTable devices={stockReconcileService.devicesOfGroup(devices, r.key)} showCost={vis.cost} onSell={onSell} />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

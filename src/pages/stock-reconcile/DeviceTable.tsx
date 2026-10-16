@@ -1,5 +1,7 @@
 // src/pages/stock-reconcile/DeviceTable.tsx
+import { ShoppingCart } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { DEVICE_STATUS_MAP } from '@/constants/statusMaps'
 import { fmt } from '@/lib/fmt'
 import type { ReconcileDevice } from '@/types/stockReconcile'
@@ -8,14 +10,16 @@ interface Props {
   devices:    ReconcileDevice[]
   showStatus?: boolean
   showCost:   boolean
+  onSell?:    (device: ReconcileDevice) => void   // لو موجود بيظهر زرار «بيع» لكل جهاز
 }
 
-export function DeviceTable({ devices, showStatus = false, showCost }: Props) {
+export function DeviceTable({ devices, showStatus = false, showCost, onSell }: Props) {
   const heads = [
     '#', 'الجهاز', 'IMEI 1', 'IMEI 2', 'تخزين', 'لون',
     ...(showStatus ? ['الحالة في النظام'] : []),
     ...(showCost ? ['سعر الشراء'] : []),
     'سعر البيع', 'تاريخ الشراء',
+    ...(onSell ? [''] : []),
   ]
 
   return (
@@ -49,6 +53,11 @@ export function DeviceTable({ devices, showStatus = false, showCost }: Props) {
                   {d.selling_price == null ? '—' : `${fmt(d.selling_price)} ج`}
                 </td>
                 <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{d.purchase_date}</td>
+                {onSell && (
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <Button size="sm" variant="primary" icon={<ShoppingCart size={14} />} onClick={() => onSell(d)}>بيع</Button>
+                  </td>
+                )}
               </tr>
             )
           })}

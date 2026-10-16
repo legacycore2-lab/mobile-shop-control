@@ -4,6 +4,7 @@ import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useNumberVisibility } from '@/hooks/usePermissions'
+import { useSellFromReconcile } from '@/hooks/useSellFromReconcile'
 import { readJson, writeJson } from '@/lib/clientStorage'
 import { exportToCsv, type ExportHeader } from '@/lib/exportUtils'
 import { friendlyDbError } from '@/lib/errors'
@@ -42,6 +43,7 @@ interface Props {
 
 export function ImeiScanTab({ devices, isLoading, isError, error, scope }: Props) {
   const vis = useNumberVisibility()
+  const onSell = useSellFromReconcile()
 
   const [codes,    setCodes]    = useState<string[]>(loadCodes)
   const [feedback, setFeedback] = useState<ScanFeedback | null>(null)
@@ -128,7 +130,7 @@ export function ImeiScanTab({ devices, isLoading, isError, error, scope }: Props
           >
             {result.missing.length === 0
               ? <p className="px-4 pb-4 text-sm text-green-600 dark:text-green-400">كل أجهزة المخزون اتمسحت — مفيش ناقص</p>
-              : <DeviceTable devices={result.missing} showCost={vis.cost} />}
+              : <DeviceTable devices={result.missing} showCost={vis.cost} onSell={onSell} />}
           </ResultSection>
 
           {result.otherStatus.length > 0 && (
