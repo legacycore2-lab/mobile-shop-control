@@ -4,7 +4,7 @@ import type { ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanL
 
 // بعض سكانرات USB بتضيف بادئة زي 02/ قبل الكود
 export function normalizeCode(raw: string): string {
-  return raw.replace(/^0\d\//, '').trim()
+  return raw.trim().replace(/^0\d\//, '').trim()
 }
 
 // نص ملصوق (كود في كل سطر، أو مفصول بمسافة/فاصلة) → أكواد نظيفة من غير تكرار
@@ -36,9 +36,9 @@ function inScope(d: ReconcileDevice, scope: Set<string>): boolean {
   return scope.size === 0 || scope.has(modelKey(d))
 }
 
-// نوع الجهاز = ماركة + موديل + تخزين + لون
+// نوع الجهاز = ماركة + موديل + تخزين + لون (من غير حساسية لحالة الحروف: WHITE = white)
 function groupKey(d: ReconcileDevice): string {
-  return [d.brand_name, d.model_name, d.storage ?? '', d.color ?? ''].join('|')
+  return [d.brand_name, d.model_name, d.storage ?? '', d.color ?? ''].map(v => v.trim().toLowerCase()).join('|')
 }
 
 export const stockReconcileService = {

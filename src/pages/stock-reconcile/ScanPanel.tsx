@@ -32,6 +32,23 @@ export function ScanPanel({ scannedCount, feedback, disabled, onAdd, onClear }: 
 
   useEffect(() => { if (!disabled) inputRef.current?.focus() }, [disabled])
 
+  // لو السكانر كتب والفوكس مش على الخانة (بعد الضغط على زرار مثلاً) — الكود لازم يدخل الخانة
+  // مش يفتح بطاقة الجهاز اللي بيفتحها الماسح العام في App. بنمسك أول حرف في مرحلة الـ capture
+  useEffect(() => {
+    if (disabled) return
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return
+      e.preventDefault()
+      e.stopPropagation()
+      setValue(normalizeCode(e.key))
+      inputRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [disabled])
+
   function submit() {
     const codes = parseCodes(value)
     if (codes.length) onAdd(codes)
