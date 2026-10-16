@@ -20,12 +20,18 @@ const STATUS_OPTIONS = [
 
 const SEL = 'h-9 border border-gray-200 dark:border-gray-700 rounded-lg px-3 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500'
 
+function batteryColor(pct: number): string {
+  if (pct >= 80) return 'text-green-600 dark:text-green-400'
+  if (pct >= 50) return 'text-amber-600 dark:text-amber-400'
+  return 'text-red-600 dark:text-red-400'
+}
+
 function exportCsv(rows: ReturnType<typeof useDevicePriceList>['data']) {
   if (!rows?.length) return
-  const headers = ['#','الماركة','الموديل','IMEI 1','IMEI 2','التخزين','اللون','الحالة','سعر الشراء','سعر البيع','الفرق','هامش%']
+  const headers = ['#','الماركة','الموديل','IMEI 1','IMEI 2','التخزين','اللون','البطارية %','الحالة','سعر الشراء','سعر البيع','الفرق','هامش%']
   const lines = rows.map((r, i) => [
     i + 1, r.brand_name, r.model_name, r.imei1, r.imei2,
-    r.storage, r.color,
+    r.storage, r.color, r.battery_health ?? '',
     DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]?.label ?? r.status,
     r.cost_price, r.selling_price, r.profit, r.margin_pct,
   ])
@@ -136,7 +142,7 @@ export function PriceListTabContent() {
           onClick={() => exportPriceListPdf(
             filtered.map(r => ({
               brand_name: r.brand_name, model_name: r.model_name, imei1: r.imei1,
-              storage: r.storage, color: r.color,
+              storage: r.storage, color: r.color, battery_health: r.battery_health,
               status_label: DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]?.label ?? r.status,
               cost_price: r.cost_price, selling_price: r.selling_price, profit: r.profit,
             })),
@@ -182,16 +188,16 @@ export function PriceListTabContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                {['#','الماركة','الموديل','IMEI 1','IMEI 2','تخزين','لون','حالة','سعر الشراء','سعر البيع','الفرق','هامش %'].map(h => (
+                {['#','الماركة','الموديل','IMEI 1','IMEI 2','تخزين','لون','بطارية','حالة','سعر الشراء','سعر البيع','الفرق','هامش %'].map(h => (
                   <th key={h} className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {isLoading ? (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
+                <tr><td colSpan={13} className="px-4 py-10 text-center text-sm text-gray-400">جاري التحميل...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-sm text-gray-400">لا توجد أجهزة</td></tr>
+                <tr><td colSpan={13} className="px-4 py-10 text-center text-sm text-gray-400">لا توجد أجهزة</td></tr>
               ) : filtered.map((r, i) => {
                 const st = DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]
                 return (
@@ -203,6 +209,11 @@ export function PriceListTabContent() {
                     <td className="px-3 py-2.5 font-mono text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">{r.imei2 || '—'}</td>
                     <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.storage || '—'}</td>
                     <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.color || '—'}</td>
+                    <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                      {r.battery_health != null
+                        ? <span className={cn('font-bold', batteryColor(r.battery_health))}>{r.battery_health}%</span>
+                        : <span className="text-gray-400">—</span>}
+                    </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       {st
                         ? <Badge variant={st.variant} dot>{st.label}</Badge>
@@ -226,7 +237,7 @@ export function PriceListTabContent() {
             {!isLoading && filtered.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700 font-bold text-sm">
-                  <td colSpan={8} className="px-3 py-3 text-gray-600 dark:text-gray-400">الإجمالي ({filtered.length} جهاز)</td>
+                  <td colSpan={9} className="px-3 py-3 text-gray-600 dark:text-gray-400">الإجمالي ({filtered.length} جهاز)</td>
                   <td className="px-3 py-3 text-red-600 dark:text-red-400">{fmt(totalCost)} ج</td>
                   <td className="px-3 py-3 text-green-600 dark:text-green-400">{fmt(totalSell)} ج</td>
                   <td className={cn('px-3 py-3', totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>

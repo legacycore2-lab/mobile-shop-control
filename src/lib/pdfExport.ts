@@ -332,7 +332,7 @@ export function exportCashierPdf(rows: CashierPdfRow[], output: PdfOutput, dateR
 }
 
 // ── Device price list ─────────────────────────────────────────────────────────
-export type PriceListPdfRow = { brand_name: string; model_name: string; imei1: string; storage: string; color: string; status_label: string; cost_price: number; selling_price: number; profit: number }
+export type PriceListPdfRow = { brand_name: string; model_name: string; imei1: string; storage: string; color: string; battery_health: number | null; status_label: string; cost_price: number; selling_price: number; profit: number }
 
 export function exportPriceListPdf(rows: PriceListPdfRow[], scope: string, output: PdfOutput) {
   const cost = rows.reduce((s, r) => s + r.cost_price, 0)
@@ -345,9 +345,9 @@ export function exportPriceListPdf(rows: PriceListPdfRow[], scope: string, outpu
     { label: 'إجمالي الفرق',       value: `${fmt(sell - cost)} ج`, color: 'green' },
   ])
   html += `<div class="sec"><div class="sec-title">قائمة الأجهزة</div>
-  <table><thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>IMEI</th><th>التخزين</th><th>اللون</th><th>الحالة</th><th>سعر الشراء</th><th>سعر البيع</th><th>الفرق</th></tr></thead><tbody>
-  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.brand_name}</td><td>${r.model_name}</td><td>${r.imei1}</td><td>${r.storage}</td><td>${r.color}</td><td>${r.status_label}</td><td>${fmt(r.cost_price)} ج</td><td>${fmt(r.selling_price)} ج</td><td>${fmt(r.profit)} ج</td></tr>`).join('')}
-  <tr class="tot"><td colspan="7"><strong>الإجمالي</strong></td><td>${fmt(cost)} ج</td><td>${fmt(sell)} ج</td><td>${fmt(sell - cost)} ج</td></tr>
+  <table><thead><tr><th>#</th><th>الماركة</th><th>الموديل</th><th>IMEI</th><th>التخزين</th><th>اللون</th><th>البطارية</th><th>الحالة</th><th>سعر الشراء</th><th>سعر البيع</th><th>الفرق</th></tr></thead><tbody>
+  ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.brand_name}</td><td>${r.model_name}</td><td>${r.imei1}</td><td>${r.storage}</td><td>${r.color}</td><td>${r.battery_health != null ? `${r.battery_health}%` : '—'}</td><td>${r.status_label}</td><td>${fmt(r.cost_price)} ج</td><td>${fmt(r.selling_price)} ج</td><td>${fmt(r.profit)} ج</td></tr>`).join('')}
+  <tr class="tot"><td colspan="8"><strong>الإجمالي</strong></td><td>${fmt(cost)} ج</td><td>${fmt(sell)} ج</td><td>${fmt(sell - cost)} ج</td></tr>
   </tbody></table></div>`
   openWindow(html, `قائمة-أسعار-الأجهزة-${new Date().toISOString().split('T')[0]}`, output)
 }

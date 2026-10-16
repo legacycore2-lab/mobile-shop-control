@@ -100,6 +100,7 @@ export interface DevicePriceRow {
   storage:       string
   color:         string
   condition:     string
+  battery_health: number | null
   status:        string
   cost_price:    number
   selling_price: number
@@ -447,7 +448,7 @@ export const reportsRepository = {
     const { data, error } = await supabase
       .from('mobile_devices')
       .select(`
-        id, imei1, imei2, storage, color, condition, status,
+        id, imei1, imei2, storage, color, condition, battery_health, status,
         cost_price, selling_price, purchase_date, sold_at,
         mobile_models!model_id (
           name,
@@ -475,6 +476,7 @@ export const reportsRepository = {
         storage:       String(r['storage'] ?? ''),
         color:         String(r['color']   ?? ''),
         condition:     String(r['condition'] ?? ''),
+        battery_health: r['battery_health'] != null ? Number(r['battery_health']) : null,
         status:        String(r['status']  ?? ''),
         cost_price:    cost,
         selling_price: sell,
