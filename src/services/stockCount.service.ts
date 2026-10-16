@@ -60,7 +60,9 @@ export function buildWhatsappLink(session: StockCountSessionView): string | null
   return session.employee_phone ? whatsappUrl(session.employee_phone, buildStockCountMessage(session)) : null
 }
 
-function assertCount(value: number, label: string): void {
+// null = الكل
+function assertCount(value: number | null, label: string): void {
+  if (value === null) return
   if (!Number.isInteger(value) || value < 0 || value > MAX_ITEMS_PER_TYPE) {
     throw new Error(`${label} لازم يكون رقم من 0 لـ ${MAX_ITEMS_PER_TYPE}`)
   }
@@ -103,7 +105,7 @@ export const stockCountService = {
     if (!input.employeeId) throw new Error('اختار المسئول عن الجرد')
     assertCount(input.productsCount, 'عدد المنتجات')
     assertCount(input.modelsCount, 'عدد الموبايلات')
-    if (input.productsCount + input.modelsCount === 0) throw new Error('لازم تختار صنف واحد على الأقل')
+    if (input.productsCount === 0 && input.modelsCount === 0) throw new Error('لازم تختار صنف واحد على الأقل')
     return stockCountRepository.create(input.employeeId, input.productsCount, input.modelsCount)
   },
 

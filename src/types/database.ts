@@ -452,7 +452,7 @@ export type Database = {
       next_sale_invoice_number:     { Args: Record<never, never>;     Returns: string }
       record_attendance:            { Args: { p_employee_id: string; p_lat: number; p_lng: number; p_type: string }; Returns: RecordAttendanceResult }
       haversine_distance:           { Args: { lat1: number; lng1: number; lat2: number; lng2: number }; Returns: number }
-      create_stock_count:           { Args: { p_employee_id: string; p_products: number; p_models: number }; Returns: string }
+      create_stock_count:           { Args: { p_employee_id: string; p_products: number | null; p_models: number | null }; Returns: string }
       get_stock_count_by_token:     { Args: { p_token: string }; Returns: PublicStockCount | null }
       submit_stock_count:           { Args: { p_token: string; p_answers: StockCountAnswer[] }; Returns: undefined }
     }

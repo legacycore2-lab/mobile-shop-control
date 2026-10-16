@@ -7,6 +7,35 @@ import { useCreateStockCount, useStockCountEmployees } from '@/hooks/useStockCou
 import { friendlyDbError } from '@/lib/errors'
 import { FIELD_CLASS } from './constants'
 
+interface CountFieldProps {
+  label:       string
+  value:       string
+  onChange:    (v: string) => void
+  all:         boolean
+  onAllChange: (v: boolean) => void
+  allLabel:    string
+}
+
+// خانة عدد + اختيار "الكل" (لما الكل يتفعّل الخانة بتتقفل)
+function CountField({ label, value, onChange, all, onAllChange, allLabel }: CountFieldProps) {
+  return (
+    <div>
+      <label className="block">
+        <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</span>
+        <input type="number" inputMode="numeric" min={0} max={50} value={all ? '' : value}
+          placeholder={all ? 'الكل' : undefined} disabled={all}
+          onChange={e => onChange(e.target.value)}
+          className={`${FIELD_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`} />
+      </label>
+      <label className="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <input type="checkbox" checked={all} onChange={e => onAllChange(e.target.checked)}
+          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+        {allLabel}
+      </label>
+    </div>
+  )
+}
+
 export function CreateStockCountCard() {
   const { data: employees = [], isLoading } = useStockCountEmployees()
   const create = useCreateStockCount()
@@ -14,6 +43,8 @@ export function CreateStockCountCard() {
   const [employeeId, setEmployeeId] = useState('')
   const [products,   setProducts]   = useState('5')
   const [models,     setModels]     = useState('3')
+  const [allProducts, setAllProducts] = useState(false)
+  const [allModels,   setAllModels]   = useState(false)
   const [error,      setError]      = useState<string | null>(null)
 
   async function handleCreate() {
@@ -21,8 +52,8 @@ export function CreateStockCountCard() {
     try {
       await create.mutateAsync({
         employeeId,
-        productsCount: Number(products),
-        modelsCount:   Number(models),
+        productsCount: allProducts ? null : Number(products),
+        modelsCount:   allModels   ? null : Number(models),
       })
     } catch (err) {
       setError(friendlyDbError(err))
@@ -52,17 +83,11 @@ export function CreateStockCountCard() {
             </select>
           </label>
 
-          <label className="block">
-            <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">عدد المنتجات</span>
-            <input type="number" inputMode="numeric" min={0} max={50} value={products}
-              onChange={e => setProducts(e.target.value)} className={FIELD_CLASS} />
-          </label>
+          <CountField label="عدد المنتجات" value={products} onChange={setProducts}
+            all={allProducts} onAllChange={setAllProducts} allLabel="كل المنتجات" />
 
-          <label className="block">
-            <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">عدد الموبايلات (موديلات)</span>
-            <input type="number" inputMode="numeric" min={0} max={50} value={models}
-              onChange={e => setModels(e.target.value)} className={FIELD_CLASS} />
-          </label>
+          <CountField label="عدد الموبايلات (موديلات)" value={models} onChange={setModels}
+            all={allModels} onAllChange={setAllModels} allLabel="كل الموبايلات" />
 
           <div className="sm:col-span-2 lg:col-span-4">
             <Button variant="primary" icon={<Shuffle size={15} />} loading={create.isPending}

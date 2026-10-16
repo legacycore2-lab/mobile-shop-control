@@ -6,6 +6,8 @@ import type {
 
 const n = (v: unknown): number => Number(v ?? 0)
 
+const SESSIONS_PER_REQUEST = 10
+
 const optNum = (v: unknown): number | null => (v == null ? null : Number(v))
 
 function normalizeItem<T extends StockCountItem>(it: T): T {
@@ -26,16 +28,24 @@ export const stockCountRepository = {
 
   getItems: async (sessionIds: string[]): Promise<StockCountItemRow[]> => {
     if (!sessionIds.length) return []
-    const { data, error } = await supabase
-      .from('stock_count_items')
-      .select('*')
-      .in('session_id', sessionIds)
-      .limit(2000)
-    if (error) throw error
-    return ((data ?? []) as StockCountItemRow[]).map(normalizeItem)
+    // الجرد الشامل ممكن يبقى فيه عشرات الأصناف، فبنجيب كل 10 جلسات في طلب لتجنب حد الصفوف
+    const chunks: string[][] = []
+    for (let i = 0; i < sessionIds.length; i += SESSIONS_PER_REQUEST) {
+      chunks.push(sessionIds.slice(i, i + SESSIONS_PER_REQUEST))
+    }
+    const results = await Promise.all(chunks.map(async ids => {
+      const { data, error } = await supabase
+        .from('stock_count_items')
+        .select('*')
+        .in('session_id', ids)
+        .limit(1000)
+      if (error) throw error
+      return (data ?? []) as StockCountItemRow[]
+    }))
+    return results.flat().map(normalizeItem)
   },
 
-  create: async (employeeId: string, productsCount: number, modelsCount: number): Promise<string> => {
+  create: async (employeeId: string, productsCount: number | null, modelsCount: number | null): Promise<string> => {
     const { data, error } = await supabase.rpc('create_stock_count', {
       p_employee_id: employeeId,
       p_products:    productsCount,

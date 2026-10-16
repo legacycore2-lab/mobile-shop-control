@@ -70,6 +70,6 @@ export interface AnswerDraft {
 
 export interface CreateStockCountInput {
   employeeId:    string
-  productsCount: number
-  modelsCount:   number
+  productsCount: number | null   // null = كل المنتجات
+  modelsCount:   number | null   // null = كل الموبايلات
 }
