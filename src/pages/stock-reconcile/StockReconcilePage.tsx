@@ -1,9 +1,19 @@
 // src/pages/stock-reconcile/StockReconcilePage.tsx
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useReconcileDevices } from '@/hooks/useStockReconcile'
+import { readJson, writeJson } from '@/lib/clientStorage'
 import { cn } from '@/lib/cn'
+import { stockReconcileService } from '@/services/stockReconcile.service'
 import { ImeiScanTab } from './ImeiScanTab'
 import { ModelCountTab } from './ModelCountTab'
+import { ScopePicker } from './ScopePicker'
+
+const SCOPE_KEY = 'stock-reconcile:scope'
+
+function loadScope(): string[] {
+  const saved = readJson<unknown>(SCOPE_KEY, [])
+  return Array.isArray(saved) ? saved.filter((k): k is string => typeof k === 'string') : []
+}
 
 type Mode = 'model' | 'imei'
 
@@ -14,7 +24,18 @@ const MODES: { id: Mode; label: string; hint: string }[] = [
 
 export function StockReconcilePage() {
   const { data: devices = [], isLoading, isError, error } = useReconcileDevices()
-  const [mode, setMode] = useState<Mode>('model')
+  const [mode,  setMode]  = useState<Mode>('model')
+  const [scope, setScope] = useState<string[]>(loadScope)
+
+  const models = useMemo(() => stockReconcileService.listModels(devices), [devices])
+  // الموديلات اللي اتحذفت من المخزون (اتباعت كلها) مبتأثرش على النطاق
+  const activeScope = useMemo(() => scope.filter(k => models.some(m => m.key === k)), [scope, models])
+  const scopedDevices = useMemo(() => stockReconcileService.filterByScope(devices, activeScope), [devices, activeScope])
+
+  function handleScopeChange(next: string[]) {
+    setScope(next)
+    writeJson(SCOPE_KEY, next)
+  }
 
   return (
     <div className="space-y-5">
@@ -40,9 +61,13 @@ export function StockReconcilePage() {
         ))}
       </div>
 
+      {!isLoading && !isError && (
+        <ScopePicker models={models} selected={activeScope} onChange={handleScopeChange} />
+      )}
+
       {mode === 'model'
-        ? <ModelCountTab devices={devices} isLoading={isLoading} isError={isError} error={error} />
-        : <ImeiScanTab   devices={devices} isLoading={isLoading} isError={isError} error={error} />}
+        ? <ModelCountTab devices={scopedDevices} isLoading={isLoading} isError={isError} error={error} />
+        : <ImeiScanTab   devices={devices} isLoading={isLoading} isError={isError} error={error} scope={activeScope} />}
     </div>
   )
 }

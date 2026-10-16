@@ -30,6 +30,15 @@ export interface ReconcileResult {
   unknown:     string[]            // اتمسحت ومش موجودة في النظام خالص
 }
 
+// موديل يتحدد بالماركة + الاسم — بيتستخدم لتحديد الأنواع المشمولة بالمطابقة
+export interface ScopeModel {
+  key:        string
+  label:      string
+  brand_name: string
+  model_name: string
+  in_stock:   number
+}
+
 // ── العد بالموديل: نوع = ماركة + موديل + تخزين + لون ──────────────────────────
 export interface ModelGroup {
   key:        string

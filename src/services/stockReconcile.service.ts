@@ -1,6 +1,6 @@
 // src/services/stockReconcile.service.ts
 import { stockReconcileRepository } from '@/repositories/stockReconcile.repository'
-import type { ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanLookup } from '@/types/stockReconcile'
+import type { ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanLookup, ScopeModel } from '@/types/stockReconcile'
 
 // بعض سكانرات USB بتضيف بادئة زي 02/ قبل الكود
 export function normalizeCode(raw: string): string {
@@ -27,6 +27,15 @@ const byModel = (a: ReconcileDevice, b: ReconcileDevice): number =>
   a.model_name.localeCompare(b.model_name, 'ar') ||
   a.imei1.localeCompare(b.imei1)
 
+export function modelKey(d: ReconcileDevice): string {
+  return `${d.brand_name}|${d.model_name}`
+}
+
+// scope فاضي = كل الموديلات
+function inScope(d: ReconcileDevice, scope: Set<string>): boolean {
+  return scope.size === 0 || scope.has(modelKey(d))
+}
+
 // نوع الجهاز = ماركة + موديل + تخزين + لون
 function groupKey(d: ReconcileDevice): string {
   return [d.brand_name, d.model_name, d.storage ?? '', d.color ?? ''].join('|')
@@ -43,7 +52,27 @@ export const stockReconcileService = {
     return { kind: device.status === 'in_stock' ? 'matched' : 'other_status', device }
   },
 
-  reconcile: (devices: ReconcileDevice[], codes: string[]): ReconcileResult => {
+  // الموديلات اللي فيها أجهزة في المخزون (لاختيار نطاق المطابقة)
+  listModels: (devices: ReconcileDevice[]): ScopeModel[] => {
+    const models = new Map<string, ScopeModel>()
+    for (const d of devices) {
+      if (d.status !== 'in_stock') continue
+      const key = modelKey(d)
+      const existing = models.get(key)
+      if (existing) existing.in_stock++
+      else models.set(key, { key, label: `${d.brand_name} ${d.model_name}`, brand_name: d.brand_name, model_name: d.model_name, in_stock: 1 })
+    }
+    return Array.from(models.values()).sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+  },
+
+  filterByScope: (devices: ReconcileDevice[], scope: string[]): ReconcileDevice[] => {
+    const set = new Set(scope)
+    return devices.filter(d => inScope(d, set))
+  },
+
+  // الناقص والمطابق بيتحسبوا للموديلات المحددة بس (الأكواد الغريبة بتفضل تظهر)
+  reconcile: (devices: ReconcileDevice[], codes: string[], scope: string[] = []): ReconcileResult => {
+    const scopeSet      = new Set(scope)
     const index        = indexByCode(devices)
     const matchedIds   = new Set<string>()
     const otherIds     = new Set<string>()
@@ -56,7 +85,7 @@ export const stockReconcileService = {
       else                                 otherIds.add(device.id)
     }
 
-    const inStock = devices.filter(d => d.status === 'in_stock')
+    const inStock = devices.filter(d => d.status === 'in_stock' && inScope(d, scopeSet))
     return {
       matched:     inStock.filter(d => matchedIds.has(d.id)).sort(byModel),
       missing:     inStock.filter(d => !matchedIds.has(d.id)).sort(byModel),

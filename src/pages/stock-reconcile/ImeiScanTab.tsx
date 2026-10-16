@@ -37,16 +37,17 @@ interface Props {
   isLoading: boolean
   isError:   boolean
   error:     unknown
+  scope:     string[]   // الموديلات المحددة (فاضي = الكل)
 }
 
-export function ImeiScanTab({ devices, isLoading, isError, error }: Props) {
+export function ImeiScanTab({ devices, isLoading, isError, error, scope }: Props) {
   const vis = useNumberVisibility()
 
   const [codes,    setCodes]    = useState<string[]>(loadCodes)
   const [feedback, setFeedback] = useState<ScanFeedback | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
 
-  const result = useMemo(() => stockReconcileService.reconcile(devices, codes), [devices, codes])
+  const result = useMemo(() => stockReconcileService.reconcile(devices, codes, scope), [devices, codes, scope])
   const inStockCount = result.matched.length + result.missing.length
 
   function persist(next: string[]) {
