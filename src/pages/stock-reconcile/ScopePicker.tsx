@@ -17,15 +17,14 @@ interface BrandGroup {
   models: ScopeModel[]
 }
 
-const CHECKBOX = 'w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500'
-
-// اختيار الموديلات اللي فيها المشكلة — لو مفيش اختيار المطابقة بتشمل كل الأنواع
+// اختيار الموديلات اللي فيها المشكلة — دوس على الموديل يتحدد، ودوس تاني يتشال
+// لو مفيش اختيار المطابقة بتشمل كل الأنواع
 export function ScopePicker({ models, selected, onChange }: Props) {
-  const [open,   setOpen]   = useState(false)
+  const [open,   setOpen]   = useState(selected.length === 0)
   const [search, setSearch] = useState('')
 
-  const selectedSet = useMemo(() => new Set(selected), [selected])
-  const selectedModels = models.filter(m => selectedSet.has(m.key))
+  const selectedSet     = useMemo(() => new Set(selected), [selected])
+  const selectedModels  = models.filter(m => selectedSet.has(m.key))
   const selectedDevices = selectedModels.reduce((s, m) => s + m.in_stock, 0)
 
   const groups = useMemo<BrandGroup[]>(() => {
@@ -43,7 +42,7 @@ export function ScopePicker({ models, selected, onChange }: Props) {
   }
 
   function toggleBrand(group: BrandGroup) {
-    const keys = group.models.map(m => m.key)
+    const keys  = group.models.map(m => m.key)
     const allOn = keys.every(k => selectedSet.has(k))
     onChange(allOn ? selected.filter(k => !keys.includes(k)) : Array.from(new Set([...selected, ...keys])))
   }
@@ -56,22 +55,12 @@ export function ScopePicker({ models, selected, onChange }: Props) {
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">الأنواع اللي هتتطابق</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {selectedModels.length === 0
-              ? 'كل الموديلات — اضغط عشان تحدد موديلات معينة بس'
-              : `${selectedModels.length} موديل · ${selectedDevices} جهاز في النظام`}
+              ? 'كل الموديلات — دوس على الموديلات اللي فيها المشكلة بس'
+              : `${selectedModels.length} موديل مختار · ${selectedDevices} جهاز في النظام`}
           </p>
         </div>
         <ChevronDown size={16} className={cn('text-gray-400 transition-transform flex-shrink-0', open && 'rotate-180')} />
       </button>
-
-      {!open && selectedModels.length > 0 && (
-        <div className="px-4 pb-4 flex flex-wrap gap-2">
-          {selectedModels.map(m => (
-            <span key={m.key} className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-medium">
-              {m.label} ({m.in_stock})
-            </span>
-          ))}
-        </div>
-      )}
 
       {open && (
         <div className="border-t border-gray-100 dark:border-gray-800 p-4 space-y-4">
@@ -79,32 +68,46 @@ export function ScopePicker({ models, selected, onChange }: Props) {
             <div className="relative flex-1 min-w-48">
               <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث عن موديل..."
-                className="w-full h-9 pr-8 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500" />
+                className="w-full h-10 pr-8 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500" />
             </div>
-            <Button size="sm" variant="ghost" disabled={selected.length === 0} onClick={() => onChange([])}>
+            <Button size="md" variant="ghost" disabled={selected.length === 0} onClick={() => onChange([])}>
               مسح الاختيار (الكل)
             </Button>
           </div>
 
           {groups.length === 0 && <p className="text-sm text-gray-400">مفيش موديلات مطابقة</p>}
 
-          <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4">
             {groups.map(g => {
               const allOn = g.models.every(m => selectedSet.has(m.key))
               return (
                 <div key={g.brand}>
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
-                    <input type="checkbox" className={CHECKBOX} checked={allOn} onChange={() => toggleBrand(g)} />
-                    {g.brand}
-                  </label>
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 pr-6">
-                    {g.models.map(m => (
-                      <label key={m.key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                        <input type="checkbox" className={CHECKBOX} checked={selectedSet.has(m.key)} onChange={() => toggleModel(m.key)} />
-                        <span className="flex-1 truncate">{m.model_name}</span>
-                        <span className="text-xs text-gray-400">{m.in_stock}</span>
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">{g.brand}</h3>
+                    <button type="button" onClick={() => toggleBrand(g)}
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                      {allOn ? 'إلغاء الكل' : 'تحديد الكل'}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {g.models.map(m => {
+                      const on = selectedSet.has(m.key)
+                      return (
+                        <button key={m.key} type="button" aria-pressed={on} onClick={() => toggleModel(m.key)}
+                          className={cn(
+                            'h-10 px-3 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors',
+                            on
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700',
+                          )}>
+                          {m.model_name}
+                          <span className={cn(
+                            'min-w-5 px-1.5 rounded-md text-xs text-center',
+                            on ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300',
+                          )}>{m.in_stock}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )
