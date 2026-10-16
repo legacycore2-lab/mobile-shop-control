@@ -29,3 +29,19 @@ export interface ReconcileResult {
   otherStatus: ReconcileDevice[]   // اتمسحت بس حالتها في النظام مش "في المخزون"
   unknown:     string[]            // اتمسحت ومش موجودة في النظام خالص
 }
+
+// ── العد بالموديل: نوع = ماركة + موديل + تخزين + لون ──────────────────────────
+export interface ModelGroup {
+  key:        string
+  label:      string
+  brand_name: string
+  model_name: string
+  storage:    string | null
+  color:      string | null
+  system_qty: number
+}
+
+export interface ModelCountRow extends ModelGroup {
+  counted: number | null   // null = لسه معدّش
+  diff:    number | null   // الفعلي − النظام (سالب = ناقص)
+}

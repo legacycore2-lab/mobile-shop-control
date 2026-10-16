@@ -1,6 +1,6 @@
 // src/services/stockReconcile.service.ts
 import { stockReconcileRepository } from '@/repositories/stockReconcile.repository'
-import type { ReconcileDevice, ReconcileResult, ScanLookup } from '@/types/stockReconcile'
+import type { ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanLookup } from '@/types/stockReconcile'
 
 // بعض سكانرات USB بتضيف بادئة زي 02/ قبل الكود
 export function normalizeCode(raw: string): string {
@@ -26,6 +26,11 @@ const byModel = (a: ReconcileDevice, b: ReconcileDevice): number =>
   a.brand_name.localeCompare(b.brand_name, 'ar') ||
   a.model_name.localeCompare(b.model_name, 'ar') ||
   a.imei1.localeCompare(b.imei1)
+
+// نوع الجهاز = ماركة + موديل + تخزين + لون
+function groupKey(d: ReconcileDevice): string {
+  return [d.brand_name, d.model_name, d.storage ?? '', d.color ?? ''].join('|')
+}
 
 export const stockReconcileService = {
 
@@ -59,4 +64,28 @@ export const stockReconcileService = {
       unknown,
     }
   },
+
+  // أنواع الأجهزة اللي في المخزون وعددها في النظام
+  groupInStock: (devices: ReconcileDevice[]): ModelGroup[] => {
+    const groups = new Map<string, ModelGroup>()
+    for (const d of devices) {
+      if (d.status !== 'in_stock') continue
+      const key = groupKey(d)
+      const existing = groups.get(key)
+      if (existing) { existing.system_qty++; continue }
+      groups.set(key, {
+        key,
+        label: [`${d.brand_name} ${d.model_name}`, d.storage, d.color].filter(Boolean).join(' · '),
+        brand_name: d.brand_name, model_name: d.model_name,
+        storage: d.storage, color: d.color, system_qty: 1,
+      })
+    }
+    return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+  },
+
+  buildCountRows: (groups: ModelGroup[], counts: Record<string, number>): ModelCountRow[] =>
+    groups.map(g => {
+      const counted = g.key in counts ? counts[g.key] : null
+      return { ...g, counted, diff: counted === null ? null : counted - g.system_qty }
+    }),
 }
