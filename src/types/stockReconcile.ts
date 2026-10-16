@@ -39,6 +39,23 @@ export interface ScopeModel {
   in_stock:   number
 }
 
+export type ScanOutcomeKind = 'counted' | 'duplicate' | 'other_status' | 'out_of_scope' | 'unknown'
+
+// نتيجة مسح كود واحد في وضع العد بالموديل
+export interface ScanOutcome {
+  code:        string
+  kind:        ScanOutcomeKind
+  device?:     ReconcileDevice
+  groupLabel?: string   // نوع الجهاز اللي اتعدّ عليه
+  total?:      number   // عدد النوع ده بعد المسحة
+}
+
+export interface ScanApplyResult {
+  counts:     Record<string, number>
+  scannedIds: string[]
+  outcomes:   ScanOutcome[]
+}
+
 // ── العد بالموديل: نوع = ماركة + موديل + تخزين + لون ──────────────────────────
 export interface ModelGroup {
   key:        string

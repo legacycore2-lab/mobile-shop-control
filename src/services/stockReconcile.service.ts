@@ -1,6 +1,8 @@
 // src/services/stockReconcile.service.ts
 import { stockReconcileRepository } from '@/repositories/stockReconcile.repository'
-import type { ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanLookup, ScopeModel } from '@/types/stockReconcile'
+import type {
+  ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanApplyResult, ScanLookup, ScanOutcome, ScopeModel,
+} from '@/types/stockReconcile'
 
 // بعض سكانرات USB بتضيف بادئة زي 02/ قبل الكود
 export function normalizeCode(raw: string): string {
@@ -39,6 +41,10 @@ function inScope(d: ReconcileDevice, scope: Set<string>): boolean {
 // نوع الجهاز = ماركة + موديل + تخزين + لون (من غير حساسية لحالة الحروف: WHITE = white)
 function groupKey(d: ReconcileDevice): string {
   return [d.brand_name, d.model_name, d.storage ?? '', d.color ?? ''].map(v => v.trim().toLowerCase()).join('|')
+}
+
+function groupLabel(d: ReconcileDevice): string {
+  return [`${d.brand_name} ${d.model_name}`, d.storage, d.color].filter(Boolean).join(' · ')
 }
 
 export const stockReconcileService = {
@@ -104,12 +110,40 @@ export const stockReconcileService = {
       if (existing) { existing.system_qty++; continue }
       groups.set(key, {
         key,
-        label: [`${d.brand_name} ${d.model_name}`, d.storage, d.color].filter(Boolean).join(' · '),
+        label: groupLabel(d),
         brand_name: d.brand_name, model_name: d.model_name,
         storage: d.storage, color: d.color, system_qty: 1,
       })
     }
     return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+  },
+
+  // مسح أجهزة في وضع العد بالموديل: كل جهاز سليم بيتعدّ +1 على نوعه (الجهاز بيتعدّ مرة واحدة حتى لو مسحت IMEI التاني)
+  applyScans: (
+    devices: ReconcileDevice[], scope: string[], scannedIds: string[],
+    counts: Record<string, number>, codes: string[],
+  ): ScanApplyResult => {
+    const index    = indexByCode(devices)
+    const scopeSet = new Set(scope)
+    const seen     = new Set(scannedIds)
+    const nextIds  = [...scannedIds]
+    const nextCounts = { ...counts }
+    const outcomes: ScanOutcome[] = []
+
+    for (const code of codes) {
+      const device = index.get(code)
+      if (!device) { outcomes.push({ code, kind: 'unknown' }); continue }
+      if (device.status !== 'in_stock') { outcomes.push({ code, kind: 'other_status', device }); continue }
+      if (!inScope(device, scopeSet))   { outcomes.push({ code, kind: 'out_of_scope', device }); continue }
+      if (seen.has(device.id))          { outcomes.push({ code, kind: 'duplicate', device }); continue }
+
+      seen.add(device.id)
+      nextIds.push(device.id)
+      const key = groupKey(device)
+      nextCounts[key] = (nextCounts[key] ?? 0) + 1
+      outcomes.push({ code, kind: 'counted', device, groupLabel: groupLabel(device), total: nextCounts[key] })
+    }
+    return { counts: nextCounts, scannedIds: nextIds, outcomes }
   },
 
   devicesOfGroup: (devices: ReconcileDevice[], key: string): ReconcileDevice[] =>

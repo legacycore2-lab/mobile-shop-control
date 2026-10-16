@@ -30,7 +30,6 @@ export function StockReconcilePage() {
   const models = useMemo(() => stockReconcileService.listModels(devices), [devices])
   // الموديلات اللي اتحذفت من المخزون (اتباعت كلها) مبتأثرش على النطاق
   const activeScope = useMemo(() => scope.filter(k => models.some(m => m.key === k)), [scope, models])
-  const scopedDevices = useMemo(() => stockReconcileService.filterByScope(devices, activeScope), [devices, activeScope])
 
   function handleScopeChange(next: string[]) {
     setScope(next)
@@ -66,7 +65,7 @@ export function StockReconcilePage() {
       )}
 
       {mode === 'model'
-        ? <ModelCountTab devices={scopedDevices} isLoading={isLoading} isError={isError} error={error} />
+        ? <ModelCountTab devices={devices} isLoading={isLoading} isError={isError} error={error} scope={activeScope} />
         : <ImeiScanTab   devices={devices} isLoading={isLoading} isError={isError} error={error} scope={activeScope} />}
     </div>
   )

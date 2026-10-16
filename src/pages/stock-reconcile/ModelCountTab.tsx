@@ -4,6 +4,7 @@ import { Download, Search, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { DEVICE_STATUS_MAP } from '@/constants/statusMaps'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useNumberVisibility } from '@/hooks/usePermissions'
 import { useSellFromReconcile } from '@/hooks/useSellFromReconcile'
@@ -11,12 +12,17 @@ import { readJson, writeJson } from '@/lib/clientStorage'
 import { exportToCsv, type ExportHeader } from '@/lib/exportUtils'
 import { friendlyDbError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
-import { stockReconcileService } from '@/services/stockReconcile.service'
-import type { ModelCountRow, ReconcileDevice } from '@/types/stockReconcile'
+import { normalizeCode, stockReconcileService } from '@/services/stockReconcile.service'
+import type { ModelCountRow, ReconcileDevice, ScanOutcome } from '@/types/stockReconcile'
 import { CountStepper } from './CountStepper'
 import { DeviceTable } from './DeviceTable'
+import { ScanPanel, type ScanFeedback } from './ScanPanel'
 
 const STORAGE_KEY = 'stock-reconcile:model-counts'
+const SCANNED_KEY = 'stock-reconcile:model-scanned-ids'
+
+// الـ IMEI دايماً 15 رقم — لو اتكتب كده في خانة البحث يبقى سكانر مش بحث
+const IMEI_RE = /^\d{15}$/
 
 type Filter = 'all' | 'missing' | 'extra' | 'pending'
 
@@ -42,6 +48,33 @@ function loadCounts(): Record<string, number> {
   )
 }
 
+function loadScannedIds(): string[] {
+  const saved = readJson<unknown>(SCANNED_KEY, [])
+  return Array.isArray(saved) ? saved.filter((c): c is string => typeof c === 'string') : []
+}
+
+function describeOutcome(o: ScanOutcome): ScanFeedback {
+  switch (o.kind) {
+    case 'counted':      return { tone: 'success', text: `✓ ${o.groupLabel} — العدد دلوقتي ${o.total}` }
+    case 'duplicate':    return { tone: 'warning', text: 'الجهاز ده اتمسح قبل كده' }
+    case 'out_of_scope': return { tone: 'warning', text: 'الموديل ده خارج الأنواع اللي اخترتها' }
+    case 'other_status': return { tone: 'warning', text: `النظام مسجله «${o.device ? DEVICE_STATUS_MAP[o.device.status].label : '—'}» مش في المخزون` }
+    case 'unknown':      return { tone: 'danger',  text: 'الكود ده مش موجود في النظام' }
+  }
+}
+
+function summarizeOutcomes(outcomes: ScanOutcome[]): ScanFeedback {
+  const n = (k: ScanOutcome['kind']) => outcomes.filter(o => o.kind === k).length
+  const parts = [
+    `اتعدّ ${n('counted')}`,
+    n('duplicate')    ? `مكرر ${n('duplicate')}`           : '',
+    n('other_status') ? `مش في المخزون ${n('other_status')}` : '',
+    n('out_of_scope') ? `خارج النطاق ${n('out_of_scope')}`  : '',
+    n('unknown')      ? `مش معروف ${n('unknown')}`          : '',
+  ].filter(Boolean)
+  return { tone: n('unknown') + n('other_status') > 0 ? 'warning' : 'info', text: parts.join(' · ') }
+}
+
 function matchesFilter(row: ModelCountRow, filter: Filter): boolean {
   if (filter === 'missing') return row.diff !== null && row.diff < 0
   if (filter === 'extra')   return row.diff !== null && row.diff > 0
@@ -61,20 +94,25 @@ interface Props {
   isLoading: boolean
   isError:   boolean
   error:     unknown
+  scope:     string[]   // الموديلات المحددة (فاضي = الكل)
 }
 
-export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
+export function ModelCountTab({ devices, isLoading, isError, error, scope }: Props) {
   const [counts,  setCounts]  = useState<Record<string, number>>(loadCounts)
   const [search,  setSearch]  = useState('')
   const [filter,  setFilter]  = useState<Filter>('all')
   const [confirm, setConfirm] = useState<'zero' | 'clear' | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [scannedIds, setScannedIds] = useState<string[]>(loadScannedIds)
+  const [feedback, setFeedback] = useState<ScanFeedback | null>(null)
   const vis = useNumberVisibility()
   const onSell = useSellFromReconcile()
 
+  const scoped = useMemo(() => stockReconcileService.filterByScope(devices, scope), [devices, scope])
+
   const rows = useMemo(
-    () => stockReconcileService.buildCountRows(stockReconcileService.groupInStock(devices), counts),
-    [devices, counts],
+    () => stockReconcileService.buildCountRows(stockReconcileService.groupInStock(scoped), counts),
+    [scoped, counts],
   )
 
   const visible = useMemo(() => {
@@ -90,6 +128,22 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
   function persist(next: Record<string, number>) {
     setCounts(next)
     writeJson(STORAGE_KEY, next)
+  }
+
+  // مسح جهاز/أجهزة: كل جهاز بيتعدّ على نوعه تلقائي
+  function handleScan(codes: string[]) {
+    const result = stockReconcileService.applyScans(devices, scope, scannedIds, counts, codes)
+    persist(result.counts)
+    setScannedIds(result.scannedIds)
+    writeJson(SCANNED_KEY, result.scannedIds)
+    setFeedback(result.outcomes.length === 1 ? describeOutcome(result.outcomes[0]) : summarizeOutcomes(result.outcomes))
+  }
+
+  // لو سكانر كتب الـ IMEI في خانة البحث بالغلط — اعتبره مسح مش بحث
+  function handleSearchChange(value: string) {
+    const code = normalizeCode(value)
+    if (IMEI_RE.test(code)) { handleScan([code]); setSearch(''); return }
+    setSearch(value)
   }
 
   function setCount(key: string, value: number | null) {
@@ -109,6 +163,9 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
 
   function clearAll() {
     persist({})
+    setScannedIds([])
+    writeJson(SCANNED_KEY, [])
+    setFeedback(null)
     setConfirm(null)
   }
 
@@ -130,9 +187,12 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
 
   return (
     <div className="space-y-5">
+      <ScanPanel scannedCount={scannedIds.length} feedback={feedback} disabled={isLoading}
+        onAdd={handleScan} onClear={() => setConfirm('clear')} />
+
       <Card>
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          لكل نوع، اكتب أو زوّد (+) عدد الأجهزة <span className="font-semibold">الموجودة قدامك فعلاً</span>.
+          كل جهاز بتمسحه بيتعدّ على نوعه لوحده، وتقدر كمان تكتب أو تزوّد (+) العدد بإيدك.
           النوع اللي ماتعدّش بيفضل «لسه»، ولما تخلّص دوس «اللي ماتعدّش = صفر».
         </p>
       </Card>
@@ -151,7 +211,7 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-48">
           <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث بالموديل أو اللون..."
+          <input type="text" value={search} onChange={e => handleSearchChange(e.target.value)} placeholder="ابحث بالموديل أو اللون..."
             className="w-full h-9 pr-8 pl-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500" />
         </div>
         <select value={filter} onChange={e => setFilter(e.target.value as Filter)}
@@ -214,7 +274,7 @@ export function ModelCountTab({ devices, isLoading, isError, error }: Props) {
           confirmText="أيوه، صفر" onConfirm={zeroPending} onCancel={() => setConfirm(null)} />
       )}
       {confirm === 'clear' && (
-        <ConfirmModal title="مسح العد" message="هتمسح كل الأعداد اللي دخلتها وتبدأ من الأول. متأكد؟"
+        <ConfirmModal title="مسح العد" message="هتمسح كل الأعداد والأجهزة اللي اتمسحت وتبدأ من الأول. متأكد؟"
           confirmText="امسح" onConfirm={clearAll} onCancel={() => setConfirm(null)} />
       )}
     </div>
