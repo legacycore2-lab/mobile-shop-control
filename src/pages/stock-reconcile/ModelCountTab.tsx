@@ -34,10 +34,10 @@ const FILTERS: { value: Filter; label: string }[] = [
 ]
 
 const EXPORT_HEADERS: ExportHeader[] = [
-  { key: 'label',   label: 'النوع' },
-  { key: 'system',  label: 'في النظام', type: 'number' },
-  { key: 'counted', label: 'الفعلي',    type: 'number' },
-  { key: 'missing', label: 'الناقص',    type: 'number' },
+  { key: 'label',   label: 'النوع',     type: 'text',   width: 30 },
+  { key: 'system',  label: 'في النظام', type: 'number', width: 12 },
+  { key: 'counted', label: 'الفعلي',    type: 'number', width: 12 },
+  { key: 'missing', label: 'الناقص',    type: 'number', width: 12 },
 ]
 
 function loadCounts(): Record<string, number> {

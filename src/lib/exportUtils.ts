@@ -2,6 +2,7 @@
 // ── Excel Export Utility ───────────────────────────────────────────────────
 import { buildXlsx } from '@/lib/xlsxWriter'
 import type { XlsxColumn, XlsxColumnKind, XlsxValue } from '@/lib/xlsxWriter'
+import type { NumberKind } from '@/lib/permissions'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>
@@ -10,6 +11,8 @@ export interface ExportHeader {
   key:      string
   label:    string
   type?:    'number' | 'currency' | 'date' | 'text' | 'boolean'
+  // عمود بيتشال من الملف لو المستخدم مالوش صلاحية يشوف النوع ده من الأرقام
+  sensitive?: NumberKind
   width?:   number
 }
 
@@ -44,6 +47,13 @@ function columnOf(header: ExportHeader, rows: Row[]): XlsxColumn {
     ? 'number'
     : columnKind(header.type)
   return { header: header.label, kind, width: header.width }
+}
+
+export function visibleExportHeaders(
+  headers: ExportHeader[],
+  vis:     Record<NumberKind, boolean>,
+): ExportHeader[] {
+  return headers.filter(h => !h.sensitive || vis[h.sensitive])
 }
 
 export function buildExportBytes(
@@ -94,10 +104,10 @@ export const DEVICE_EXPORT_HEADERS: ExportHeader[] = [
   { key: 'model_name',    label: 'الموديل',           type: 'text',     width: 16 },
   { key: 'storage',       label: 'السعة',             type: 'text',     width: 10 },
   { key: 'color',         label: 'اللون',             type: 'text',     width: 10 },
-  { key: 'condition',     label: 'الحالة',            type: 'text',     width: 12 },
+  { key: 'condition',     label: 'حالة الجهاز',       type: 'text',     width: 12 },
   { key: 'supplier_name', label: 'المورد',            type: 'text',     width: 18 },
   { key: 'purchase_date', label: 'تاريخ الشراء',      type: 'date',     width: 14 },
-  { key: 'cost_price',    label: 'سعر الشراء',        type: 'currency', width: 14 },
+  { key: 'cost_price',    label: 'سعر الشراء',        type: 'currency', width: 14, sensitive: 'cost' },
   { key: 'selling_price', label: 'سعر البيع',         type: 'currency', width: 14 },
   { key: 'status',        label: 'الحالة',            type: 'text',     width: 14 },
   { key: 'location',      label: 'الموقع',            type: 'text',     width: 12 },
@@ -108,7 +118,7 @@ export const SUPPLIER_EXPORT_HEADERS: ExportHeader[] = [
   { key: 'name',            label: 'الاسم',            type: 'text',     width: 20 },
   { key: 'phone',           label: 'الهاتف',           type: 'text',     width: 14 },
   { key: 'address',         label: 'العنوان',           type: 'text',     width: 24 },
-  { key: 'opening_balance', label: 'الرصيد الافتتاحي', type: 'currency', width: 16 },
+  { key: 'opening_balance', label: 'الرصيد الافتتاحي', type: 'currency', width: 16, sensitive: 'balances' },
   { key: 'is_active',       label: 'نشط',              type: 'boolean',  width: 10 },
   { key: 'created_at',      label: 'تاريخ الإضافة',    type: 'date',     width: 14 },
 ]
@@ -118,7 +128,7 @@ export const CUSTOMER_EXPORT_HEADERS: ExportHeader[] = [
   { key: 'phone',           label: 'الهاتف',           type: 'text',     width: 14 },
   { key: 'address',         label: 'العنوان',           type: 'text',     width: 24 },
   { key: 'national_id',     label: 'الرقم القومي',     type: 'text',     width: 16 },
-  { key: 'opening_balance', label: 'الرصيد الافتتاحي', type: 'currency', width: 16 },
+  { key: 'opening_balance', label: 'الرصيد الافتتاحي', type: 'currency', width: 16, sensitive: 'balances' },
   { key: 'is_active',       label: 'نشط',              type: 'boolean',  width: 10 },
   { key: 'created_at',      label: 'تاريخ الإضافة',    type: 'date',     width: 14 },
 ]
@@ -127,7 +137,7 @@ export const PRODUCT_EXPORT_HEADERS: ExportHeader[] = [
   { key: 'name',          label: 'المنتج',          type: 'text',     width: 24 },
   { key: 'category_name', label: 'التصنيف',         type: 'text',     width: 16 },
   { key: 'sku',           label: 'كود المنتج',      type: 'text',     width: 14 },
-  { key: 'cost_price',    label: 'سعر الشراء',      type: 'currency', width: 14 },
+  { key: 'cost_price',    label: 'سعر الشراء',      type: 'currency', width: 14, sensitive: 'cost' },
   { key: 'selling_price', label: 'سعر البيع',       type: 'currency', width: 14 },
   { key: 'stock_qty',     label: 'الكمية',          type: 'number',   width: 12 },
   { key: 'reorder_level', label: 'حد إعادة الطلب', type: 'number',   width: 14 },

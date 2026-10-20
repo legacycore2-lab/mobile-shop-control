@@ -6,7 +6,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useNumberVisibility } from '@/hooks/usePermissions'
 import { useSellFromReconcile } from '@/hooks/useSellFromReconcile'
 import { readJson, writeJson } from '@/lib/clientStorage'
-import { exportToExcel, type ExportHeader } from '@/lib/exportUtils'
+import { exportToExcel, visibleExportHeaders, type ExportHeader } from '@/lib/exportUtils'
 import { friendlyDbError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { stockReconcileService } from '@/services/stockReconcile.service'
@@ -23,14 +23,14 @@ function loadCodes(): string[] {
 }
 
 const MISSING_HEADERS: ExportHeader[] = [
-  { key: 'device',        label: 'الجهاز' },
-  { key: 'imei1',         label: 'IMEI 1' },
-  { key: 'imei2',         label: 'IMEI 2' },
-  { key: 'storage',       label: 'التخزين' },
-  { key: 'color',         label: 'اللون' },
-  { key: 'cost_price',    label: 'سعر الشراء', type: 'currency' },
-  { key: 'selling_price', label: 'سعر البيع',  type: 'currency' },
-  { key: 'purchase_date', label: 'تاريخ الشراء', type: 'date' },
+  { key: 'device',        label: 'الجهاز',       type: 'text',     width: 24 },
+  { key: 'imei1',         label: 'IMEI 1',       type: 'text',     width: 20 },
+  { key: 'imei2',         label: 'IMEI 2',       type: 'text',     width: 20 },
+  { key: 'storage',       label: 'التخزين',      type: 'text',     width: 12 },
+  { key: 'color',         label: 'اللون',        type: 'text',     width: 14 },
+  { key: 'cost_price',    label: 'سعر الشراء',   type: 'currency', width: 14, sensitive: 'cost' },
+  { key: 'selling_price', label: 'سعر البيع',    type: 'currency', width: 14 },
+  { key: 'purchase_date', label: 'تاريخ الشراء', type: 'date',     width: 14 },
 ]
 
 interface Props {
@@ -84,9 +84,8 @@ export function ImeiScanTab({ devices, isLoading, isError, error, scope }: Props
   }
 
   function exportMissing() {
-    exportToExcel('الأجهزة-الناقصة', MISSING_HEADERS, result.missing.map((d: ReconcileDevice) => ({
+    exportToExcel('الأجهزة-الناقصة', visibleExportHeaders(MISSING_HEADERS, vis), result.missing.map((d: ReconcileDevice) => ({
       ...d, device: `${d.brand_name} ${d.model_name}`,
-      cost_price: vis.cost ? d.cost_price : '',
     })))
   }
 

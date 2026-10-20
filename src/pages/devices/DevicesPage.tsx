@@ -20,6 +20,7 @@ import { STATUS_MAP, CONDITION_MAP, PAGE_SIZE, type FilterStatus } from './const
 import type { MobileDeviceView } from '@/types/database'
 import { Sensitive } from '@/components/shared/Sensitive'
 import { useNumberVisibility } from '@/hooks/usePermissions'
+import { exportToExcel, visibleExportHeaders, DEVICE_EXPORT_HEADERS } from '@/lib/exportUtils'
 
 export function DevicesPage() {
   const vis = useNumberVisibility()
@@ -52,6 +53,15 @@ export function DevicesPage() {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  function exportDevices() {
+    if (filtered.length === 0) return
+    exportToExcel('devices', visibleExportHeaders(DEVICE_EXPORT_HEADERS, vis), filtered.map(d => ({
+      ...d,
+      condition: CONDITION_MAP[d.condition] ?? d.condition,
+      status:    STATUS_MAP[d.status]?.label ?? d.status,
+    })), 'الأجهزة')
+  }
 
   function openEdit(d: MobileDeviceView) { setSelected(d); setModal('edit') }
   function closeModal() { setModal(null); setSelected(null) }
@@ -91,8 +101,9 @@ export function DevicesPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">إدارة مخزون الأجهزة وتتبع IMEI</p>
         </div>
         <div className="flex gap-2">
-          <button className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
-            <Download size={14} /> تصدير
+          <button onClick={exportDevices} disabled={filtered.length === 0}
+            className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+            <Download size={14} /> تصدير Excel
           </button>
           <button onClick={() => setScanner(true)}
             className="h-9 px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
