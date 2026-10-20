@@ -1,6 +1,7 @@
 // src/lib/exportUtils.ts
-// ── Professional Excel / CSV Export Utility ────────────────────────────────
-// Native implementation — no external library dependency
+// ── Excel Export Utility ───────────────────────────────────────────────────
+import { buildXlsx } from '@/lib/xlsxWriter'
+import type { XlsxColumn, XlsxColumnKind, XlsxValue } from '@/lib/xlsxWriter'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>
@@ -12,23 +13,63 @@ export interface ExportHeader {
   width?:   number
 }
 
-// ── CSV Export (safe, no library needed) ──────────────────────────────────
+// ── Excel export (.xlsx حقيقي) ────────────────────────────────────────────────
+// الأعمدة النصية (IMEI، الهاتف، الرقم القومي، الكود) بتتحفظ نص عشان Excel ما يحوّلهاش لأس علمي.
 
-function escapeCsv(val: unknown): string {
-  if (val === null || val === undefined) return ''
-  const str = String(val)
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`
-  }
-  return str
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+function columnKind(type: ExportHeader['type']): XlsxColumnKind {
+  if (type === 'number' || type === 'currency' || type === 'date') return type
+  return 'text'
 }
 
-function formatValue(val: unknown, type?: ExportHeader['type']): string {
-  if (val === null || val === undefined) return ''
+function toNumber(val: unknown): number | null {
+  if (val === null || val === undefined || val === '') return null
+  const n = Number(val)
+  return Number.isFinite(n) ? n : null
+}
+
+function cellValue(val: unknown, type: ExportHeader['type']): XlsxValue {
+  if (val === null || val === undefined) return null
   if (type === 'boolean')  return val ? 'نعم' : 'لا'
+  if (type === 'number' || type === 'currency') return toNumber(val)
   if (type === 'date')     return String(val).split('T')[0]
-  if (type === 'currency' || type === 'number') return String(Number(val) || 0)
+  // عمود من غير نوع: الأرقام تفضل أرقام، وأي حاجة تانية نص
+  if (type === undefined && typeof val === 'number') return Number.isFinite(val) ? val : null
   return String(val)
+}
+
+function columnOf(header: ExportHeader, rows: Row[]): XlsxColumn {
+  const kind = header.type === undefined && rows.some(r => typeof r[header.key] === 'number')
+    ? 'number'
+    : columnKind(header.type)
+  return { header: header.label, kind, width: header.width }
+}
+
+export function buildExportBytes(
+  headers:   ExportHeader[],
+  rows:      Row[],
+  sheetName = 'البيانات',
+  subtitle?: string,
+): Uint8Array {
+  return buildXlsx({
+    name:    sheetName,
+    title:   subtitle ?? null,
+    columns: headers.map(h => columnOf(h, rows)),
+    rows:    rows.map(row => headers.map(h => cellValue(row[h.key], h.type))),
+  })
+}
+
+export function exportToExcel(
+  filename:  string,
+  headers:   ExportHeader[],
+  rows:      Row[],
+  sheetName = 'البيانات',
+  subtitle?: string,
+): void {
+  const dateStr = new Date().toISOString().split('T')[0]
+  const bytes   = buildExportBytes(headers, rows, sheetName, subtitle)
+  downloadBlob(new Blob([bytes.slice()], { type: XLSX_MIME }), `${filename}_${dateStr}.xlsx`)
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {
@@ -41,134 +82,6 @@ export function downloadBlob(blob: Blob, filename: string): void {
   link.click()
   document.body.removeChild(link)
   setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-// ── Core Excel export — generates real .xlsx via native XML ────────────────
-// Simple SpreadsheetML format — supported by Excel, LibreOffice, Google Sheets
-
-function escapeXml(val: string): string {
-  return val
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
-export function exportToExcel(
-  filename:  string,
-  headers:   ExportHeader[],
-  rows:      Row[],
-  sheetName = 'البيانات',
-  subtitle?: string,
-): void {
-  const today = new Date().toLocaleDateString('ar-EG')
-  const dateStr = new Date().toISOString().split('T')[0]
-
-  // Build rows data
-  const titleRows: string[][] = [
-    [filename],
-    ...(subtitle ? [[subtitle]] : []),
-    [`تاريخ التصدير: ${today}`],
-    [],
-    headers.map(h => h.label),
-    ...rows.map(row =>
-      headers.map(h => formatValue(row[h.key], h.type))
-    ),
-  ]
-
-  // Build XML rows
-  const xmlRows = titleRows.map((row, ri) => {
-    const cells = row.map((cell, ci) => {
-      const colLetter = String.fromCharCode(65 + ci)
-      const cellRef   = `${colLetter}${ri + 1}`
-      const isNum     = ri >= 4 && headers[ci]?.type === 'number' || headers[ci]?.type === 'currency'
-      if (isNum && cell !== '' && !isNaN(Number(cell))) {
-        return `<c r="${cellRef}"><v>${escapeXml(cell)}</v></c>`
-      }
-      return `<c r="${cellRef}" t="inlineStr"><is><t>${escapeXml(cell)}</t></is></c>`
-    }).join('')
-    return `<row r="${ri + 1}">${cells}</row>`
-  }).join('')
-
-  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="${escapeXml(sheetName)}" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`
-
-  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheetView workbookViewId="0" rightToLeft="1"/>
-  <sheetData>${xmlRows}</sheetData>
-</worksheet>`
-
-  const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1"
-    Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
-    Target="worksheets/sheet1.xml"/>
-</Relationships>`
-
-  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml"  ContentType="application/xml"/>
-  <Override PartName="/xl/workbook.xml"
-    ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml"
-    ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-</Types>`
-
-  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1"
-    Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
-    Target="xl/workbook.xml"/>
-</Relationships>`
-
-  // Build ZIP using native approach via Blob concatenation
-  // Since we can't use JSZip without adding a library, use CSV as the safe fallback
-  // and trigger a proper download
-  exportToCsvDirect(filename, headers, rows, dateStr)
-}
-
-function exportToCsvDirect(
-  filename: string,
-  headers:  ExportHeader[],
-  rows:     Row[],
-  dateStr:  string,
-): void {
-  const headerRow = headers.map(h => escapeCsv(h.label)).join(',')
-  const dataRows  = rows.map(row =>
-    headers.map(h => escapeCsv(formatValue(row[h.key], h.type))).join(',')
-  )
-
-  // Add BOM for Arabic text in Excel
-  const bom     = '﻿'
-  const content = bom + [headerRow, ...dataRows].join('\n')
-  const blob    = new Blob([content], { type: 'text/csv;charset=utf-8' })
-
-  downloadBlob(blob, `${filename}_${dateStr}.csv`)
-}
-
-export function exportMovementToExcel(
-  filename:    string,
-  headers:     ExportHeader[],
-  rows:        Row[],
-  _decisionKey: string,
-  _sheetName = 'حركة المخزون',
-): void {
-  exportToExcel(filename, headers, rows)
-}
-
-export function exportToCsv(
-  filename: string,
-  headers:  ExportHeader[],
-  rows:     Row[],
-): void {
-  exportToExcel(filename, headers, rows)
 }
 
 // ── Export headers (unchanged) ─────────────────────────────────────────────

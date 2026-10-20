@@ -7,6 +7,7 @@ import { DEVICE_STATUS_MAP } from '@/constants/statusMaps'
 import { Badge } from '@/components/ui/Badge'
 import { fmt } from '@/lib/fmt'
 import { exportPriceListPdf } from '@/lib/pdfExport'
+import { exportToExcel, type ExportHeader } from '@/lib/exportUtils'
 import { cn } from '@/lib/cn'
 
 const STATUS_OPTIONS = [
@@ -26,23 +27,30 @@ function batteryColor(pct: number): string {
   return 'text-red-600 dark:text-red-400'
 }
 
-function exportCsv(rows: ReturnType<typeof useDevicePriceList>['data']) {
+const EXPORT_HEADERS: ExportHeader[] = [
+  { key: 'index',          label: '#',          type: 'number',   width: 6  },
+  { key: 'brand_name',     label: 'الماركة',    type: 'text',     width: 14 },
+  { key: 'model_name',     label: 'الموديل',    type: 'text',     width: 18 },
+  { key: 'imei1',          label: 'IMEI 1',     type: 'text',     width: 20 },
+  { key: 'imei2',          label: 'IMEI 2',     type: 'text',     width: 20 },
+  { key: 'storage',        label: 'التخزين',    type: 'text',     width: 11 },
+  { key: 'color',          label: 'اللون',      type: 'text',     width: 16 },
+  { key: 'battery_health', label: 'البطارية %', type: 'number',   width: 12 },
+  { key: 'status_label',   label: 'الحالة',     type: 'text',     width: 12 },
+  { key: 'cost_price',     label: 'سعر الشراء', type: 'currency', width: 14 },
+  { key: 'selling_price',  label: 'سعر البيع',  type: 'currency', width: 14 },
+  { key: 'profit',         label: 'الفرق',      type: 'currency', width: 14 },
+  { key: 'margin_pct',     label: 'هامش %',     type: 'number',   width: 10 },
+]
+
+function exportPriceList(rows: ReturnType<typeof useDevicePriceList>['data']) {
   if (!rows?.length) return
-  const headers = ['#','الماركة','الموديل','IMEI 1','IMEI 2','التخزين','اللون','البطارية %','الحالة','سعر الشراء','سعر البيع','الفرق','هامش%']
-  const lines = rows.map((r, i) => [
-    i + 1, r.brand_name, r.model_name, r.imei1, r.imei2,
-    r.storage, r.color, r.battery_health ?? '',
-    DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]?.label ?? r.status,
-    r.cost_price, r.selling_price, r.profit, r.margin_pct,
-  ])
-  const csv  = '\uFEFF' + [headers, ...lines].map(row => row.join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href     = url
-  a.download = `device-price-list-${new Date().toISOString().split('T')[0]}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  exportToExcel('device-price-list', EXPORT_HEADERS, rows.map((r, i) => ({
+    ...r,
+    index:        i + 1,
+    status_label: DEVICE_STATUS_MAP[r.status as keyof typeof DEVICE_STATUS_MAP]?.label ?? r.status,
+    margin_pct:   Math.round(r.margin_pct * 10) / 10,
+  })), 'أسعار الأجهزة')
 }
 
 export function PriceListTabContent() {
@@ -132,11 +140,11 @@ export function PriceListTabContent() {
 
         {/* تصدير */}
         <button
-          onClick={() => exportCsv(filtered)}
+          onClick={() => exportPriceList(filtered)}
           className="h-9 px-4 flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
         >
           <Download size={14} />
-          تصدير CSV
+          تصدير Excel
         </button>
         <button
           onClick={() => exportPriceListPdf(

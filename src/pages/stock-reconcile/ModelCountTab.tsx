@@ -9,7 +9,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useNumberVisibility } from '@/hooks/usePermissions'
 import { useSellFromReconcile } from '@/hooks/useSellFromReconcile'
 import { readJson, writeJson } from '@/lib/clientStorage'
-import { exportToCsv, type ExportHeader } from '@/lib/exportUtils'
+import { exportToExcel, type ExportHeader } from '@/lib/exportUtils'
 import { friendlyDbError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { normalizeCode, stockReconcileService } from '@/services/stockReconcile.service'
@@ -170,7 +170,7 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
   }
 
   function exportMissing() {
-    exportToCsv('الأجهزة-الناقصة-بالموديل', EXPORT_HEADERS,
+    exportToExcel('الأجهزة-الناقصة-بالموديل', EXPORT_HEADERS,
       rows.filter(r => r.diff !== null && r.diff < 0).map(r => ({
         label: r.label, system: r.system_qty, counted: r.counted, missing: -(r.diff ?? 0),
       })))

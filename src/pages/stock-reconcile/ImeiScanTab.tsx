@@ -6,7 +6,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useNumberVisibility } from '@/hooks/usePermissions'
 import { useSellFromReconcile } from '@/hooks/useSellFromReconcile'
 import { readJson, writeJson } from '@/lib/clientStorage'
-import { exportToCsv, type ExportHeader } from '@/lib/exportUtils'
+import { exportToExcel, type ExportHeader } from '@/lib/exportUtils'
 import { friendlyDbError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { stockReconcileService } from '@/services/stockReconcile.service'
@@ -84,7 +84,7 @@ export function ImeiScanTab({ devices, isLoading, isError, error, scope }: Props
   }
 
   function exportMissing() {
-    exportToCsv('الأجهزة-الناقصة', MISSING_HEADERS, result.missing.map((d: ReconcileDevice) => ({
+    exportToExcel('الأجهزة-الناقصة', MISSING_HEADERS, result.missing.map((d: ReconcileDevice) => ({
       ...d, device: `${d.brand_name} ${d.model_name}`,
       cost_price: vis.cost ? d.cost_price : '',
     })))
@@ -124,7 +124,7 @@ export function ImeiScanTab({ devices, isLoading, isError, error, scope }: Props
             actions={
               <Button size="sm" variant="secondary" icon={<Download size={14} />}
                 disabled={result.missing.length === 0} onClick={exportMissing}>
-                تصدير CSV
+                تصدير Excel
               </Button>
             }
           >
