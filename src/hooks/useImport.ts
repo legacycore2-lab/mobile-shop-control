@@ -1,6 +1,7 @@
 // src/hooks/useImport.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { importService } from '@/services/import.service'
+import { importTemplateService } from '@/services/importTemplate.service'
 import type { ParsedWorkbook } from '@/services/import.service'
 
 interface RunImportInput {
@@ -12,6 +13,12 @@ interface RunImportInput {
 export function useParseImportFile() {
   return useMutation({
     mutationFn: (file: File) => importService.parseFile(file),
+  })
+}
+
+export function useBuildImportTemplate() {
+  return useMutation({
+    mutationFn: () => importTemplateService.build(),
   })
 }
 

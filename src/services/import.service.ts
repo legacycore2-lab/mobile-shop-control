@@ -261,6 +261,7 @@ function splitList(v: Cell): string[] | null {
 function parseProductRow(row: Row, cols: Columns<ProductKey>, rowNum: number): ParsedRow<ImportProductRow> {
   const errors: string[] = []
 
+  const sku          = str(at(row, cols.sku))
   const name         = str(at(row, cols.name))
   const categoryName = str(at(row, cols.cat))
   const categoryType = lookup(PRODUCT_TYPE_ALIASES, at(row, cols.type))
@@ -269,7 +270,11 @@ function parseProductRow(row: Row, cols: Columns<ProductKey>, rowNum: number): P
   const qty          = num(at(row, cols.qty))
   const reorder      = num(at(row, cols.reorder))
 
-  if (!name)         errors.push('اسم المنتج مطلوب')
+  if (!name) {
+    errors.push(sku
+      ? 'اسم المنتج مطلوب — الكود مش موجود في "قائمة المنتجات"، اكتب الاسم بإيدك أو نزّل القالب من جديد'
+      : 'اسم المنتج مطلوب')
+  }
   if (!categoryName) errors.push('الفئة مطلوبة')
   if (!categoryType) errors.push('نوع الفئة لازم يكون: إكسسوار أو قطعة غيار')
   if (cost === null || cost < 0) errors.push('سعر التكلفة لازم يكون رقم صفر أو أكبر')
@@ -295,7 +300,7 @@ function parseProductRow(row: Row, cols: Columns<ProductKey>, rowNum: number): P
       stock_qty:         Math.round(qty),
       reorder_level:     reorder !== null ? Math.round(reorder) : 5,
       unit:              str(at(row, cols.unit)) || 'قطعة',
-      sku:               str(at(row, cols.sku))     || null,
+      sku:               sku || null,
       barcode:           str(at(row, cols.barcode)) || null,
       notes:             str(at(row, cols.notes))   || null,
       compatible_models: splitList(at(row, cols.compat)),

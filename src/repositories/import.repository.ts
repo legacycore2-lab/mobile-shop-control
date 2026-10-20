@@ -1,5 +1,6 @@
 // src/repositories/import.repository.ts
 import { supabase } from '@/lib/supabase'
+import { generateProductCode } from '@/lib/productCode'
 import type { ProductType } from '@/types/database'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -35,6 +36,13 @@ export interface ImportDeviceRow {
   warranty_months: number
   serial_number:   string | null
   notes:           string | null
+}
+
+export interface ProductReference {
+  sku:           string
+  name:          string
+  category_name: string
+  category_type: ProductType
 }
 
 export interface ImportResult {
@@ -140,9 +148,114 @@ async function getOrCreateModel(
   return (created as { id: string }).id
 }
 
+interface ExistingProduct {
+  id:        string
+  stock_qty: number
+}
+
+// الكود هو هوية المنتج — لو الكود موجود نحدّث نفس المنتج بغض النظر عن الاسم المكتوب
+async function findProductBySku(sku: string): Promise<ExistingProduct | null> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, stock_qty')
+    .eq('sku', sku)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (error) throw new Error(`تعذر البحث بالكود "${sku}": ${error.message}`)
+  return data as unknown as ExistingProduct | null
+}
+
+async function findProductByName(name: string, categoryId: string): Promise<ExistingProduct | null> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, stock_qty')
+    .eq('name', name)
+    .eq('category_id', categoryId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (error) throw new Error(`تعذر البحث عن المنتج "${name}": ${error.message}`)
+  return data as unknown as ExistingProduct | null
+}
+
+async function updateExistingProduct(existing: ExistingProduct, row: ImportProductRow): Promise<void> {
+  const { error } = await supabase
+    .from('products')
+    .update({
+      cost_price:    row.cost_price,
+      selling_price: row.selling_price,
+      stock_qty:     existing.stock_qty + row.stock_qty,
+      reorder_level: row.reorder_level,
+      unit:          row.unit,
+      ...(row.sku     ? { sku:     row.sku }     : {}),
+      ...(row.barcode ? { barcode: row.barcode } : {}),
+      ...(row.notes   ? { notes:   row.notes }   : {}),
+      ...(row.compatible_models ? { compatible_models: row.compatible_models } : {}),
+    } as never)
+    .eq('id', existing.id)
+  if (error) throw new Error(error.message)
+}
+
+async function insertProduct(row: ImportProductRow, categoryId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('products')
+    .insert({
+      name:                row.name,
+      category_id:         categoryId,
+      product_type:        row.category_type,
+      cost_price:          row.cost_price,
+      selling_price:       row.selling_price,
+      stock_qty:           row.stock_qty,
+      reorder_level:       row.reorder_level,
+      unit:                row.unit,
+      sku:                 row.sku ?? (row.barcode ? null : generateProductCode()),
+      barcode:             row.barcode ?? null,
+      notes:               row.notes   ?? null,
+      is_active:           true,
+      is_deleted:          false,
+      compatible_models:   row.compatible_models,
+      default_supplier_id: null,
+      created_by:          userId,
+    } as never)
+  if (error) throw new Error(error.message)
+}
+
 // ── Repository ────────────────────────────────────────────────────────────────
 
+const REFERENCE_PAGE_SIZE = 1000
+
 export const importRepository = {
+
+  // ── Product references (كود → اسم/فئة) لشيت "قائمة المنتجات" في القالب ──────
+  getProductReferences: async (): Promise<ProductReference[]> => {
+    const out: ProductReference[] = []
+
+    for (let from = 0; ; from += REFERENCE_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('sku, name, product_categories!category_id ( name, type )')
+        .eq('is_deleted', false)
+        .not('sku', 'is', null)
+        .order('name')
+        .range(from, from + REFERENCE_PAGE_SIZE - 1)
+      if (error) throw new Error(`تعذر تحميل قائمة المنتجات: ${error.message}`)
+
+      const page = (data ?? []) as unknown as {
+        sku:                string
+        name:               string
+        product_categories: { name: string; type: ProductType } | null
+      }[]
+
+      for (const r of page) {
+        out.push({
+          sku:           r.sku,
+          name:          r.name,
+          category_name: r.product_categories?.name ?? '',
+          category_type: r.product_categories?.type ?? 'accessory',
+        })
+      }
+      if (page.length < REFERENCE_PAGE_SIZE) return out
+    }
+  },
 
   // ── Import Products ───────────────────────────────────────────────────────
   importProducts: async (
@@ -156,56 +269,15 @@ export const importRepository = {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       try {
-        const categoryId = await getOrCreateCategory(row.category_name, row.category_type, catCache)
+        const bySku = row.sku ? await findProductBySku(row.sku) : null
 
-        // check if product with same name+category exists → update stock
-        const { data: existing } = await supabase
-          .from('products')
-          .select('id, stock_qty')
-          .eq('name', row.name)
-          .eq('category_id', categoryId)
-          .eq('is_deleted', false)
-          .maybeSingle()
-
-        if (existing) {
-          // update qty + prices
-          const { error } = await supabase
-            .from('products')
-            .update({
-              cost_price:    row.cost_price,
-              selling_price: row.selling_price,
-              stock_qty:     (existing as { id: string; stock_qty: number }).stock_qty + row.stock_qty,
-              reorder_level: row.reorder_level,
-              unit:          row.unit,
-              ...(row.sku     ? { sku:     row.sku }     : {}),
-              ...(row.barcode ? { barcode: row.barcode } : {}),
-              ...(row.notes   ? { notes:   row.notes }   : {}),
-              ...(row.compatible_models ? { compatible_models: row.compatible_models } : {}),
-            } as never)
-            .eq('id', (existing as { id: string }).id)
-          if (error) throw new Error(error.message)
+        if (bySku) {
+          await updateExistingProduct(bySku, row)
         } else {
-          const { error } = await supabase
-            .from('products')
-            .insert({
-              name:               row.name,
-              category_id:        categoryId,
-              product_type:       row.category_type,
-              cost_price:         row.cost_price,
-              selling_price:      row.selling_price,
-              stock_qty:          row.stock_qty,
-              reorder_level:      row.reorder_level,
-              unit:               row.unit,
-              sku:                row.sku    ?? null,
-              barcode:            row.barcode ?? null,
-              notes:              row.notes   ?? null,
-              is_active:          true,
-              is_deleted:         false,
-              compatible_models:  row.compatible_models,
-              default_supplier_id: null,
-              created_by:         userId,
-            } as never)
-          if (error) throw new Error(error.message)
+          const categoryId = await getOrCreateCategory(row.category_name, row.category_type, catCache)
+          const byName     = await findProductByName(row.name, categoryId)
+          if (byName) await updateExistingProduct(byName, row)
+          else        await insertProduct(row, categoryId, userId)
         }
 
         result.success++

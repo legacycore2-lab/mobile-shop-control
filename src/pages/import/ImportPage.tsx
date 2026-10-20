@@ -5,10 +5,11 @@ import {
   ArrowRight, Download, RefreshCw, Loader2, Package, Smartphone,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { useParseImportFile, useRunImport } from '@/hooks/useImport'
+import { useBuildImportTemplate, useParseImportFile, useRunImport } from '@/hooks/useImport'
 import type { ImportOutcome, ParsedWorkbook } from '@/services/import.service'
 import { cn } from '@/lib/cn'
-import { TEMPLATE_FILE_NAME, TEMPLATE_URL } from './constants'
+import { downloadBlob } from '@/lib/exportUtils'
+import { TEMPLATE_FILE_NAME } from './constants'
 import { StepBar, type ImportStep } from './components/StepBar'
 import { ProgressBar } from './components/ProgressBar'
 import { ProductPreviewTable } from './components/ProductPreviewTable'
@@ -18,6 +19,7 @@ import { ImportResultCard } from './components/ImportResultCard'
 const INSTRUCTIONS = [
   'حمّل القالب من الزر الأخضر في الأعلى',
   'افتح شيت "منتجات وإكسسوارات" أو "أجهزة موبايل" (أو الاتنين) واكتب بياناتك من الصف 5',
+  'منتج موجود: اكتب كوده في أول عمود وهيظهر اسمه وفئته تلقائي — راجعه قبل ما تكمّل. منتج جديد: سيب الكود فاضي واكتب الاسم بإيدك',
   'احفظ الملف بصيغة .xlsx — مش محتاج تمسح أو تعدّل أي حاجة تانية',
   'ارفعه هنا — النظام هيعرض معاينة قبل الحفظ، وبعدها تأكّد الاستيراد',
 ]
@@ -70,6 +72,7 @@ export function ImportPage() {
 
   const { mutateAsync: parseFile, isPending: parsing } = useParseImportFile()
   const { mutateAsync: runImport, isPending: running }  = useRunImport()
+  const { mutateAsync: buildTemplate, isPending: buildingTemplate } = useBuildImportTemplate()
 
   const [step,     setStep]     = useState<ImportStep>('upload')
   const [plan,     setPlan]     = useState<ParsedWorkbook | null>(null)
@@ -77,6 +80,16 @@ export function ImportPage() {
   const [error,    setError]    = useState<string | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [dragOver, setDragOver] = useState(false)
+  const [templateError, setTemplateError] = useState<string | null>(null)
+
+  const handleTemplateDownload = async () => {
+    setTemplateError(null)
+    try {
+      downloadBlob(await buildTemplate(), TEMPLATE_FILE_NAME)
+    } catch (err) {
+      setTemplateError(err instanceof Error ? err.message : 'تعذّر تجهيز القالب')
+    }
+  }
 
   const handleFile = useCallback(async (file: File) => {
     setError(null)
@@ -140,15 +153,22 @@ export function ImportPage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">استيراد البيانات</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ارفع ملف Excel لإضافة المنتجات أو الأجهزة دفعة واحدة</p>
         </div>
-        <a
-          href={TEMPLATE_URL}
-          download={TEMPLATE_FILE_NAME}
-          className="flex items-center gap-2 h-9 px-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+        <button
+          onClick={() => void handleTemplateDownload()}
+          disabled={buildingTemplate}
+          className="flex items-center gap-2 h-9 px-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-100 dark:hover:bg-green-900/30 disabled:opacity-60 disabled:cursor-wait transition-colors"
         >
-          <Download size={15} />
-          تحميل القالب
-        </a>
+          {buildingTemplate ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+          {buildingTemplate ? 'جاري تجهيز القالب...' : 'تحميل القالب'}
+        </button>
       </div>
+
+      {templateError && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300">
+          <XCircle size={18} className="flex-shrink-0" />
+          <p className="text-sm font-medium">{templateError}</p>
+        </div>
+      )}
 
       <StepBar step={step} />
 

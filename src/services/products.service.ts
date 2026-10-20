@@ -1,6 +1,7 @@
 // src/services/products.service.ts
 import { productsRepository, type ProductWithCategory, type LowStockProduct } from '@/repositories/products.repository'
 import type { Product, ProductCategory, ProductType } from '@/types/database'
+import { generateProductCode } from '@/lib/productCode'
 
 export interface ProductFormData {
   category_id: string
@@ -35,13 +36,6 @@ export interface ProductStats {
   lowStock: number
   totalCostValue: number
   totalSellingValue: number
-}
-
-// كود تلقائي للمنتج اللي مالوش SKU ولا باركود — عشان يتطبع له QR ويتمسح في الكاشير
-function generateProductCode(): string {
-  const time = Date.now().toString(36).toUpperCase()
-  const rand = Math.random().toString(36).slice(2, 5).toUpperCase()
-  return `PRD-${time}${rand}`
 }
 
 export const productsService = {
