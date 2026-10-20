@@ -2,23 +2,23 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { importService } from '@/services/import.service'
 import { importTemplateService } from '@/services/importTemplate.service'
-import type { ParsedWorkbook } from '@/services/import.service'
+import type { ImportKind, ParsedImport } from '@/services/import.service'
 
 interface RunImportInput {
-  plan:        ParsedWorkbook
+  plan:        ParsedImport
   userId:      string
   onProgress?: (done: number, total: number) => void
 }
 
 export function useParseImportFile() {
   return useMutation({
-    mutationFn: (file: File) => importService.parseFile(file),
+    mutationFn: ({ file, kind }: { file: File; kind: ImportKind }) => importService.parseFile(file, kind),
   })
 }
 
 export function useBuildImportTemplate() {
   return useMutation({
-    mutationFn: () => importTemplateService.build(),
+    mutationFn: (kind: ImportKind) => importTemplateService.build(kind),
   })
 }
 

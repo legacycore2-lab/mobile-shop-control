@@ -1,13 +1,17 @@
 // src/services/importTemplate.service.ts
-// تجهيز قالب الاستيراد: القالب الثابت + شيت "قائمة المنتجات" متعبّي بمنتجات النظام الحالية
-// (المعادلات في شيت المنتجات بتجيب الاسم والفئة والنوع من الكود)
+// تجهيز قالب الاستيراد: قالب الأجهزة زي ما هو، وقالب المنتجات + شيت "قائمة المنتجات" متعبّي بمنتجات النظام
+// الحالية (المعادلات في شيت المنتجات بتجيب الاسم والفئة والنوع من الكود)
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { importRepository } from '@/repositories/import.repository'
 import type { ProductReference } from '@/repositories/import.repository'
+import type { ImportKind } from '@/services/import.service'
 import type { ProductType } from '@/types/database'
 
-const TEMPLATE_URL         = `${import.meta.env.BASE_URL}import-template.xlsx`
-const REFERENCE_SHEET_PATH = 'xl/worksheets/sheet4.xml'
+const TEMPLATE_URL: Record<ImportKind, string> = {
+  products: `${import.meta.env.BASE_URL}import-template-products.xlsx`,
+  devices:  `${import.meta.env.BASE_URL}import-template-devices.xlsx`,
+}
+const REFERENCE_SHEET_PATH = 'xl/worksheets/sheet3.xml'
 const REFERENCE_COLUMNS    = 'ABCD'
 const XLSX_MIME            = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -48,20 +52,31 @@ function injectReference(sheetXml: string, refs: ProductReference[]): string {
     .replace(/<dimension ref="[^"]*"\/>/, () => `<dimension ref="A1:D${refs.length + 1}"/>`)
 }
 
+async function fetchTemplate(kind: ImportKind): Promise<Uint8Array> {
+  const response = await fetch(TEMPLATE_URL[kind])
+  if (!response.ok) throw new Error('تعذّر تحميل ملف القالب')
+  return new Uint8Array(await response.arrayBuffer())
+}
+
+function toXlsxBlob(bytes: Uint8Array): Blob {
+  return new Blob([bytes.slice()], { type: XLSX_MIME })
+}
+
 export const importTemplateService = {
 
-  build: async (): Promise<Blob> => {
-    const [response, refs] = await Promise.all([
-      fetch(TEMPLATE_URL),
+  build: async (kind: ImportKind): Promise<Blob> => {
+    if (kind === 'devices') return toXlsxBlob(await fetchTemplate('devices'))
+
+    const [template, refs] = await Promise.all([
+      fetchTemplate('products'),
       importRepository.getProductReferences(),
     ])
-    if (!response.ok) throw new Error('تعذّر تحميل ملف القالب')
 
-    const files = unzipSync(new Uint8Array(await response.arrayBuffer()))
+    const files = unzipSync(template)
     const sheet = files[REFERENCE_SHEET_PATH]
     if (!sheet) throw new Error('ملف القالب تالف — ارفع نسخة سليمة من القالب للمشروع')
 
     files[REFERENCE_SHEET_PATH] = strToU8(injectReference(strFromU8(sheet), refs))
-    return new Blob([zipSync(files).slice()], { type: XLSX_MIME })
+    return toXlsxBlob(zipSync(files))
   },
 }

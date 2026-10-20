@@ -6,23 +6,16 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useBuildImportTemplate, useParseImportFile, useRunImport } from '@/hooks/useImport'
-import type { ImportOutcome, ParsedWorkbook } from '@/services/import.service'
+import type { ImportKind, ParsedImport } from '@/services/import.service'
+import type { ImportResult } from '@/repositories/import.repository'
 import { cn } from '@/lib/cn'
 import { downloadBlob } from '@/lib/exportUtils'
-import { TEMPLATE_FILE_NAME } from './constants'
+import { KIND_META } from './constants'
 import { StepBar, type ImportStep } from './components/StepBar'
 import { ProgressBar } from './components/ProgressBar'
 import { ProductPreviewTable } from './components/ProductPreviewTable'
 import { DevicePreviewTable } from './components/DevicePreviewTable'
 import { ImportResultCard } from './components/ImportResultCard'
-
-const INSTRUCTIONS = [
-  'حمّل القالب من الزر الأخضر في الأعلى',
-  'افتح شيت "منتجات وإكسسوارات" أو "أجهزة موبايل" (أو الاتنين) واكتب بياناتك من الصف 5',
-  'منتج موجود: اكتب كوده في أول عمود وهيظهر اسمه وفئته تلقائي — راجعه قبل ما تكمّل. منتج جديد: سيب الكود فاضي واكتب الاسم بإيدك',
-  'احفظ الملف بصيغة .xlsx — مش محتاج تمسح أو تعدّل أي حاجة تانية',
-  'ارفعه هنا — النظام هيعرض معاينة قبل الحفظ، وبعدها تأكّد الاستيراد',
-]
 
 function SummaryCard({ label, value, tone }: { label: string; value: number; tone: 'neutral' | 'good' | 'bad' }) {
   const palette = {
@@ -44,27 +37,12 @@ function SummaryCard({ label, value, tone }: { label: string; value: number; ton
   )
 }
 
-function SheetHeading({ icon: Icon, tone, title, valid, invalid }: {
-  icon:    typeof Package
-  tone:    string
-  title:   string
-  valid:   number
-  invalid: number
-}) {
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <Icon size={16} className={tone} />
-      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{title}</span>
-      <span className="text-xs text-gray-400 dark:text-gray-500">
-        · {valid} صحيح{invalid > 0 ? ` · ${invalid} به أخطاء` : ''}
-      </span>
-    </div>
-  )
+const KIND_ICON: Record<ImportKind, typeof Package> = {
+  products: Package,
+  devices:  Smartphone,
 }
 
-function countOf(plan: ParsedWorkbook, field: 'total' | 'valid' | 'invalid'): number {
-  return (plan.products?.[field] ?? 0) + (plan.devices?.[field] ?? 0)
-}
+const KINDS: ImportKind[] = ['products', 'devices']
 
 export function ImportPage() {
   const { profile } = useAuth()
@@ -74,18 +52,27 @@ export function ImportPage() {
   const { mutateAsync: runImport, isPending: running }  = useRunImport()
   const { mutateAsync: buildTemplate, isPending: buildingTemplate } = useBuildImportTemplate()
 
+  const [kind,     setKind]     = useState<ImportKind>('products')
   const [step,     setStep]     = useState<ImportStep>('upload')
-  const [plan,     setPlan]     = useState<ParsedWorkbook | null>(null)
-  const [outcome,  setOutcome]  = useState<ImportOutcome | null>(null)
+  const [plan,     setPlan]     = useState<ParsedImport | null>(null)
+  const [result,   setResult]   = useState<ImportResult | null>(null)
   const [error,    setError]    = useState<string | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [dragOver, setDragOver] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
 
+  const meta = KIND_META[kind]
+
+  const switchKind = (next: ImportKind) => {
+    setKind(next)
+    setError(null)
+    setTemplateError(null)
+  }
+
   const handleTemplateDownload = async () => {
     setTemplateError(null)
     try {
-      downloadBlob(await buildTemplate(), TEMPLATE_FILE_NAME)
+      downloadBlob(await buildTemplate(kind), meta.templateFile)
     } catch (err) {
       setTemplateError(err instanceof Error ? err.message : 'تعذّر تجهيز القالب')
     }
@@ -94,13 +81,12 @@ export function ImportPage() {
   const handleFile = useCallback(async (file: File) => {
     setError(null)
     try {
-      const parsed = await parseFile(file)
-      setPlan(parsed)
+      setPlan(await parseFile({ file, kind }))
       setStep('preview')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'فشل قراءة الملف')
     }
-  }, [parseFile])
+  }, [parseFile, kind])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -112,9 +98,11 @@ export function ImportPage() {
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) void handleFile(file)
+    e.target.value = ''
   }, [handleFile])
 
-  const validCount = plan ? countOf(plan, 'valid') : 0
+  const validCount   = plan?.sheet.valid ?? 0
+  const invalidCount = plan?.sheet.invalid ?? 0
 
   const handleImport = async () => {
     if (!plan || !profile || validCount === 0) return
@@ -122,12 +110,11 @@ export function ImportPage() {
     setStep('importing')
     setProgress({ done: 0, total: validCount })
     try {
-      const result = await runImport({
+      setResult(await runImport({
         plan,
         userId:     profile.id,
         onProgress: (done, total) => setProgress({ done, total }),
-      })
-      setOutcome(result)
+      }))
       setStep('done')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'فشل الاستيراد')
@@ -138,10 +125,9 @@ export function ImportPage() {
   const reset = () => {
     setStep('upload')
     setPlan(null)
-    setOutcome(null)
+    setResult(null)
     setError(null)
     setProgress({ done: 0, total: 0 })
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   return (
@@ -151,7 +137,7 @@ export function ImportPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">استيراد البيانات</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ارفع ملف Excel لإضافة المنتجات أو الأجهزة دفعة واحدة</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ارفع ملف Excel لإضافة {meta.title} دفعة واحدة</p>
         </div>
         <button
           onClick={() => void handleTemplateDownload()}
@@ -159,7 +145,7 @@ export function ImportPage() {
           className="flex items-center gap-2 h-9 px-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-semibold hover:bg-green-100 dark:hover:bg-green-900/30 disabled:opacity-60 disabled:cursor-wait transition-colors"
         >
           {buildingTemplate ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-          {buildingTemplate ? 'جاري تجهيز القالب...' : 'تحميل القالب'}
+          {buildingTemplate ? 'جاري تجهيز القالب...' : meta.templateLabel}
         </button>
       </div>
 
@@ -169,6 +155,32 @@ export function ImportPage() {
           <p className="text-sm font-medium">{templateError}</p>
         </div>
       )}
+
+      {/* Kind tabs — بيتبدّلوا قبل رفع الملف فقط */}
+      <div className="inline-flex p-1 rounded-xl bg-gray-100 dark:bg-gray-800 gap-1">
+        {KINDS.map(k => {
+          const Icon   = KIND_ICON[k]
+          const active = k === kind
+          return (
+            <button
+              key={k}
+              onClick={() => switchKind(k)}
+              disabled={step !== 'upload'}
+              className={cn(
+                'flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold transition-colors',
+                active
+                  ? 'bg-white dark:bg-gray-900 text-blue-700 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                step !== 'upload' && !active && 'opacity-40',
+                step !== 'upload' && 'cursor-not-allowed',
+              )}
+            >
+              <Icon size={15} />
+              {KIND_META[k].tabLabel}
+            </button>
+          )
+        })}
+      </div>
 
       <StepBar step={step} />
 
@@ -198,16 +210,8 @@ export function ImportPage() {
                   <FileSpreadsheet size={32} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-base font-semibold text-gray-900 dark:text-white">اسحب الملف هنا أو اضغط للاختيار</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">اسحب ملف {meta.title} هنا أو اضغط للاختيار</p>
                   <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">صيغة .xlsx فقط — أقصى حجم 10 MB</p>
-                </div>
-                <div className="flex items-center gap-6 text-xs text-gray-400 dark:text-gray-500">
-                  <div className="flex items-center gap-1.5">
-                    <Package size={14} className="text-blue-500" /> شيت المنتجات
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Smartphone size={14} className="text-green-500" /> شيت الأجهزة
-                  </div>
                 </div>
               </>
             )}
@@ -233,12 +237,12 @@ export function ImportPage() {
               كيفية الاستخدام
             </h3>
             <ol className="space-y-3">
-              {INSTRUCTIONS.map((s, i) => (
+              {meta.instructions.map((text, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300">
                   <span className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                     {i + 1}
                   </span>
-                  {s}
+                  {text}
                 </li>
               ))}
             </ol>
@@ -250,17 +254,17 @@ export function ImportPage() {
       {step === 'preview' && plan && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <SummaryCard label="إجمالي الصفوف" value={countOf(plan, 'total')} tone="neutral" />
+            <SummaryCard label="إجمالي الصفوف" value={plan.sheet.total} tone="neutral" />
             <SummaryCard label="صحيح — جاهز للاستيراد" value={validCount} tone="good" />
-            <SummaryCard label="به أخطاء" value={countOf(plan, 'invalid')} tone={countOf(plan, 'invalid') > 0 ? 'bad' : 'neutral'} />
+            <SummaryCard label="به أخطاء" value={invalidCount} tone={invalidCount > 0 ? 'bad' : 'neutral'} />
           </div>
 
-          {countOf(plan, 'invalid') > 0 && (
+          {invalidCount > 0 && (
             <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
               <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  {countOf(plan, 'invalid')} صف به أخطاء — لن يتم استيراده
+                  {invalidCount} صف به أخطاء — لن يتم استيراده
                 </p>
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
                   سيتم استيراد {validCount} صف صحيح فقط. عدّل الملف وأعد الرفع لو عايز تستورد الكل.
@@ -276,21 +280,9 @@ export function ImportPage() {
             </div>
           )}
 
-          {plan.products && (
-            <section className="space-y-3">
-              <SheetHeading icon={Package} tone="text-blue-600" title="المنتجات والإكسسوارات"
-                valid={plan.products.valid} invalid={plan.products.invalid} />
-              <ProductPreviewTable sheet={plan.products} />
-            </section>
-          )}
-
-          {plan.devices && (
-            <section className="space-y-3">
-              <SheetHeading icon={Smartphone} tone="text-green-600" title="الأجهزة"
-                valid={plan.devices.valid} invalid={plan.devices.invalid} />
-              <DevicePreviewTable sheet={plan.devices} />
-            </section>
-          )}
+          {plan.kind === 'products'
+            ? <ProductPreviewTable sheet={plan.sheet} />
+            : <DevicePreviewTable  sheet={plan.sheet} />}
 
           <div className="flex items-center justify-between gap-3 pt-2">
             <button onClick={reset}
@@ -303,7 +295,7 @@ export function ImportPage() {
               className="flex items-center gap-2 h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-600/25"
             >
               <Upload size={15} />
-              استيراد {validCount} صف
+              استيراد {validCount} {meta.unit}
             </button>
           </div>
         </div>
@@ -323,22 +315,13 @@ export function ImportPage() {
       )}
 
       {/* ── DONE ──────────────────────────────────────────────────────────── */}
-      {step === 'done' && outcome && (
+      {step === 'done' && result && (
         <div className="space-y-5">
-          {outcome.products && (
-            <ImportResultCard
-              title={outcome.products.failed === 0 ? 'اكتمل استيراد المنتجات بنجاح' : 'اكتمل استيراد المنتجات مع بعض الأخطاء'}
-              unit="منتج"
-              result={outcome.products}
-            />
-          )}
-          {outcome.devices && (
-            <ImportResultCard
-              title={outcome.devices.failed === 0 ? 'اكتمل استيراد الأجهزة بنجاح' : 'اكتمل استيراد الأجهزة مع بعض الأخطاء'}
-              unit="جهاز"
-              result={outcome.devices}
-            />
-          )}
+          <ImportResultCard
+            title={result.failed === 0 ? `اكتمل استيراد ${meta.title} بنجاح` : `اكتمل استيراد ${meta.title} مع بعض الأخطاء`}
+            unit={meta.unit}
+            result={result}
+          />
           <div className="flex items-center justify-center gap-3">
             <button onClick={reset}
               className="flex items-center gap-2 h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors">

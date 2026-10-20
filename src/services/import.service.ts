@@ -26,15 +26,11 @@ export interface ParsedSheet<T> {
   invalid:   number
 }
 
-export interface ParsedWorkbook {
-  products: ParsedSheet<ImportProductRow> | null
-  devices:  ParsedSheet<ImportDeviceRow>  | null
-}
+export type ImportKind = 'products' | 'devices'
 
-export interface ImportOutcome {
-  products: ImportResult | null
-  devices:  ImportResult | null
-}
+export type ParsedImport =
+  | { kind: 'products'; sheet: ParsedSheet<ImportProductRow> }
+  | { kind: 'devices';  sheet: ParsedSheet<ImportDeviceRow> }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -211,16 +207,15 @@ function at(row: Row, i: number): Cell {
 
 // ── Sheet detection ───────────────────────────────────────────────────────────
 
-type SheetKind = 'products' | 'devices'
-
-function detectKind(row: Row): SheetKind | null {
+function detectKind(row: Row): ImportKind | null {
   const texts = row.map(headerText)
-  if (texts.some(t => t.startsWith('اسم المنتج'))) return 'products'
+  // شيت "قائمة المنتجات" المرجعي عنده عمود "اسم المنتج" كمان، فنشترط وجود "سعر التكلفة" معاه
+  if (texts.some(t => t.startsWith('اسم المنتج')) && texts.some(t => t.startsWith('سعر التكلفة'))) return 'products'
   if (texts.some(t => t.startsWith('imei')))       return 'devices'
   return null
 }
 
-function findHeader(data: Row[]): { index: number; kind: SheetKind } | null {
+function findHeader(data: Row[]): { index: number; kind: ImportKind } | null {
   const limit = Math.min(data.length, HEADER_SCAN_ROWS)
   for (let i = 0; i < limit; i++) {
     const kind = detectKind(data[i])
@@ -391,8 +386,7 @@ function parseDevicesSheet(sheetName: string, data: Row[], headerIndex: number):
 
 // ── Import execution ──────────────────────────────────────────────────────────
 
-function validData<T>(sheet: ParsedSheet<T> | null): T[] {
-  if (!sheet) return []
+function validData<T>(sheet: ParsedSheet<T>): T[] {
   return sheet.rows.flatMap(r => (r.valid && r.data ? [r.data] : []))
 }
 
@@ -405,12 +399,17 @@ async function guarded(rowCount: number, run: () => Promise<ImportResult>): Prom
   }
 }
 
+const KIND_LABEL: Record<ImportKind, string> = {
+  products: 'المنتجات',
+  devices:  'الأجهزة',
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const importService = {
 
   // قراءة الملف + التحقق من الصفوف (بدون أي كتابة في قاعدة البيانات)
-  parseFile: async (file: File): Promise<ParsedWorkbook> => {
+  parseFile: async (file: File, kind: ImportKind): Promise<ParsedImport> => {
     if (!file.name.toLowerCase().endsWith('.xlsx')) {
       throw new Error('الملف لازم يكون Excel بصيغة .xlsx (مش .xls ولا .csv)')
     }
@@ -426,50 +425,45 @@ export const importService = {
       throw new Error('تعذّر قراءة الملف — اتأكد إنه ملف Excel سليم بصيغة .xlsx')
     }
 
-    const result: ParsedWorkbook = { products: null, devices: null }
-    let recognized = false
+    let sawTarget = false
+    let sawOther  = false
 
     for (const { sheet, data } of sheets) {
       const header = findHeader(data)
       if (!header) continue
-      recognized = true
+      if (header.kind !== kind) { sawOther = true; continue }
+      sawTarget = true
 
-      if (header.kind === 'products' && !result.products) {
-        result.products = parseProductsSheet(sheet, data, header.index)
-      } else if (header.kind === 'devices' && !result.devices) {
-        result.devices = parseDevicesSheet(sheet, data, header.index)
+      if (kind === 'products') {
+        const parsed = parseProductsSheet(sheet, data, header.index)
+        if (parsed) return { kind: 'products', sheet: parsed }
+      } else {
+        const parsed = parseDevicesSheet(sheet, data, header.index)
+        if (parsed) return { kind: 'devices', sheet: parsed }
       }
     }
 
-    if (!recognized) {
-      throw new Error('الملف مش على شكل القالب — حمّل القالب من الزر الأخضر واكتب بياناتك فيه')
+    if (sawTarget) {
+      throw new Error('مفيش صفوف بيانات في الملف — اكتب بياناتك من الصف 5')
     }
-    if (!result.products && !result.devices) {
-      throw new Error('مفيش صفوف بيانات في الملف — اكتب بياناتك من الصف 5 في شيت المنتجات أو شيت الأجهزة')
+    if (sawOther) {
+      const other: ImportKind = kind === 'products' ? 'devices' : 'products'
+      throw new Error(`الملف ده قالب ${KIND_LABEL[other]} — بدّل للتبويب الصح أو حمّل قالب ${KIND_LABEL[kind]}`)
     }
-    return result
+    throw new Error(`الملف مش على شكل القالب — حمّل قالب ${KIND_LABEL[kind]} واكتب بياناتك فيه`)
   },
 
-  // تنفيذ الاستيراد للصفوف الصحيحة فقط: المنتجات أولاً ثم الأجهزة
-  runImport: async (
-    plan:        ParsedWorkbook,
+  // تنفيذ الاستيراد للصفوف الصحيحة فقط
+  runImport: (
+    plan:        ParsedImport,
     userId:      string,
     onProgress?: (done: number, total: number) => void,
-  ): Promise<ImportOutcome> => {
-    const productRows = validData(plan.products)
-    const deviceRows  = validData(plan.devices)
-    const total       = productRows.length + deviceRows.length
-
-    const products = productRows.length > 0
-      ? await guarded(productRows.length, () =>
-          importRepository.importProducts(productRows, userId, done => onProgress?.(done, total)))
-      : null
-
-    const devices = deviceRows.length > 0
-      ? await guarded(deviceRows.length, () =>
-          importRepository.importDevices(deviceRows, userId, done => onProgress?.(productRows.length + done, total)))
-      : null
-
-    return { products, devices }
+  ): Promise<ImportResult> => {
+    if (plan.kind === 'products') {
+      const rows = validData(plan.sheet)
+      return guarded(rows.length, () => importRepository.importProducts(rows, userId, onProgress))
+    }
+    const rows = validData(plan.sheet)
+    return guarded(rows.length, () => importRepository.importDevices(rows, userId, onProgress))
   },
 }
