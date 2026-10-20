@@ -1,25 +1,27 @@
 // src/repositories/import.repository.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase'
 import type { ProductType } from '@/types/database'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ImportProductRow {
-  name:          string
-  category_name: string
-  category_type: ProductType
-  cost_price:    number
-  selling_price: number
-  stock_qty:     number
-  reorder_level: number
-  unit:          string
-  sku:           string | null
-  barcode:       string | null
-  notes:         string | null
+  sheet_row:         number
+  name:              string
+  category_name:     string
+  category_type:     ProductType
+  cost_price:        number
+  selling_price:     number
+  stock_qty:         number
+  reorder_level:     number
+  unit:              string
+  sku:               string | null
+  barcode:           string | null
+  notes:             string | null
+  compatible_models: string[] | null
 }
 
 export interface ImportDeviceRow {
+  sheet_row:       number
   imei1:           string
   imei2:           string | null
   brand_name:      string
@@ -178,6 +180,7 @@ export const importRepository = {
               ...(row.sku     ? { sku:     row.sku }     : {}),
               ...(row.barcode ? { barcode: row.barcode } : {}),
               ...(row.notes   ? { notes:   row.notes }   : {}),
+              ...(row.compatible_models ? { compatible_models: row.compatible_models } : {}),
             } as never)
             .eq('id', (existing as { id: string }).id)
           if (error) throw new Error(error.message)
@@ -198,7 +201,7 @@ export const importRepository = {
               notes:              row.notes   ?? null,
               is_active:          true,
               is_deleted:         false,
-              compatible_models:  null,
+              compatible_models:  row.compatible_models,
               default_supplier_id: null,
               created_by:         userId,
             } as never)
@@ -208,7 +211,7 @@ export const importRepository = {
         result.success++
       } catch (err) {
         result.failed++
-        result.errors.push({ row: i + 5, message: err instanceof Error ? err.message : String(err) })
+        result.errors.push({ row: row.sheet_row, message: err instanceof Error ? err.message : String(err) })
       }
 
       onProgress?.(i + 1, rows.length)
@@ -335,7 +338,7 @@ export const importRepository = {
         result.success++
       } catch (err) {
         result.failed++
-        result.errors.push({ row: i + 5, message: err instanceof Error ? err.message : String(err) })
+        result.errors.push({ row: row.sheet_row, message: err instanceof Error ? err.message : String(err) })
       }
 
       onProgress?.(i + 1, rows.length)
