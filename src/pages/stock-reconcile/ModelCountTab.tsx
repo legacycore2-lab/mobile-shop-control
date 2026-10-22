@@ -253,7 +253,7 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
                           طباعة ليبل
                         </Button>
                       )}
-                      {!matched && closed && onSell && (
+                      {!matched && onSell && (
                         <Button size="sm" variant="primary" icon={<ShoppingCart size={14} />} onClick={() => onSell(d)}>
                           بيع
                         </Button>
