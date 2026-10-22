@@ -341,7 +341,7 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
             {/* Specs */}
             <div>
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">المواصفات</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>السعة التخزينية</label>
                   <input value={form.storage} onChange={e => set('storage', e.target.value)}
@@ -359,6 +359,15 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
                     <option value="used">مستعمل</option>
                     <option value="refurbished">مجدد</option>
                   </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>البطارية (%)</label>
+                  <input type="number" min="0" max="100" value={form.battery_health}
+                    onChange={e => {
+                      const v = e.target.value
+                      if (v === '' || (Number(v) >= 0 && Number(v) <= 100)) set('battery_health', v)
+                    }}
+                    placeholder="مثال: 85" className={inputCls} />
                 </div>
               </div>
             </div>
