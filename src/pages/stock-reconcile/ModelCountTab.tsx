@@ -240,6 +240,14 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{deviceLabel(d)}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono">{d.imei1}</p>
+                      {d.battery_health != null && (
+                        <p className={cn('text-xs font-semibold mt-0.5',
+                          d.battery_health >= 80 ? 'text-green-600 dark:text-green-400'
+                          : d.battery_health >= 50 ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-red-600 dark:text-red-400')}>
+                          بطارية {d.battery_health}%
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
                       <StateBadge state={rowState(matched, closed)} />

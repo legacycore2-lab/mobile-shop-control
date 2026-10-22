@@ -10,6 +10,7 @@ export interface ReconcileDevice {
   model_name:    string
   storage:       string | null
   color:         string | null
+  battery_health: number | null
   status:        DeviceStatus
   cost_price:    number
   selling_price: number | null
