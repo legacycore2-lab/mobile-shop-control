@@ -1,7 +1,7 @@
 // src/services/stockReconcile.service.ts
 import { stockReconcileRepository } from '@/repositories/stockReconcile.repository'
 import type {
-  ModelCountRow, ModelGroup, ReconcileDevice, ReconcileResult, ScanApplyResult, ScanLookup, ScanOutcome, ScopeModel,
+  ReconcileDevice, ReconcileResult, ScanApplyResult, ScanLookup, ScanOutcome, ScopeModel,
 } from '@/types/stockReconcile'
 
 // بعض سكانرات USB بتضيف بادئة زي 02/ قبل الكود
@@ -100,34 +100,21 @@ export const stockReconcileService = {
     }
   },
 
-  // أنواع الأجهزة اللي في المخزون وعددها في النظام
-  groupInStock: (devices: ReconcileDevice[]): ModelGroup[] => {
-    const groups = new Map<string, ModelGroup>()
-    for (const d of devices) {
-      if (d.status !== 'in_stock') continue
-      const key = groupKey(d)
-      const existing = groups.get(key)
-      if (existing) { existing.system_qty++; continue }
-      groups.set(key, {
-        key,
-        label: groupLabel(d),
-        brand_name: d.brand_name, model_name: d.model_name,
-        storage: d.storage, color: d.color, system_qty: 1,
-      })
-    }
-    return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+  // أجهزة المخزون في النطاق المحدد — كل جهاز سطر لوحده
+  listInStock: (devices: ReconcileDevice[], scope: string[]): ReconcileDevice[] => {
+    const set = new Set(scope)
+    return devices.filter(d => d.status === 'in_stock' && inScope(d, set)).sort(byModel)
   },
 
-  // مسح أجهزة في وضع العد بالموديل: كل جهاز سليم بيتعدّ +1 على نوعه (الجهاز بيتعدّ مرة واحدة حتى لو مسحت IMEI التاني)
+  // مسح أجهزة في وضع المطابقة: كل جهاز سليم بيتعلّم «مطابق» (مرة واحدة حتى لو مسحت IMEI التاني)
   applyScans: (
-    devices: ReconcileDevice[], scope: string[], scannedIds: string[],
-    counts: Record<string, number>, codes: string[],
+    devices: ReconcileDevice[], scope: string[], scannedIds: string[], codes: string[],
   ): ScanApplyResult => {
     const index    = indexByCode(devices)
+    const byId     = new Map(devices.map(d => [d.id, d]))
     const scopeSet = new Set(scope)
     const seen     = new Set(scannedIds)
     const nextIds  = [...scannedIds]
-    const nextCounts = { ...counts }
     const outcomes: ScanOutcome[] = []
 
     for (const code of codes) {
@@ -139,19 +126,10 @@ export const stockReconcileService = {
 
       seen.add(device.id)
       nextIds.push(device.id)
-      const key = groupKey(device)
-      nextCounts[key] = (nextCounts[key] ?? 0) + 1
-      outcomes.push({ code, kind: 'counted', device, groupLabel: groupLabel(device), total: nextCounts[key] })
+      const key   = groupKey(device)
+      const total = nextIds.filter(id => { const d = byId.get(id); return d !== undefined && groupKey(d) === key }).length
+      outcomes.push({ code, kind: 'counted', device, groupLabel: groupLabel(device), total })
     }
-    return { counts: nextCounts, scannedIds: nextIds, outcomes }
+    return { scannedIds: nextIds, outcomes }
   },
-
-  devicesOfGroup: (devices: ReconcileDevice[], key: string): ReconcileDevice[] =>
-    devices.filter(d => d.status === 'in_stock' && groupKey(d) === key).sort(byModel),
-
-  buildCountRows: (groups: ModelGroup[], counts: Record<string, number>): ModelCountRow[] =>
-    groups.map(g => {
-      const counted = g.key in counts ? counts[g.key] : null
-      return { ...g, counted, diff: counted === null ? null : counted - g.system_qty }
-    }),
 }

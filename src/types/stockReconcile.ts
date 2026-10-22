@@ -47,27 +47,10 @@ export interface ScanOutcome {
   kind:        ScanOutcomeKind
   device?:     ReconcileDevice
   groupLabel?: string   // نوع الجهاز اللي اتعدّ عليه
-  total?:      number   // عدد النوع ده بعد المسحة
+  total?:      number   // عدد الأجهزة المطابقة من النوع ده بعد المسحة
 }
 
 export interface ScanApplyResult {
-  counts:     Record<string, number>
   scannedIds: string[]
   outcomes:   ScanOutcome[]
-}
-
-// ── العد بالموديل: نوع = ماركة + موديل + تخزين + لون ──────────────────────────
-export interface ModelGroup {
-  key:        string
-  label:      string
-  brand_name: string
-  model_name: string
-  storage:    string | null
-  color:      string | null
-  system_qty: number
-}
-
-export interface ModelCountRow extends ModelGroup {
-  counted: number | null   // null = لسه معدّش
-  diff:    number | null   // الفعلي − النظام (سالب = ناقص)
 }
