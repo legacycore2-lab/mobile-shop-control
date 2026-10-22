@@ -110,6 +110,8 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
   const vis = useNumberVisibility()
   const onSell = useSellFromReconcile()
 
+  const matchedIds = useMemo(() => new Set(scannedIds), [scannedIds])
+
   const scoped = useMemo(() => stockReconcileService.filterByScope(devices, scope), [devices, scope])
 
   const rows = useMemo(
@@ -278,10 +280,11 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
                     <p className="px-4 pb-2 text-xs text-gray-500 dark:text-gray-400">
                       {r.diff === 0
                         ? 'النوع ده مطابق — اطبع الليبل لكل جهاز.'
-                        : 'اختار الجهاز اللي اتباع (من نفس النوع) واضغط «بيع» عشان تسجل فاتورته.'}
+                        : 'الأجهزة اللي عليها «مطابق» اتمسحت. اختار الجهاز اللي اتباع واضغط «بيع» عشان تسجل فاتورته.'}
                     </p>
                     <DeviceTable devices={stockReconcileService.devicesOfGroup(devices, r.key)} showCost={vis.cost}
-                      onSell={r.diff === 0 ? undefined : onSell} onPrint={r.diff === 0 ? printDeviceLabel : undefined} />
+                      matchedIds={matchedIds}
+                      onSell={r.diff === 0 ? undefined : onSell} onPrint={printDeviceLabel} />
                   </div>
                 )}
               </li>
