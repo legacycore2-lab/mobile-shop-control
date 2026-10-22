@@ -1,6 +1,7 @@
 // src/pages/stock-reconcile/ModelCountTab.tsx
 import { useMemo, useState } from 'react'
 import { Download, Search, Trash2 } from 'lucide-react'
+import { BarcodeLabelModal, type BarcodeLabel } from '@/components/shared/BarcodeLabelModal'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -105,6 +106,7 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
   const [expanded, setExpanded] = useState<string | null>(null)
   const [scannedIds, setScannedIds] = useState<string[]>(loadScannedIds)
   const [feedback, setFeedback] = useState<ScanFeedback | null>(null)
+  const [label, setLabel] = useState<BarcodeLabel | null>(null)
   const vis = useNumberVisibility()
   const onSell = useSellFromReconcile()
 
@@ -167,6 +169,17 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
     writeJson(SCANNED_KEY, [])
     setFeedback(null)
     setConfirm(null)
+  }
+
+  function printDeviceLabel(d: ReconcileDevice) {
+    setLabel({
+      type:    'device',
+      code:    d.imei1,
+      name:    `${d.brand_name} ${d.model_name}`,
+      subName: [d.storage, d.color].filter(Boolean).join(' · ') || undefined,
+      extra:   `IMEI: ${d.imei1}`,
+      price:   d.selling_price ?? undefined,
+    })
   }
 
   function exportMissing() {
@@ -250,6 +263,12 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
                         {expanded === r.key ? 'إخفاء الأجهزة' : 'اعرض الأجهزة / بيع'}
                       </Button>
                     )}
+                    {r.diff === 0 && (
+                      <Button size="sm" variant="secondary"
+                        onClick={() => setExpanded(e => e === r.key ? null : r.key)}>
+                        {expanded === r.key ? 'إخفاء الأجهزة' : 'طباعة ليبل'}
+                      </Button>
+                    )}
                     <DiffBadge row={r} />
                     <CountStepper value={r.counted} label={r.label} onChange={v => setCount(r.key, v)} />
                   </div>
@@ -257,9 +276,12 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
                 {expanded === r.key && (
                   <div className="mt-3 -mx-4">
                     <p className="px-4 pb-2 text-xs text-gray-500 dark:text-gray-400">
-                      اختار الجهاز اللي اتباع (من نفس النوع) واضغط «بيع» عشان تسجل فاتورته.
+                      {r.diff === 0
+                        ? 'النوع ده مطابق — اطبع الليبل لكل جهاز.'
+                        : 'اختار الجهاز اللي اتباع (من نفس النوع) واضغط «بيع» عشان تسجل فاتورته.'}
                     </p>
-                    <DeviceTable devices={stockReconcileService.devicesOfGroup(devices, r.key)} showCost={vis.cost} onSell={onSell} />
+                    <DeviceTable devices={stockReconcileService.devicesOfGroup(devices, r.key)} showCost={vis.cost}
+                      onSell={r.diff === 0 ? undefined : onSell} onPrint={r.diff === 0 ? printDeviceLabel : undefined} />
                   </div>
                 )}
               </li>
@@ -267,6 +289,8 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
           </ul>
         )}
       </Card>
+
+      {label && <BarcodeLabelModal label={label} onClose={() => setLabel(null)} />}
 
       {confirm === 'zero' && (
         <ConfirmModal variant="warning" title="اعتبار الباقي صفر"

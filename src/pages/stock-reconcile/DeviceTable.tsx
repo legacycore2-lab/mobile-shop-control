@@ -1,5 +1,5 @@
 // src/pages/stock-reconcile/DeviceTable.tsx
-import { ShoppingCart } from 'lucide-react'
+import { Printer, ShoppingCart } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { DEVICE_STATUS_MAP } from '@/constants/statusMaps'
@@ -11,15 +11,17 @@ interface Props {
   showStatus?: boolean
   showCost:   boolean
   onSell?:    (device: ReconcileDevice) => void   // لو موجود بيظهر زرار «بيع» لكل جهاز
+  onPrint?:   (device: ReconcileDevice) => void   // لو موجود بيظهر زرار «ليبل» لكل جهاز
 }
 
-export function DeviceTable({ devices, showStatus = false, showCost, onSell }: Props) {
+export function DeviceTable({ devices, showStatus = false, showCost, onSell, onPrint }: Props) {
   const heads = [
     '#', 'الجهاز', 'IMEI 1', 'IMEI 2', 'تخزين', 'لون',
     ...(showStatus ? ['الحالة في النظام'] : []),
     ...(showCost ? ['سعر الشراء'] : []),
     'سعر البيع', 'تاريخ الشراء',
-    ...(onSell ? [''] : []),
+    ...(onSell ? ['بيع'] : []),
+    ...(onPrint ? ['ليبل'] : []),
   ]
 
   return (
@@ -56,6 +58,11 @@ export function DeviceTable({ devices, showStatus = false, showCost, onSell }: P
                 {onSell && (
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <Button size="sm" variant="primary" icon={<ShoppingCart size={14} />} onClick={() => onSell(d)}>بيع</Button>
+                  </td>
+                )}
+                {onPrint && (
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <Button size="sm" variant="secondary" icon={<Printer size={14} />} onClick={() => onPrint(d)}>طباعة ليبل</Button>
                   </td>
                 )}
               </tr>
