@@ -57,10 +57,20 @@ interface Props { label: BarcodeLabel; onClose: () => void }
 
 // ── Print — 38mm × 25mm label: QR + item name below ────────────────────────────────────────
 
-// اسم الصنف + السعة واللون + البطارية في نفس السطور (من غير سطر لوحده)
+// اسم الصنف + السعة واللون
 function labelCaption(label: BarcodeLabel): string {
-  return [label.name, label.subName, label.battery != null ? `Bat ${label.battery}%` : undefined]
-    .filter(Boolean).join(' · ')
+  return [label.name, label.subName].filter(Boolean).join(' · ')
+}
+
+// رسمة بطارية صغيرة بتتملي على قد النسبة (أرقام بس — آمنة تتحط في HTML)
+function batteryHtml(percent: number): string {
+  const pct  = Math.max(0, Math.min(100, Math.round(percent)))
+  const fill = Math.round((pct / 100) * 14)
+  const svg = `<svg class="bat-icon" width="16" height="8" viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">`
+    + `<rect x="0.5" y="0.5" width="16" height="9" rx="1.5" fill="none" stroke="#000" stroke-width="1"/>`
+    + `<rect x="17" y="3" width="2.5" height="4" fill="#000"/>`
+    + `<rect x="2" y="2" width="${fill}" height="6" fill="#000"/></svg>`
+  return `<span class="bat">${svg}${pct}%</span>`
 }
 
 function escapeHtml(text: string): string {
@@ -74,11 +84,12 @@ async function printLabel(label: BarcodeLabel, copies: number) {
   })
 
   const caption = escapeHtml(labelCaption(label))
+  const battery = label.battery != null ? ` · ${batteryHtml(label.battery)}` : ''
 
   const singleLabel = `
     <div class="label">
       <img class="qr" src="${qrDataUrl}" />
-      <div class="name">${caption}</div>
+      <div class="name">${caption}${battery}</div>
     </div>`
 
   const html = `<!DOCTYPE html><html><head>
@@ -101,6 +112,8 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     }
     .label + .label { break-before: page; }
     .qr { width: 16mm; height: 16mm; display: block; }
+    .bat { white-space: nowrap; }
+    .bat-icon { width: 4.2mm; height: 2.1mm; vertical-align: -0.2mm; margin-inline-end: 0.6mm; }
     .name {
       width: 36mm;
       font: 700 7pt/1.1 Arial, Tahoma, sans-serif;
@@ -217,6 +230,10 @@ export function BarcodeLabelModal({ label, onClose }: Props) {
             <p className="text-xs font-bold text-gray-900 dark:text-white text-center">
               {labelCaption(label)}
             </p>
+            {label.battery != null && (
+              <p className="text-xs font-bold text-gray-900 dark:text-white text-center"
+                dangerouslySetInnerHTML={{ __html: batteryHtml(label.battery) }} />
+            )}
           </div>
 
           {/* Label size note */}
