@@ -1,5 +1,5 @@
 // src/components/shared/BarcodeLabelModal.tsx
-// ── Barcode Label Generator — QR Only — 1.50 in × 0.98 in (38mm × 25mm) ─────
+// ── Barcode Label Generator — QR + item name — 1.50 in × 0.98 in (38mm × 25mm) ─
 
 import React, { useRef, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
@@ -54,7 +54,11 @@ export interface BarcodeLabel {
 
 interface Props { label: BarcodeLabel; onClose: () => void }
 
-// ── Print — 38mm × 25mm QR-only label ────────────────────────────────────────
+// ── Print — 38mm × 25mm label: QR + item name below ────────────────────────────────────────
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 async function printLabel(label: BarcodeLabel, copies: number) {
   const qrDataUrl = await QRCode.toDataURL(label.code, {
@@ -62,9 +66,12 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     color: { dark: '#000000', light: '#ffffff' },
   })
 
+  const caption = escapeHtml([label.name, label.subName].filter(Boolean).join(' · '))
+
   const singleLabel = `
     <div class="label">
       <img class="qr" src="${qrDataUrl}" />
+      <div class="name">${caption}</div>
     </div>`
 
   const html = `<!DOCTYPE html><html><head>
@@ -78,13 +85,25 @@ async function printLabel(label: BarcodeLabel, copies: number) {
       width: 38mm;
       height: 24mm;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 0.4mm;
       break-inside: avoid;
       overflow: hidden;
     }
     .label + .label { break-before: page; }
-    .qr { width: 21mm; height: 21mm; display: block; }
+    .qr { width: 16mm; height: 16mm; display: block; }
+    .name {
+      width: 36mm;
+      font: 700 7pt/1.1 Arial, Tahoma, sans-serif;
+      text-align: center;
+      color: #000;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
   </style>
   </head><body>
   ${Array.from({ length: copies }).map(() => singleLabel).join('')}
@@ -188,6 +207,9 @@ export function BarcodeLabelModal({ label, onClose }: Props) {
           {/* QR preview only */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center gap-2">
             <QRCanvas value={label.code} size={140} />
+            <p className="text-xs font-bold text-gray-900 dark:text-white text-center">
+              {[label.name, label.subName].filter(Boolean).join(' · ')}
+            </p>
           </div>
 
           {/* Label size note */}
