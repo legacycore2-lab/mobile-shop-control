@@ -57,6 +57,12 @@ interface Props { label: BarcodeLabel; onClose: () => void }
 
 // ── Print — 38mm × 25mm label: QR + item name below ────────────────────────────────────────
 
+// اسم الصنف + السعة واللون + البطارية في نفس السطور (من غير سطر لوحده)
+function labelCaption(label: BarcodeLabel): string {
+  return [label.name, label.subName, label.battery != null ? `Bat ${label.battery}%` : undefined]
+    .filter(Boolean).join(' · ')
+}
+
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -67,14 +73,12 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     color: { dark: '#000000', light: '#ffffff' },
   })
 
-  const caption = escapeHtml([label.name, label.subName].filter(Boolean).join(' · '))
-  const hasBattery = label.battery != null
+  const caption = escapeHtml(labelCaption(label))
 
   const singleLabel = `
     <div class="label">
-      <img class="qr${hasBattery ? ' small' : ''}" src="${qrDataUrl}" />
+      <img class="qr" src="${qrDataUrl}" />
       <div class="name">${caption}</div>
-      ${hasBattery ? `<div class="battery">بطارية ${label.battery}%</div>` : ''}
     </div>`
 
   const html = `<!DOCTYPE html><html><head>
@@ -97,8 +101,6 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     }
     .label + .label { break-before: page; }
     .qr { width: 16mm; height: 16mm; display: block; }
-    .qr.small { width: 13.5mm; height: 13.5mm; }
-    .battery { font: 700 7pt/1 Arial, Tahoma, sans-serif; color: #000; text-align: center; }
     .name {
       width: 36mm;
       font: 700 7pt/1.1 Arial, Tahoma, sans-serif;
@@ -213,11 +215,8 @@ export function BarcodeLabelModal({ label, onClose }: Props) {
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center gap-2">
             <QRCanvas value={label.code} size={140} />
             <p className="text-xs font-bold text-gray-900 dark:text-white text-center">
-              {[label.name, label.subName].filter(Boolean).join(' · ')}
+              {labelCaption(label)}
             </p>
-            {label.battery != null && (
-              <p className="text-xs font-bold text-gray-900 dark:text-white text-center">بطارية {label.battery}%</p>
-            )}
           </div>
 
           {/* Label size note */}
