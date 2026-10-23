@@ -143,7 +143,10 @@ export function PurchasesPage() {
               ) : paginated.map(inv => {
                 const st = STATUS_MAP[inv.status]
                 return (
-                  <tr key={inv.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <tr key={inv.id} className={cn(
+                  'border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
+                  inv.status === 'cancelled' && '[&>td:not(:last-child)_*]:text-red-600! [&>td:not(:last-child)]:text-red-600 dark:[&>td:not(:last-child)_*]:text-red-400! dark:[&>td:not(:last-child)]:text-red-400',
+                )}>
                     {/* رقم الفاتورة */}
                     <td className="px-4 py-3">
                       <p className="font-mono text-sm font-bold text-gray-900 dark:text-white">{inv.invoice_number}</p>
