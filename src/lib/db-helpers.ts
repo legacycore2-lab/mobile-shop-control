@@ -28,7 +28,7 @@ function pickOne(v: unknown): Record<string, unknown> | null {
 }
 
 // أسماء الأجهزة والمنتجات اللي في الفاتورة (للعرض في القائمة) — بيع وشراء
-function invoiceItemNames(dev: unknown[], prd: unknown[]): string[] {
+export function invoiceItemNames(dev: unknown[], prd: unknown[]): string[] {
   const devices = dev.map(row => {
     const model = pickOne(pickOne((row as Record<string, unknown>)['mobile_devices'])?.['mobile_models'])
     const brand = pickOne(model?.['mobile_brands'])

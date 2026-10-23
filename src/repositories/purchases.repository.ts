@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // ── SQL queries ONLY — no business logic ─────────────────────────────────────
 import { supabase } from '@/lib/supabase'
-import { buildPurchaseInvoiceView, adjustProductStock, n } from '@/lib/db-helpers'
+import { buildPurchaseInvoiceView, adjustProductStock, invoiceItemNames, n } from '@/lib/db-helpers'
 import type {
   PurchaseInvoice, PurchaseInvoiceView,
   PurchaseInvoiceDetail, PurchaseInvoiceDetailDevice, PurchaseInvoiceDetailProduct,
@@ -42,7 +42,10 @@ export const purchasesRepository = {
   },
 
   getAll: async (): Promise<PurchaseInvoiceView[]> => {
-    const { data, error } = await supabase.rpc('get_purchase_invoices')
+    const [{ data, error }, namesByInvoice] = await Promise.all([
+      supabase.rpc('get_purchase_invoices'),
+      purchasesRepository.getItemNames(),
+    ])
     if (error) throw error
     return ((data ?? []) as unknown[]).map(row => {
       const r = row as Record<string, unknown>
@@ -54,10 +57,42 @@ export const purchasesRepository = {
         remaining:       n(r['remaining']),
         devices_count:   n(r['devices_count']),
         products_count:  n(r['products_count']),
+        item_names:      namesByInvoice.get(String(r['id'])) ?? [],
         supplier_name:   String(r['supplier_name']   ?? '—'),
         created_by_name: String(r['created_by_name'] ?? '—'),
       } as PurchaseInvoiceView
     })
+  },
+
+  // أسماء الأجهزة والمنتجات لكل فاتورة شراء (للعرض في القائمة)
+  getItemNames: async (): Promise<Map<string, string[]>> => {
+    const [devRes, prdRes] = await Promise.all([
+      supabase.from('purchase_invoice_devices').select(
+        'invoice_id, mobile_devices!device_id ( mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) )',
+      ),
+      supabase.from('purchase_invoice_products').select(
+        'invoice_id, quantity, products!product_id ( name )',
+      ),
+    ])
+    if (devRes.error) throw devRes.error
+    if (prdRes.error) throw prdRes.error
+
+    const group = (rows: unknown[]): Map<string, unknown[]> => {
+      const byInvoice = new Map<string, unknown[]>()
+      for (const row of rows) {
+        const id = String((row as Record<string, unknown>)['invoice_id'])
+        byInvoice.set(id, [...(byInvoice.get(id) ?? []), row])
+      }
+      return byInvoice
+    }
+    const devs = group((devRes.data ?? []) as unknown[])
+    const prds = group((prdRes.data ?? []) as unknown[])
+
+    const map = new Map<string, string[]>()
+    for (const id of new Set([...devs.keys(), ...prds.keys()])) {
+      map.set(id, invoiceItemNames(devs.get(id) ?? [], prds.get(id) ?? []))
+    }
+    return map
   },
 
   getById: async (id: string): Promise<PurchaseInvoiceDetail | null> => {
