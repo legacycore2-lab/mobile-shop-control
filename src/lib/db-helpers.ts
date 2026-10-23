@@ -27,8 +27,8 @@ function pickOne(v: unknown): Record<string, unknown> | null {
   return one && typeof one === 'object' ? one as Record<string, unknown> : null
 }
 
-// أسماء الأجهزة والمنتجات اللي في الفاتورة (للعرض في القائمة)
-function saleItemNames(dev: unknown[], prd: unknown[]): string[] {
+// أسماء الأجهزة والمنتجات اللي في الفاتورة (للعرض في القائمة) — بيع وشراء
+function invoiceItemNames(dev: unknown[], prd: unknown[]): string[] {
   const devices = dev.map(row => {
     const model = pickOne(pickOne((row as Record<string, unknown>)['mobile_devices'])?.['mobile_models'])
     const brand = pickOne(model?.['mobile_brands'])
@@ -62,7 +62,7 @@ export function buildSaleInvoiceView(r: Record<string, unknown>): SaleInvoiceVie
     created_by_name: String(cby?.['full_name'] ?? '—'),
     devices_count:   (dev  ?? []).length,
     products_count:  (prd  ?? []).length,
-    item_names:      saleItemNames(dev ?? [], prd ?? []),
+    item_names:      invoiceItemNames(dev ?? [], prd ?? []),
   } as SaleInvoiceView
 }
 
@@ -84,6 +84,7 @@ export function buildPurchaseInvoiceView(r: Record<string, unknown>): PurchaseIn
     created_by_name: String(cby?.['full_name'] ?? '—'),
     devices_count:   (dev  ?? []).length,
     products_count:  (prd  ?? []).length,
+    item_names:      invoiceItemNames(dev ?? [], prd ?? []),
   } as PurchaseInvoiceView
 }
 

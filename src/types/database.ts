@@ -109,6 +109,7 @@ export interface PurchaseInvoiceView extends PurchaseInvoice {
   created_by_name: string
   devices_count:   number
   products_count:  number
+  item_names:      string[]
 }
 
 export interface PurchaseInvoiceDevice {

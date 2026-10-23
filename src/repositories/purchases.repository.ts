@@ -26,8 +26,11 @@ const INVOICE_SELECT = `
   notes, status, created_by, created_at, updated_at,
   suppliers!supplier_id ( name ),
   profiles!created_by ( full_name ),
-  devices_agg:purchase_invoice_devices ( id ),
-  products_agg:purchase_invoice_products ( id )
+  devices_agg:purchase_invoice_devices (
+    id,
+    mobile_devices!device_id ( mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) )
+  ),
+  products_agg:purchase_invoice_products ( id, quantity, products!product_id ( name ) )
 `
 
 export const purchasesRepository = {
