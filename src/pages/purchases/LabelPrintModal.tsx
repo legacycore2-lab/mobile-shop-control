@@ -5,6 +5,7 @@ import QRCode from 'qrcode'
 import { fmt } from '@/lib/fmt'
 import type { PurchaseInvoiceDetailDevice as InvoiceDetailDevice, PurchaseInvoiceDetailProduct as InvoiceDetailProduct } from '@/types/database'
 import { Sensitive } from '@/components/shared/Sensitive'
+import { printBarcodeLabels, type BarcodeLabel } from '@/lib/printBarcodeLabel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,45 +68,27 @@ function QrDisplay({ code, size = 80 }: { code: string; size?: number }) {
   return <canvas ref={ref} width={size} height={size} style={{ display:'block' }} />
 }
 
-// ── Print engine ──────────────────────────────────────────────────────────────
+// ── Print engine — بيستخدم نفس ليبل المخزون (QR + اسم الصنف) ───────────────────
+
+function toBarcodeLabel(data: LabelData): BarcodeLabel {
+  if (data.type === 'device') {
+    return {
+      type:    'device',
+      code:    getLabelCode(data),
+      name:    `${data.brand} ${data.model}`,
+      subName: [data.storage, data.color].filter(Boolean).join(' · ') || undefined,
+    }
+  }
+  return {
+    type:    'product',
+    code:    getLabelCode(data),
+    name:    data.name,
+    subName: data.category,
+  }
+}
 
 async function printLabels(items: { data: LabelData; copies: number }[]) {
-  const labelBlocks: string[] = []
-
-  for (const { data, copies } of items) {
-    const code = getLabelCode(data)
-
-    let qrDataUrl = ''
-    try {
-      qrDataUrl = await QRCode.toDataURL(code, { width: 240, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
-    } catch { /* ignore */ }
-    const barcodeStr = qrDataUrl ? `<img src="${qrDataUrl}" />` : ''
-
-    const labelHtml = `<div class="label">${barcodeStr}</div>`
-    for (let i = 0; i < copies; i++) labelBlocks.push(labelHtml)
-  }
-
-  const html = `<!DOCTYPE html><html><head>
-  <meta charset="UTF-8"><title>ليبل</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    @page { size:38mm 24.5mm; margin:0; }
-    html, body { background:#fff; width:38mm; }
-    .label {
-      width:38mm; height:24mm;
-      display:flex; align-items:center; justify-content:center;
-      break-inside:avoid; overflow:hidden;
-    }
-    .label + .label { break-before:page; }
-    .label img { display:block; width:21mm; height:21mm; }
-  </style>
-</head><body>
-${labelBlocks.join('')}
-<script>window.onload=function(){window.print()};<\/script>
-</body></html>`
-
-  const win = window.open('', '_blank')
-  if (win) { win.document.write(html); win.document.close() }
+  await printBarcodeLabels(items.map(i => ({ label: toBarcodeLabel(i.data), copies: i.copies })))
 }
 
 // ── Single Label Modal (الاستخدام القديم) ────────────────────────────────────
