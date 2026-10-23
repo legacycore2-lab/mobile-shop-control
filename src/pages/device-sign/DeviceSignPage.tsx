@@ -36,16 +36,19 @@ export function DeviceSignPage() {
   const [spec, setSpec]           = useState('')
   const [condition, setCondition] = useState('')
   const [battery, setBattery]     = useState('')
+  const [price, setPrice]         = useState('')
   const [size, setSize]         = useState<SignSize>('label')
   const page = SIGN_PAGE_PX[size]
   const { ref, scale } = usePreviewScale(page.width)
 
   const data: SignData = useMemo(() => ({
-    name, spec, condition, battery: battery === '' ? null : Number(battery),
-  }), [name, spec, condition, battery])
+    name, spec, condition,
+    battery: battery === '' ? null : Number(battery),
+    price:   price === '' ? null : Number(price),
+  }), [name, spec, condition, battery, price])
 
   const previewHtml = useMemo(() => buildSignHtml(data, size, signBaseUrl(), false), [data, size])
-  const empty = !name.trim() && !spec.trim() && !condition.trim() && battery === ''
+  const empty = !name.trim() && !spec.trim() && !condition.trim() && battery === '' && price === ''
 
   return (
     <div className="space-y-5">
@@ -99,6 +102,13 @@ export function DeviceSignPage() {
                   if (v === '' || (Number(v) >= 0 && Number(v) <= 100)) setBattery(v)
                 }}
                 placeholder="85" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                السعر (جنيه) <span className="text-gray-400 font-normal">اختياري</span>
+              </label>
+              <input className={FIELD} type="number" min="0" value={price}
+                onChange={e => setPrice(e.target.value.replace(/\D/g, ''))} placeholder="1500" />
             </div>
             <Button className="w-full" icon={<Printer size={16} />} disabled={empty} onClick={() => printSign(data, size)}>
               طباعة اللافتة
