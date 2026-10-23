@@ -237,6 +237,7 @@ export function DevicesPage() {
                           subName: [d.storage, d.color].filter(Boolean).join(' · ') || undefined,
                           extra: `IMEI: ${d.imei1}`,
                           price: d.selling_price ?? undefined,
+                          battery: d.battery_health,
                         })}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-200 dark:hover:border-purple-800 transition-colors">
                         <Printer size={13} />

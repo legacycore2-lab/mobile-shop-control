@@ -162,6 +162,7 @@ export function ModelCountTab({ devices, isLoading, isError, error, scope }: Pro
       subName: [d.storage, d.color].filter(Boolean).join(' · ') || undefined,
       extra:   `IMEI: ${d.imei1}`,
       price:   d.selling_price ?? undefined,
+      battery: d.battery_health,
     })
   }
 

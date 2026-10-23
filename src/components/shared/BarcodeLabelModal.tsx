@@ -43,6 +43,7 @@ export interface BarcodeLabel {
   storage?:      string
   color?:        string
   condition?:    string
+  battery?:      number | null   // نسبة البطارية — بتظهر تحت الاسم على الليبل
   warranty?:     string
   supplier?:     string
   invoice?:      string
@@ -67,11 +68,13 @@ async function printLabel(label: BarcodeLabel, copies: number) {
   })
 
   const caption = escapeHtml([label.name, label.subName].filter(Boolean).join(' · '))
+  const hasBattery = label.battery != null
 
   const singleLabel = `
     <div class="label">
-      <img class="qr" src="${qrDataUrl}" />
+      <img class="qr${hasBattery ? ' small' : ''}" src="${qrDataUrl}" />
       <div class="name">${caption}</div>
+      ${hasBattery ? `<div class="battery">بطارية ${label.battery}%</div>` : ''}
     </div>`
 
   const html = `<!DOCTYPE html><html><head>
@@ -94,6 +97,8 @@ async function printLabel(label: BarcodeLabel, copies: number) {
     }
     .label + .label { break-before: page; }
     .qr { width: 16mm; height: 16mm; display: block; }
+    .qr.small { width: 13.5mm; height: 13.5mm; }
+    .battery { font: 700 7pt/1 Arial, Tahoma, sans-serif; color: #000; text-align: center; }
     .name {
       width: 36mm;
       font: 700 7pt/1.1 Arial, Tahoma, sans-serif;
@@ -210,6 +215,9 @@ export function BarcodeLabelModal({ label, onClose }: Props) {
             <p className="text-xs font-bold text-gray-900 dark:text-white text-center">
               {[label.name, label.subName].filter(Boolean).join(' · ')}
             </p>
+            {label.battery != null && (
+              <p className="text-xs font-bold text-gray-900 dark:text-white text-center">بطارية {label.battery}%</p>
+            )}
           </div>
 
           {/* Label size note */}
