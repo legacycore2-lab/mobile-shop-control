@@ -5,56 +5,6 @@ import React, { useRef, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { X, Printer, QrCode } from 'lucide-react'
 
-// ── «الشافعي» بخط زخرفي في نص الباركود (مستوى تصحيح H بيخلي القراءة سليمة مع الشارة) ──
-
-const BADGE_TEXT = 'الشافعي'
-const BADGE_FONT = 'Rakkas'
-
-let badgeFontReady: Promise<void> | null = null
-
-// الخط بيتحمّل مرة واحدة؛ لو فشل بنرجع لخط النظام ومفيش حاجة بتقف
-function ensureBadgeFont(): Promise<void> {
-  badgeFontReady ??= new FontFace(
-    BADGE_FONT, `url(${import.meta.env.BASE_URL}fonts/rakkas-arabic-400-normal.woff2)`,
-  ).load().then(face => { document.fonts.add(face) }).catch(() => undefined)
-  return badgeFontReady
-}
-
-function drawBadge(ctx: CanvasRenderingContext2D, size: number) {
-  const w = size * 0.40
-  const h = size * 0.21
-  const x = (size - w) / 2
-  const y = (size - h) / 2
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(x, y, w, h)
-  ctx.fillStyle = '#000000'
-  ctx.strokeStyle = '#000000'
-  ctx.lineWidth = size * 0.005          // تخين الخط عشان يطلع واضح على الطابعة الحرارية
-  ctx.lineJoin = 'round'
-  ctx.font = `${Math.round(size * 0.17)}px "${BADGE_FONT}", Arial, sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.direction = 'rtl'
-  ctx.strokeText(BADGE_TEXT, size / 2, size / 2 + size * 0.012, w * 0.94)
-  ctx.fillText(BADGE_TEXT, size / 2, size / 2 + size * 0.012, w * 0.94)
-}
-
-async function renderQr(canvas: HTMLCanvasElement, code: string, size: number): Promise<void> {
-  await ensureBadgeFont()
-  await QRCode.toCanvas(canvas, code, {
-    width: size, margin: 1, errorCorrectionLevel: 'H',
-    color: { dark: '#000000', light: '#ffffff' },
-  })
-  const ctx = canvas.getContext('2d')
-  if (ctx) drawBadge(ctx, canvas.width)
-}
-
-async function qrDataUrlWithBadge(code: string, size: number): Promise<string> {
-  const canvas = document.createElement('canvas')
-  await renderQr(canvas, code, size)
-  return canvas.toDataURL('image/png')
-}
-
 // ── QR Canvas Preview ─────────────────────────────────────────────────────────
 
 function QRCanvas({ value, size = 140 }: { value: string; size?: number }) {
@@ -62,7 +12,11 @@ function QRCanvas({ value, size = 140 }: { value: string; size?: number }) {
   const [error, setError]   = useState(false)
   useEffect(() => {
     if (!canvasRef.current) return
-    renderQr(canvasRef.current, value, size).catch(() => setError(true))
+    QRCode.toCanvas(canvasRef.current, value, {
+      width: size, margin: 1,
+      color: { dark: '#000000', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    }).catch(() => setError(true))
   }, [value, size])
   if (error)
     return (
@@ -124,7 +78,10 @@ function escapeHtml(text: string): string {
 }
 
 async function printLabel(label: BarcodeLabel, copies: number) {
-  const qrDataUrl = await qrDataUrlWithBadge(label.code, 240)
+  const qrDataUrl = await QRCode.toDataURL(label.code, {
+    width: 240, margin: 1, errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#ffffff' },
+  })
 
   const caption = escapeHtml(labelCaption(label))
   const battery = label.battery != null ? ` · ${batteryHtml(label.battery)}` : ''
