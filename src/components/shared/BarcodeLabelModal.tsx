@@ -27,18 +27,16 @@ function drawBadge(ctx: CanvasRenderingContext2D, size: number) {
   const y = (size - h) / 2
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(x, y, w, h)
+  ctx.fillStyle = '#000000'
+  ctx.strokeStyle = '#000000'
+  ctx.lineWidth = size * 0.005          // تخين الخط عشان يطلع واضح على الطابعة الحرارية
+  ctx.lineJoin = 'round'
   ctx.font = `${Math.round(size * 0.17)}px "${BADGE_FONT}", Arial, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.direction = 'rtl'
-  const ty = size / 2 + size * 0.012
-  // تحديد خفيف حوالين الحروف بيخليها أغمق وأوضح على الطابعة الحرارية
-  ctx.strokeStyle = '#000000'
-  ctx.lineWidth = 1.2
-  ctx.lineJoin = 'round'
-  ctx.strokeText(BADGE_TEXT, size / 2, ty, w * 0.94)
-  ctx.fillStyle = '#000000'
-  ctx.fillText(BADGE_TEXT, size / 2, ty, w * 0.94)
+  ctx.strokeText(BADGE_TEXT, size / 2, size / 2 + size * 0.012, w * 0.94)
+  ctx.fillText(BADGE_TEXT, size / 2, size / 2 + size * 0.012, w * 0.94)
 }
 
 async function renderQr(canvas: HTMLCanvasElement, code: string, size: number): Promise<void> {
