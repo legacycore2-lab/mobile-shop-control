@@ -36,6 +36,7 @@ const OrdersPage         = lazy(() => import('@/pages/orders/OrdersPage').then(m
 const CatalogPage        = lazy(() => import('@/pages/catalog/CatalogPage').then(m => ({ default: m.CatalogPage })))
 const PermissionsPage    = lazy(() => import('@/pages/permissions/PermissionsPage').then(m => ({ default: m.PermissionsPage })))
 const StockCountPage      = lazy(() => import('@/pages/stock-count/StockCountPage').then(m => ({ default: m.StockCountPage })))
+const DeviceSignPage      = lazy(() => import('@/pages/device-sign/DeviceSignPage').then(m => ({ default: m.DeviceSignPage })))
 const StockReconcilePage  = lazy(() => import('@/pages/stock-reconcile/StockReconcilePage').then(m => ({ default: m.StockReconcilePage })))
 const PublicStockCountPage = lazy(() => import('@/pages/stock-count/PublicStockCountPage').then(m => ({ default: m.PublicStockCountPage })))
 
@@ -184,6 +185,7 @@ function Guard() {
               <Route path="/orders"      element={<PageErrorBoundary><ProtectedRoute resource="orders"><OrdersPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/stock-count" element={<PageErrorBoundary><ProtectedRoute resource="products"><StockCountPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/stock-reconcile" element={<PageErrorBoundary><ProtectedRoute resource="devices"><StockReconcilePage /></ProtectedRoute></PageErrorBoundary>} />
+              <Route path="/device-sign" element={<PageErrorBoundary><ProtectedRoute resource="devices"><DeviceSignPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/import"      element={<PageErrorBoundary><ProtectedRoute resource="import"><ImportPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="/settings"    element={<PageErrorBoundary><ProtectedRoute resource="settings"><SettingsPage /></ProtectedRoute></PageErrorBoundary>} />
               <Route path="*"            element={<Navigate to="/" replace />} />

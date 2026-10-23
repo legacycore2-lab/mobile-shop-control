@@ -8,7 +8,7 @@ import {
   UserCheck, LayoutDashboard, Smartphone, ShoppingCart, Package,
   Users, Truck, BarChart3, Settings, LogOut,
   Menu, X, Store, Sun, Moon, Tag, Shield, ShieldCheck,
-  BookOpen, FileUp, CalendarCheck, Images, Receipt, RefreshCw, Home, ClipboardList, ClipboardCheck, ScanLine,
+  BookOpen, FileUp, CalendarCheck, Images, Receipt, RefreshCw, Home, ClipboardList, ClipboardCheck, ScanLine, Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useAlertCount, useStockNotifications } from '@/hooks/useNotifications'
@@ -22,6 +22,7 @@ const NAV: { to: string; icon: React.ElementType; label: string; end?: boolean; 
   { to: '/',            icon: LayoutDashboard, label: 'الرئيسية',          end: true, resource: 'dashboard'   },
   { to: '/devices',     icon: Smartphone,      label: 'الأجهزة',                      resource: 'devices'     },
   { to: '/stock-reconcile', icon: ScanLine,     label: 'مطابقة المخزون',               resource: 'devices'     },
+  { to: '/device-sign', icon: Printer,         label: 'لافتة الجهاز',                 resource: 'devices'     },
   { to: '/model-images', icon: Images,        label: 'صور الموديلات',                resource: 'devices'     },
   { to: '/pos',         icon: ShoppingCart,    label: 'نقطة البيع',                   resource: 'pos'         },
   { to: '/purchases',   icon: Package,         label: 'المشتريات',                    resource: 'purchases'   },
