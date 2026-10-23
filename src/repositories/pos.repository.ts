@@ -40,12 +40,32 @@ export const posRepository = {
   },
 
   getAll: async (): Promise<SaleInvoiceView[]> => {
-    const { data, error } = await supabase
-      .from('sale_invoices')
-      .select(INVOICE_SELECT)
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return ((data ?? []) as unknown[]).map(r => buildSaleInvoiceView(r as Record<string, unknown>))
+    const [invRes, snapRes] = await Promise.all([
+      supabase.from('sale_invoices').select(INVOICE_SELECT).order('created_at', { ascending: false }),
+      supabase.from('sale_invoice_cancel_snapshots').select('invoice_id, devices, products'),
+    ])
+    if (invRes.error) throw invRes.error
+    if (snapRes.error) throw snapRes.error
+
+    // الفواتير الملغاة أصنافها اتمسحت من الفاتورة — بنجيبها من لقطة الإلغاء
+    const snapshots = new Map(
+      ((snapRes.data ?? []) as unknown as Pick<SaleCancelSnapshot, 'invoice_id' | 'devices' | 'products'>[])
+        .map(sn => [sn.invoice_id, sn]),
+    )
+    return ((invRes.data ?? []) as unknown[]).map(r => {
+      const view = buildSaleInvoiceView(r as Record<string, unknown>)
+      const snap = view.status === 'cancelled' ? snapshots.get(view.id) : undefined
+      if (!snap) return view
+      return {
+        ...view,
+        devices_count:  snap.devices.length,
+        products_count: snap.products.length,
+        item_names: [
+          ...snap.devices.map(d => `${d.brand_name} ${d.model_name}`),
+          ...snap.products.map(p => (p.quantity > 1 ? `${p.product_name} ×${p.quantity}` : p.product_name)),
+        ],
+      }
+    })
   },
 
   getById: async (id: string): Promise<SaleInvoiceDetail | null> => {
