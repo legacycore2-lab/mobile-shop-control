@@ -145,8 +145,8 @@ export function PosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                {['رقم الفاتورة', 'العميل (المشتري)', 'الكاشير (البائع)', 'التاريخ', 'أجهزة', 'منتجات', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', ''].map((h, i) => (
-                  <th key={i} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap text-right', i >= 3 && 'text-center')}>
+                {['رقم الفاتورة', 'العميل (المشتري)', 'الكاشير (البائع)', 'التاريخ', 'الأصناف', 'أجهزة', 'منتجات', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', ''].map((h, i) => (
+                  <th key={i} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap text-right', i >= 3 && i !== 4 && 'text-center')}>
                     {h}
                   </th>
                 ))}
@@ -156,14 +156,14 @@ export function PosPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                    {Array.from({ length: 11 }).map((_, j) => (
+                    {Array.from({ length: 12 }).map((_, j) => (
                       <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" /></td>
                     ))}
                   </tr>
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-16 text-center text-gray-400 dark:text-gray-600">
+                  <td colSpan={12} className="px-4 py-16 text-center text-gray-400 dark:text-gray-600">
                     <ShoppingCart size={32} className="mx-auto mb-2 opacity-30" />
                     <p className="text-sm">لا توجد فواتير بيع</p>
                     <button onClick={() => setShowCreate(true)} className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline">
@@ -194,6 +194,12 @@ export function PosPage() {
                   {/* التاريخ */}
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-center">
                     {new Date(inv.invoice_date).toLocaleDateString('ar-EG')}
+                  </td>
+                  {/* الأصناف */}
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 min-w-[160px] max-w-[260px]">
+                    {inv.item_names.length === 0
+                      ? <span className="text-gray-300 dark:text-gray-600">—</span>
+                      : inv.item_names.map((name, i) => <p key={i} className="truncate" title={name}>{name}</p>)}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">

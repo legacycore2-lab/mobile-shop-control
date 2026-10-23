@@ -24,8 +24,11 @@ const INVOICE_SELECT = `
   *,
   customers!customer_id ( name, phone ),
   profiles!created_by ( full_name ),
-  devices_agg:sale_invoice_devices ( id ),
-  products_agg:sale_invoice_products ( id )
+  devices_agg:sale_invoice_devices (
+    id,
+    mobile_devices!device_id ( mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) )
+  ),
+  products_agg:sale_invoice_products ( id, quantity, products!product_id ( name ) )
 `
 
 export const posRepository = {

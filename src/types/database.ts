@@ -155,6 +155,7 @@ export interface SaleInvoiceView extends SaleInvoice {
   created_by_name: string
   devices_count:   number
   products_count:  number
+  item_names:      string[]
 }
 
 export interface SaleInvoiceDevice {

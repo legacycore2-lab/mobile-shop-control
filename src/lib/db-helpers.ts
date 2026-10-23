@@ -22,6 +22,27 @@ export function n(v: unknown): number {
 //   Therefore:  remaining = total_amount - paid_amount
 //   Do NOT subtract discount again — that would double-count it.
 
+function pickOne(v: unknown): Record<string, unknown> | null {
+  const one = Array.isArray(v) ? v[0] : v
+  return one && typeof one === 'object' ? one as Record<string, unknown> : null
+}
+
+// أسماء الأجهزة والمنتجات اللي في الفاتورة (للعرض في القائمة)
+function saleItemNames(dev: unknown[], prd: unknown[]): string[] {
+  const devices = dev.map(row => {
+    const model = pickOne(pickOne((row as Record<string, unknown>)['mobile_devices'])?.['mobile_models'])
+    const brand = pickOne(model?.['mobile_brands'])
+    return [brand?.['name'], model?.['name']].filter(Boolean).join(' ')
+  })
+  const products = prd.map(row => {
+    const r    = row as Record<string, unknown>
+    const name = pickOne(r['products'])?.['name']
+    const qty  = n(r['quantity'])
+    return name ? (qty > 1 ? `${String(name)} ×${qty}` : String(name)) : ''
+  })
+  return [...devices, ...products].filter(Boolean)
+}
+
 export function buildSaleInvoiceView(r: Record<string, unknown>): SaleInvoiceView {
   const cust = r['customers']    as Record<string, unknown> | null
   const cby  = r['profiles']     as Record<string, unknown> | null
@@ -41,6 +62,7 @@ export function buildSaleInvoiceView(r: Record<string, unknown>): SaleInvoiceVie
     created_by_name: String(cby?.['full_name'] ?? '—'),
     devices_count:   (dev  ?? []).length,
     products_count:  (prd  ?? []).length,
+    item_names:      saleItemNames(dev ?? [], prd ?? []),
   } as SaleInvoiceView
 }
 
