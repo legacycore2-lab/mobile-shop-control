@@ -490,10 +490,8 @@ export function exportDailyClosePdf(d: DailyClose, output: PdfOutput) {
     <table><thead><tr><th>الفاتورة</th><th>العميل</th><th>الأصناف</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>
     ${d.sales.invoices.map(i => `<tr><td>${i.number}</td><td>${i.customerName ?? 'نقدي'}</td><td>${i.items.join('<br>')}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td><td>${i.remaining > 0 ? `${fmt(i.remaining)} ج` : '—'}</td></tr>`).join('')}
     </tbody></table></div>
-    <div class="sec"><div class="sec-title">الأصناف المباعة (قبل الخصم)</div>
-    <table><thead><tr><th>الصنف</th><th>النوع</th><th>الكمية</th><th>المبلغ</th></tr></thead><tbody>
-    ${d.sales.items.map(it => `<tr><td>${it.name}</td><td>${it.kind === 'device' ? 'جهاز' : 'إكسسوار / قطعة'}</td><td>${fmt(it.quantity)}</td><td>${fmt(it.amount)} ج</td></tr>`).join('')}
-    <tr class="tot"><td colspan="2">أجهزة: ${fmt(d.sales.devices.quantity)} (${fmt(d.sales.devices.amount)} ج) — إكسسوارات: ${fmt(d.sales.products.quantity)} (${fmt(d.sales.products.amount)} ج)</td><td></td><td></td></tr>
+    <div class="sec"><table><tbody>
+    <tr class="tot"><td>أجهزة: ${fmt(d.sales.devices.quantity)} (${fmt(d.sales.devices.amount)} ج) — إكسسوارات: ${fmt(d.sales.products.quantity)} (${fmt(d.sales.products.amount)} ج) — قبل الخصم</td></tr>
     </tbody></table></div>`
   }
 

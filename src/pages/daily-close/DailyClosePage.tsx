@@ -16,8 +16,7 @@ import { CashFlowCard } from './components/CashFlowCard'
 import { ProfitCard } from './components/ProfitCard'
 import { ExpensesCard } from './components/ExpensesCard'
 import { DebtorsCard } from './components/DebtorsCard'
-import { SalesDetailCard } from './components/SalesDetailCard'
-import { PurchasesCard } from './components/PurchasesCard'
+import { TradeDetailCard } from './components/TradeDetailCard'
 import { CreditorsCard } from './components/CreditorsCard'
 
 export function DailyClosePage() {
@@ -98,8 +97,9 @@ export function DailyClosePage() {
             {data.expenses.total > 0 && <ExpensesCard expenses={data.expenses} />}
             {vis.balances && data.receivables.debtorCount > 0 && <DebtorsCard receivables={data.receivables}
               onOpenCustomer={id => navigate(`/ledger/customer/${id}`)} />}
-            {vis.revenue && <SalesDetailCard sales={data.sales} />}
-            {vis.cost && <PurchasesCard purchases={data.purchases} />}
+            {(vis.revenue || vis.cost) && (
+              <TradeDetailCard sales={data.sales} purchases={data.purchases} showSales={vis.revenue} showPurchases={vis.cost} />
+            )}
             {vis.balances && data.payables.creditorCount > 0 && <CreditorsCard payables={data.payables}
               onOpenSupplier={id => navigate(`/ledger/supplier/${id}`)} />}
           </div>
