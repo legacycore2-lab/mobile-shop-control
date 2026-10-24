@@ -1,5 +1,6 @@
 // src/repositories/dailyClose.repository.ts
 import { supabase } from '@/lib/supabase'
+import { invoiceItemNames } from '@/lib/db-helpers'
 
 const n = (v: unknown): number => Number(v ?? 0)
 
@@ -36,6 +37,7 @@ export interface PurchaseInvoiceRow {
   supplier_name:  string
   total_amount:   number
   paid_amount:    number
+  item_names:     string[]
 }
 
 export interface PaymentRow {
@@ -133,7 +135,9 @@ export const dailyCloseRepository = {
   getConfirmedPurchaseInvoices: async (date: string): Promise<PurchaseInvoiceRow[]> => {
     const { data, error } = await supabase
       .from('purchase_invoices')
-      .select('id, invoice_number, total_amount, paid_amount, suppliers!supplier_id ( name )')
+      .select(`id, invoice_number, total_amount, paid_amount, suppliers!supplier_id ( name ),
+        devices_agg:purchase_invoice_devices ( id, mobile_devices!device_id ( mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) ) ),
+        products_agg:purchase_invoice_products ( id, quantity, products!product_id ( name ) )`)
       .eq('invoice_date', date)
       .eq('status', 'confirmed')
       .limit(2000)
@@ -147,6 +151,7 @@ export const dailyCloseRepository = {
         supplier_name:  String(sup?.['name'] ?? '—'),
         total_amount:   n(r['total_amount']),
         paid_amount:    n(r['paid_amount']),
+        item_names:     invoiceItemNames((r['devices_agg'] as unknown[] | null) ?? [], (r['products_agg'] as unknown[] | null) ?? []),
       }
     })
   },

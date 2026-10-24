@@ -23,6 +23,7 @@ export function PurchasesCard({ purchases }: Props) {
               <div className="min-w-0">
                 <p className="text-gray-900 dark:text-white truncate">{i.supplierName}</p>
                 <p className="text-xs text-gray-400">{i.number}</p>
+                {i.items.map((name, k) => <p key={k} className="text-xs text-gray-600 dark:text-gray-300">{name}</p>)}
               </div>
               <div className="text-left flex-shrink-0">
                 <p className="font-medium text-gray-900 dark:text-white">{fmtCurrency(i.total)}</p>

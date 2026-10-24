@@ -487,8 +487,8 @@ export function exportDailyClosePdf(d: DailyClose, output: PdfOutput) {
 
   if (d.sales.invoices.length > 0) {
     html += `<div class="sec"><div class="sec-title">فواتير البيع</div>
-    <table><thead><tr><th>الفاتورة</th><th>العميل</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>
-    ${d.sales.invoices.map(i => `<tr><td>${i.number}</td><td>${i.customerName ?? 'نقدي'}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td><td>${i.remaining > 0 ? `${fmt(i.remaining)} ج` : '—'}</td></tr>`).join('')}
+    <table><thead><tr><th>الفاتورة</th><th>العميل</th><th>الأصناف</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>
+    ${d.sales.invoices.map(i => `<tr><td>${i.number}</td><td>${i.customerName ?? 'نقدي'}</td><td>${i.items.join('<br>')}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td><td>${i.remaining > 0 ? `${fmt(i.remaining)} ج` : '—'}</td></tr>`).join('')}
     </tbody></table></div>
     <div class="sec"><div class="sec-title">الأصناف المباعة (قبل الخصم)</div>
     <table><thead><tr><th>الصنف</th><th>النوع</th><th>الكمية</th><th>المبلغ</th></tr></thead><tbody>
@@ -503,8 +503,8 @@ export function exportDailyClosePdf(d: DailyClose, output: PdfOutput) {
     <tr><td>إجمالي المشتريات</td><td>${fmt(d.purchases.total)} ج</td></tr>
     <tr><td>المدفوع منها</td><td>${fmt(d.purchases.paid)} ج</td></tr>
   </tbody></table>
-  ${d.purchases.invoices.length > 0 ? `<table style="margin-top:8px"><thead><tr><th>الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>المدفوع</th></tr></thead><tbody>
-  ${d.purchases.invoices.map(i => `<tr><td>${i.number}</td><td>${i.supplierName}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td></tr>`).join('')}
+  ${d.purchases.invoices.length > 0 ? `<table style="margin-top:8px"><thead><tr><th>الفاتورة</th><th>المورد</th><th>الأصناف</th><th>الإجمالي</th><th>المدفوع</th></tr></thead><tbody>
+  ${d.purchases.invoices.map(i => `<tr><td>${i.number}</td><td>${i.supplierName}</td><td>${i.items.join('<br>')}</td><td>${fmt(i.total)} ج</td><td>${fmt(i.paid)} ج</td></tr>`).join('')}
   </tbody></table>` : ''}</div>`
 
   html += `<div class="sec"><div class="sec-title">المستحق للموردين</div>

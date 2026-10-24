@@ -132,6 +132,12 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
       .map(i => Math.max(0, i.total_amount - i.paid_amount)),
   )
 
+  const itemsByInvoice = new Map<string, string[]>()
+  for (const l of saleLines) {
+    const label = l.quantity > 1 ? `${l.name} ×${l.quantity}` : l.name
+    itemsByInvoice.set(l.invoice_id, [...(itemsByInvoice.get(l.invoice_id) ?? []), label])
+  }
+
   return {
     date,
     sales: {
@@ -148,6 +154,7 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
         total:        i.total_amount,
         paid:         i.paid_amount,
         remaining:    Math.max(0, i.total_amount - i.paid_amount),
+        items:        itemsByInvoice.get(i.id) ?? [],
       })),
       items,
       devices:  kindTotal('device'),
@@ -163,6 +170,7 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
         supplierName: i.supplier_name,
         total:        i.total_amount,
         paid:         i.paid_amount,
+        items:        i.item_names,
       })),
     },
     cash: {

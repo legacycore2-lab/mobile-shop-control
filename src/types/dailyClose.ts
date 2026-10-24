@@ -28,6 +28,7 @@ export interface SaleInvoiceSummary {
   total:        number
   paid:         number
   remaining:    number
+  items:        string[]
 }
 
 export interface SoldItemRow {
@@ -43,6 +44,7 @@ export interface PurchaseInvoiceSummary {
   supplierName: string
   total:        number
   paid:         number
+  items:        string[]
 }
 
 export interface CreditorRow {

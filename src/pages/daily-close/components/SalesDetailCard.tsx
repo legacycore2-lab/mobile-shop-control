@@ -25,6 +25,7 @@ export function SalesDetailCard({ sales }: Props) {
                   <tr className="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
                     <th className="text-right font-medium py-2 px-1">الفاتورة</th>
                     <th className="text-right font-medium py-2 px-1">العميل</th>
+                    <th className="text-right font-medium py-2 px-1">الأصناف</th>
                     <th className="text-right font-medium py-2 px-1">الإجمالي</th>
                     <th className="text-right font-medium py-2 px-1">المتبقي</th>
                   </tr>
@@ -34,6 +35,9 @@ export function SalesDetailCard({ sales }: Props) {
                     <tr key={i.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
                       <td className="py-2 px-1 text-gray-900 dark:text-white whitespace-nowrap">{i.number}</td>
                       <td className="py-2 px-1 text-gray-700 dark:text-gray-300">{i.customerName ?? 'نقدي'}</td>
+                      <td className="py-2 px-1 text-gray-700 dark:text-gray-300 min-w-[120px]">
+                        {i.items.map((name, k) => <p key={k}>{name}</p>)}
+                      </td>
                       <td className="py-2 px-1 text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtCurrency(i.total)}</td>
                       <td className="py-2 px-1 whitespace-nowrap font-medium text-amber-600 dark:text-amber-400">
                         {i.remaining > 0 ? fmtCurrency(i.remaining) : '—'}
