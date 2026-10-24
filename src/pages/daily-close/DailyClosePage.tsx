@@ -95,12 +95,12 @@ export function DailyClosePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {vis.revenue && <CashFlowCard cash={data.cash} />}
             {vis.profit && <ProfitCard sales={data.sales} expenses={data.expenses.total} netProfit={data.netProfit} />}
-            <ExpensesCard expenses={data.expenses} />
-            {vis.balances && <DebtorsCard receivables={data.receivables}
+            {data.expenses.total > 0 && <ExpensesCard expenses={data.expenses} />}
+            {vis.balances && data.receivables.debtorCount > 0 && <DebtorsCard receivables={data.receivables}
               onOpenCustomer={id => navigate(`/ledger/customer/${id}`)} />}
             {vis.revenue && <SalesDetailCard sales={data.sales} />}
             {vis.cost && <PurchasesCard purchases={data.purchases} />}
-            {vis.balances && <CreditorsCard payables={data.payables}
+            {vis.balances && data.payables.creditorCount > 0 && <CreditorsCard payables={data.payables}
               onOpenSupplier={id => navigate(`/ledger/supplier/${id}`)} />}
           </div>
         </>
