@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { STATUS_MAP } from './constants'
 import { fmt } from '@/lib/fmt'
-import { printSaleInvoice } from './SaleInvoicePrint'
+import { printSaleInvoice, type SaleInvoiceFormat } from './SaleInvoicePrint'
 import { useNumberVisibility } from '@/hooks/usePermissions'
 import { Sensitive } from '@/components/shared/Sensitive'
 
@@ -41,9 +41,9 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
     finally { setConfirmCancel(false) }
   }
 
-  function handlePrint() {
+  function handlePrint(format: SaleInvoiceFormat) {
     if (!inv || !detail) return
-    printSaleInvoice({
+    void printSaleInvoice({
       invoice_number:  inv.invoice_number,
       invoice_date:    inv.invoice_date,
       status:          inv.status,
@@ -69,8 +69,9 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
         unit_price:   p.unit_price,
         subtotal:     p.subtotal,
         cost_price:   p.cost_price,
+        code:         p.code ?? null,
       })),
-    })
+    }, format)
   }
 
   // profit
@@ -96,8 +97,8 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
             {/* Print Button */}
             {inv && inv.status === 'confirmed' && (
               <button
-                onClick={handlePrint}
-                title="طباعة الفاتورة"
+                onClick={() => handlePrint('receipt')}
+                title="طباعة إيصال 80mm"
                 className="h-8 px-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1.5 text-xs font-semibold"
               >
                 <Printer size={13} /> طباعة
@@ -150,12 +151,20 @@ export function SaleDrawer({ invoiceId, onClose }: { invoiceId: string; onClose:
 
               {/* Print CTA — only for confirmed */}
               {inv.status === 'confirmed' && (
-                <button
-                  onClick={handlePrint}
-                  className="w-full h-10 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                >
-                  <Printer size={15} /> طباعة فاتورة البيع
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handlePrint('a4')}
+                    className="h-10 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <Printer size={15} /> فاتورة A4
+                  </button>
+                  <button
+                    onClick={() => handlePrint('receipt')}
+                    className="h-10 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <Printer size={15} /> إيصال 80mm
+                  </button>
+                </div>
               )}
 
               {/* Confirmed warning */}

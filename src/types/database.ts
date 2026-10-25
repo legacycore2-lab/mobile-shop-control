@@ -175,6 +175,7 @@ export interface SaleInvoiceDetailDevice extends SaleInvoiceDevice {
 
 export interface SaleInvoiceDetailProduct extends SaleInvoiceProduct {
   product_name: string; unit: string; cost_price: number
+  code?: string | null   // الباركود أو SKU (مش موجود في الفواتير الملغاة)
 }
 
 export interface SaleCancelSnapshot {

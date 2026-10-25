@@ -128,7 +128,7 @@ export const posRepository = {
 
     const { data: prdRows, error: prdErr } = await supabase
       .from('sale_invoice_products')
-      .select(`*, products!product_id ( name, unit, cost_price )`)
+      .select(`*, products!product_id ( name, unit, cost_price, sku, barcode )`)
       .eq('invoice_id', id)
     if (prdErr) throw prdErr
 
@@ -146,6 +146,7 @@ export const posRepository = {
         product_name: String(prd?.['name'] ?? '—'),
         unit:         String(prd?.['unit'] ?? 'قطعة'),
         cost_price:   n(prd?.['cost_price']),
+        code:         (prd?.['barcode'] as string | null) ?? (prd?.['sku'] as string | null) ?? null,
       }
     })
 
