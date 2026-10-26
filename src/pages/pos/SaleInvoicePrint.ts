@@ -113,7 +113,7 @@ function a4Body(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string,
   return `
 <div class="page">
   <div class="head">
-    <img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI Mobile Accessories">
+    <img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI Phones & Accessories">
     <div class="title">
       <h1>فاتورة بيع</h1>
       <div class="num">${escapeHtml(data.invoice_number)}</div>
@@ -176,7 +176,7 @@ const A4_CSS = `
   body { color: #1a1a1a; font-size: 13px; }
   .page { width: 210mm; height: 296mm; padding: 12mm 14mm 10mm; display: flex; flex-direction: column; gap: 7mm; }
   .head { display: flex; justify-content: space-between; align-items: center; }
-  .logo { width: 48mm; height: auto; display: block; }
+  .logo { width: 44mm; height: auto; display: block; }
   .title { text-align: left; }
   .title h1 { font-size: 30px; font-weight: 800; line-height: 1.1; }
   .title .num { margin-top: 4px; font-size: 14px; font-weight: 700; color: #6b5206; }
@@ -235,7 +235,7 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 
   return `
 <div class="receipt">
-  <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI Mobile Accessories"></div>
+  <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI Phones & Accessories"></div>
   <hr class="solid">
   <div class="center">
     <div class="r-title">فاتورة بيع</div>
@@ -273,7 +273,7 @@ const RECEIPT_CSS = `
   body { color: #000; font-size: 12px; }
   .receipt { width: 80mm; padding: 4mm 4mm 6mm; }
   .center { text-align: center; }
-  .logo { width: 44mm; height: auto; display: inline-block; }
+  .logo { width: 40mm; height: auto; display: inline-block; image-rendering: pixelated; }
   .solid { border: none; border-top: 2px solid #000; margin: 6px 0; }
   .dashed { border: none; border-top: 1px dashed #000; margin: 6px 0; }
   .r-title { font-size: 17px; font-weight: 800; }
@@ -301,7 +301,8 @@ const RECEIPT_CSS = `
 export async function printSaleInvoice(data: SaleInvoicePrintData, format: SaleInvoiceFormat): Promise<void> {
   const invDate = new Date(data.invoice_date).toLocaleDateString('en-GB')
   const now     = new Date().toLocaleString('en-GB', { hour12: false })
-  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/elshafei-logo.png`
+  const logoFile = format === 'a4' ? 'elshafei-header.png' : 'elshafei-header-thermal.png'
+  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/${logoFile}`
   const lines   = await buildLines(data)
 
   const body = format === 'a4'
