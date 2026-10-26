@@ -176,7 +176,7 @@ const A4_CSS = `
   body { color: #1a1a1a; font-size: 13px; }
   .page { width: 210mm; height: 296mm; padding: 12mm 14mm 10mm; display: flex; flex-direction: column; gap: 7mm; }
   .head { display: flex; justify-content: space-between; align-items: center; }
-  .logo { width: 44mm; height: auto; display: block; }
+  .logo { width: 48mm; height: auto; display: block; }
   .title { text-align: left; }
   .title h1 { font-size: 30px; font-weight: 800; line-height: 1.1; }
   .title .num { margin-top: 4px; font-size: 14px; font-weight: 700; color: #6b5206; }
