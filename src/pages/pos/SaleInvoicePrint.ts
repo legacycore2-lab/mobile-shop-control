@@ -271,9 +271,9 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 const RECEIPT_CSS = `
   @page { size: 80mm 200mm; margin: 0; }
   html { direction: ltr; }
-  html, body { width: 80mm; height: auto; }
+  html, body { width: 100%; height: auto; overflow-x: hidden; }
   body { color: #000; font-size: 12px; }
-  .receipt { direction: rtl; width: 72mm; margin: 0 auto; padding: 3mm 1mm 6mm; }
+  .receipt { direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 3mm 2mm 6mm; }
   .center { text-align: center; }
   .logo { width: 40mm; height: auto; display: inline-block; image-rendering: pixelated; }
   .solid { border: none; border-top: 2px solid #000; margin: 6px 0; }
