@@ -276,7 +276,7 @@ const RECEIPT_CSS = `
   * { color: #000 !important; font-weight: 700; text-rendering: geometricPrecision; }
   .receipt { direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 2mm 2mm 3mm; }
   .center { text-align: center; }
-  .logo { width: 42mm; height: auto; display: inline-block; image-rendering: pixelated; }
+  .logo { width: 38mm; height: auto; display: inline-block; image-rendering: pixelated; }
   .solid { border: none; border-top: 2px solid #000; margin: 4px 0; }
   .dashed { border: none; border-top: 1px dashed #000; margin: 4px 0; }
   .r-title { font-size: 20px; font-weight: 800; }
@@ -316,9 +316,11 @@ export async function printSaleInvoice(data: SaleInvoicePrintData, format: SaleI
   const fitReceiptPage = format === 'receipt' ? `
   var rec = document.querySelector('.receipt')
   if (rec) {
-    var mm = Math.ceil(rec.getBoundingClientRect().height * 25.4 / 96) + 8
+    var toMm = function () { return Math.ceil(rec.getBoundingClientRect().height * 25.4 / 96) }
+    var mm = toMm()
+    if (mm > 205) { rec.style.zoom = String(Math.max(0.6, 205 / mm)); mm = toMm() }
     var st = document.createElement('style')
-    st.textContent = '@page { size: 80mm ' + mm + 'mm; margin: 0 }'
+    st.textContent = '@page { size: 80mm ' + (mm + 2) + 'mm; margin: 0 }'
     document.head.appendChild(st)
   }` : ''
 
