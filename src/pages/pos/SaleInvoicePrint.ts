@@ -305,7 +305,7 @@ export async function printSaleInvoice(data: SaleInvoicePrintData, format: SaleI
   const invDate = new Date(data.invoice_date).toLocaleDateString('en-GB')
   const now     = new Date().toLocaleString('en-GB', { hour12: false })
   const logoFile = format === 'a4' ? 'elshafei-header.png' : 'elshafei-header-thermal.png'
-  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/${logoFile}`
+  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/${logoFile}?v=20261105`
   const lines   = await buildLines(data)
 
   const body = format === 'a4'
