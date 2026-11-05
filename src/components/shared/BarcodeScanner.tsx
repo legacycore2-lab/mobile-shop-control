@@ -30,36 +30,64 @@ export function scannedChar(e: KeyboardEvent): string {
   return e.key.length === 1 && e.key.charCodeAt(0) < 128 ? e.key : ''
 }
 
+// ── قارئ الكيبورد (USB scanner) — بيقبل الكود بـ Enter أو من غير Enter ─────────
+
+const SCAN_IDLE_MS = 120   // بعد آخر حرف — لو السكانر مبعتش Enter نقفل الكود لوحدنا
+const SCAN_MAX_GAP = 80    // متوسط الفرق بين حرفين (ms) — أبطأ من كده يبقى كتابة بإيد مش سكانر
+
+export function createWedgeReader(onScan: (code: string) => void, minLength: number) {
+  let buf = ''
+  let last = 0
+  let gaps = 0
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  function reset() { buf = ''; last = 0; gaps = 0 }
+  function clear() { if (timer) { clearTimeout(timer); timer = null } }
+
+  // السكانر اللي مش بيبعت Enter: نقفل الكود لما الحروف توقف، بس لو اتكتبت بسرعة السكانر
+  function flush() {
+    timer = null
+    const fast = buf.length > 1 && gaps / (buf.length - 1) <= SCAN_MAX_GAP
+    const code = buf.trim()
+    reset()
+    if (fast && code.length >= minLength) onScan(code)
+  }
+
+  function onKey(e: KeyboardEvent) {
+    const tag = (e.target as HTMLElement).tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+    // السكانر مبيكررش مفتاح — التكرار معناه إن مفتاح ضاغط عليه، فنفضّي المخزن
+    if (e.repeat) { clear(); reset(); return }
+    if (e.key === 'Enter') {
+      clear()
+      const code = buf.trim()
+      reset()
+      if (code.length >= minLength) onScan(code)
+      return
+    }
+    const ch = scannedChar(e)
+    if (!ch) return
+    const now = Date.now()
+    if (buf) gaps += now - last
+    last = now
+    buf += ch
+    clear()
+    timer = setTimeout(flush, SCAN_IDLE_MS)
+  }
+
+  return { onKey, dispose: clear }
+}
+
 // ── USB hook (used both inside modal and externally) ──────────────────────────
 
 export function useUsbScanner(onScan: (code: string) => void, active: boolean) {
-  const buf   = useRef('')
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   useEffect(() => {
     if (!active) return
-    function onKey(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      // السكانر مبيكررش مفتاح — التكرار معناه إن مفتاح ضاغط عليه، فنفضّي المخزن
-      if (e.repeat) { buf.current = ''; return }
-      if (e.key === 'Enter') {
-        const code = buf.current.trim()
-        if (code.length >= 4) onScan(code)
-        buf.current = ''
-        return
-      }
-      const ch = scannedChar(e)
-      if (ch) {
-        buf.current += ch
-        if (timer.current) clearTimeout(timer.current)
-        timer.current = setTimeout(() => { buf.current = '' }, 100)
-      }
-    }
-    window.addEventListener('keydown', onKey)
+    const reader = createWedgeReader(onScan, 4)
+    window.addEventListener('keydown', reader.onKey)
     return () => {
-      window.removeEventListener('keydown', onKey)
-      if (timer.current) clearTimeout(timer.current)
+      window.removeEventListener('keydown', reader.onKey)
+      reader.dispose()
     }
   }, [active, onScan])
 }

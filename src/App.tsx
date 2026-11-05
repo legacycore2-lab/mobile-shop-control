@@ -1,8 +1,8 @@
 // src/App.tsx
-import { scannedChar } from '@/components/shared/BarcodeScanner'
+import { createWedgeReader } from '@/components/shared/BarcodeScanner'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { startRealtime, stopRealtime } from '@/lib/realtime'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
@@ -66,39 +66,14 @@ function RealtimeStarter() {
 
 // ── Global USB Scanner — يشتغل في كل الصفحات دايماً ─────────────────────────
 function GlobalUsbScanner({ onScan }: { onScan: (code: string) => void }) {
-  const buf   = useRef('')
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleScan = useCallback(onScan, [onScan])
-
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if (e.repeat) { buf.current = ''; return }
-
-      if (e.key === 'Enter') {
-        const code = buf.current.trim()
-        if (code.length >= 8) handleScan(code)
-        buf.current = ''
-        if (timer.current) clearTimeout(timer.current)
-        return
-      }
-
-      const ch = scannedChar(e)
-      if (ch) {
-        buf.current += ch
-        if (timer.current) clearTimeout(timer.current)
-        timer.current = setTimeout(() => { buf.current = '' }, 150)
-      }
-    }
-
-    window.addEventListener('keydown', onKey)
+    const reader = createWedgeReader(onScan, 8)
+    window.addEventListener('keydown', reader.onKey)
     return () => {
-      window.removeEventListener('keydown', onKey)
-      if (timer.current) clearTimeout(timer.current)
+      window.removeEventListener('keydown', reader.onKey)
+      reader.dispose()
     }
-  }, [handleScan])
+  }, [onScan])
 
   return null
 }
