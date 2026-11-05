@@ -269,7 +269,8 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 }
 
 const RECEIPT_CSS = `
-  @page { size: 80mm auto; margin: 0; }
+  @page { size: 80mm 200mm; margin: 0; }
+  html, body { width: 80mm; height: auto; }
   body { color: #000; font-size: 12px; }
   .receipt { width: 80mm; padding: 4mm 4mm 6mm; }
   .center { text-align: center; }
@@ -309,6 +310,15 @@ export async function printSaleInvoice(data: SaleInvoicePrintData, format: SaleI
     ? a4Body(data, lines, logoUrl, invDate, now)
     : receiptBody(data, lines, logoUrl, invDate, now)
   const css = format === 'a4' ? A4_CSS : RECEIPT_CSS
+  // Chrome لا يدعم `size: 80mm auto` فالطابعات الحرارية تطبع ورقة فاضية — نحدد الارتفاع الفعلي للإيصال قبل الطباعة
+  const fitReceiptPage = format === 'receipt' ? `
+  var rec = document.querySelector('.receipt')
+  if (rec) {
+    var mm = Math.ceil(rec.getBoundingClientRect().height * 25.4 / 96) + 4
+    var st = document.createElement('style')
+    st.textContent = '@page { size: 80mm ' + mm + 'mm; margin: 0 }'
+    document.head.appendChild(st)
+  }` : ''
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -330,7 +340,9 @@ ${body}
 <script>
   Promise.all([document.fonts.ready].concat(Array.from(document.images).map(function (img) {
     return img.complete ? Promise.resolve() : new Promise(function (r) { img.onload = img.onerror = r })
-  }))).then(function () { window.print() })
+  }))).then(function () {${fitReceiptPage}
+    window.print()
+  })
 <\/script>
 </body>
 </html>`
