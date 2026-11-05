@@ -272,28 +272,29 @@ const RECEIPT_CSS = `
   @page { size: 80mm 200mm; margin: 0; }
   html { direction: ltr; }
   html, body { width: 100%; height: auto; overflow-x: hidden; }
-  body { color: #000; font-size: 12px; }
+  body { color: #000; font-size: 15px; font-weight: 700; }
+  * { color: #000 !important; font-weight: 700; text-rendering: geometricPrecision; }
   .receipt { direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 3mm 2mm 6mm; }
   .center { text-align: center; }
   .logo { width: 40mm; height: auto; display: inline-block; image-rendering: pixelated; }
   .solid { border: none; border-top: 2px solid #000; margin: 6px 0; }
   .dashed { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-  .r-title { font-size: 17px; font-weight: 800; }
-  .r-num { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .r-title { font-size: 20px; font-weight: 800; }
+  .r-num { font-size: 17px; font-weight: 800; margin-top: 2px; }
   .meta { margin-top: 6px; }
-  .kv { display: flex; justify-content: space-between; gap: 6px; padding: 2px 0; font-size: 12px; }
-  .head-row { font-size: 11px; font-weight: 700; }
+  .kv { display: flex; justify-content: space-between; gap: 6px; padding: 3px 0; font-size: 15px; }
+  .head-row { font-size: 14px; font-weight: 800; }
   .line { display: flex; justify-content: space-between; gap: 6px; align-items: flex-start; padding: 5px 0; }
   .line-main { display: flex; align-items: center; gap: 6px; }
   .qr { width: 11mm; height: 11mm; flex: none; image-rendering: pixelated; }
-  .line-name { font-size: 13px; font-weight: 700; }
-  .line-code { font-size: 9px; direction: ltr; text-align: right; font-family: 'Courier New', monospace; }
-  .line-qty { font-size: 11px; }
-  .line-total { font-size: 13px; font-weight: 800; white-space: nowrap; }
-  .grand { font-size: 16px; font-weight: 800; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; margin: 4px 0; }
-  .pay { margin-top: 8px; text-align: center; font-size: 13px; font-weight: 800; padding: 6px; border: 2px solid #000; border-radius: 5px; }
-  .small { font-size: 10px; line-height: 1.8; }
-  .sigs { margin-top: 8mm; display: flex; justify-content: space-between; gap: 6mm; text-align: center; font-size: 10px; }
+  .line-name { font-size: 16px; font-weight: 800; }
+  .line-code { font-size: 12px; direction: ltr; text-align: right; font-family: 'Courier New', monospace; }
+  .line-qty { font-size: 14px; }
+  .line-total { font-size: 16px; font-weight: 800; white-space: nowrap; }
+  .grand { font-size: 19px; font-weight: 800; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; margin: 4px 0; }
+  .pay { margin-top: 8px; text-align: center; font-size: 16px; font-weight: 800; padding: 6px; border: 2px solid #000; border-radius: 5px; }
+  .small { font-size: 13px; line-height: 1.8; }
+  .sigs { margin-top: 8mm; display: flex; justify-content: space-between; gap: 6mm; text-align: center; font-size: 13px; }
   .sigs > div { flex: 1; }
   .sig-line { border-bottom: 1px solid #000; height: 10mm; margin-bottom: 3px; }
 `
