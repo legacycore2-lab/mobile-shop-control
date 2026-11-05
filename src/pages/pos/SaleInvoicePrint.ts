@@ -176,7 +176,7 @@ const A4_CSS = `
   body { color: #1a1a1a; font-size: 13px; }
   .page { width: 210mm; height: 296mm; padding: 12mm 14mm 10mm; display: flex; flex-direction: column; gap: 7mm; }
   .head { display: flex; justify-content: space-between; align-items: center; }
-  .logo { width: 58mm; height: auto; display: block; }
+  .logo { width: 48mm; height: auto; display: block; }
   .title { text-align: left; }
   .title h1 { font-size: 30px; font-weight: 800; line-height: 1.1; }
   .title .num { margin-top: 4px; font-size: 14px; font-weight: 700; color: #6b5206; }
@@ -276,7 +276,7 @@ const RECEIPT_CSS = `
   * { color: #000 !important; font-weight: 700; text-rendering: geometricPrecision; }
   .receipt { direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 2mm 2mm 3mm; }
   .center { text-align: center; }
-  .logo { width: 54mm; height: auto; display: inline-block; image-rendering: pixelated; }
+  .logo { width: 42mm; height: auto; display: inline-block; image-rendering: pixelated; }
   .solid { border: none; border-top: 2px solid #000; margin: 4px 0; }
   .dashed { border: none; border-top: 1px dashed #000; margin: 4px 0; }
   .r-title { font-size: 20px; font-weight: 800; }
@@ -316,7 +316,7 @@ export async function printSaleInvoice(data: SaleInvoicePrintData, format: SaleI
   const fitReceiptPage = format === 'receipt' ? `
   var rec = document.querySelector('.receipt')
   if (rec) {
-    var mm = Math.ceil(rec.getBoundingClientRect().height * 25.4 / 96) + 4
+    var mm = Math.ceil(rec.getBoundingClientRect().height * 25.4 / 96) + 8
     var st = document.createElement('style')
     st.textContent = '@page { size: 80mm ' + mm + 'mm; margin: 0 }'
     document.head.appendChild(st)
