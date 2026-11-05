@@ -42,6 +42,35 @@ export function batteryHtml(percent: number): string {
   return `<span class="bat">${svg}${pct}%</span>`
 }
 
+// ── إعدادات مقاس الليبل واتجاه الطباعة (بتتحفظ على الجهاز) ────────────────────
+export interface LabelPrintSettings {
+  width:    number            // عرض الورقة اللي الدرايفر شايفها (mm)
+  height:   number            // طول الورقة (mm)
+  rotation: 0 | 90 | 180 | 270 // تدوير المحتوى لو الطابعة بتطبعه مقلوب
+}
+
+export const DEFAULT_LABEL_SETTINGS: LabelPrintSettings = { width: 38, height: 24.5, rotation: 0 }
+const SETTINGS_KEY = 'label-print-settings'
+
+export function loadLabelSettings(): LabelPrintSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return DEFAULT_LABEL_SETTINGS
+    const p = JSON.parse(raw) as Partial<LabelPrintSettings>
+    const w = Number(p.width), h = Number(p.height)
+    const r = [0, 90, 180, 270].includes(Number(p.rotation)) ? (Number(p.rotation) as LabelPrintSettings['rotation']) : 0
+    return {
+      width:  w >= 15 && w <= 120 ? w : DEFAULT_LABEL_SETTINGS.width,
+      height: h >= 10 && h <= 120 ? h : DEFAULT_LABEL_SETTINGS.height,
+      rotation: r,
+    }
+  } catch { return DEFAULT_LABEL_SETTINGS }
+}
+
+export function saveLabelSettings(s: LabelPrintSettings): void {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)) } catch { /* مفيش تخزين متاح */ }
+}
+
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -61,10 +90,23 @@ async function labelBlock(label: BarcodeLabel): Promise<string> {
 }
 
 export async function printBarcodeLabels(items: { label: BarcodeLabel; copies: number }[]): Promise<void> {
+  const { width: pw, height: ph, rotation } = loadLabelSettings()
+  // مساحة تصميم الليبل (بعد التدوير بتتبدل الأبعاد)
+  const sideways = rotation === 90 || rotation === 270
+  const cw = sideways ? ph : pw
+  const ch = sideways ? pw : ph
+  const qr = Math.round(Math.min(ch * 0.66, cw * 0.45) * 10) / 10
+  const font = Math.max(5.5, Math.min(11, Math.min(ch / 24.5, cw / 38) * 7))
+  const transform =
+    rotation === 90  ? `translate(${pw}mm, 0) rotate(90deg)`
+    : rotation === 270 ? `translate(0, ${ph}mm) rotate(-90deg)`
+    : rotation === 180 ? `translate(${pw}mm, ${ph}mm) rotate(180deg)`
+    : 'none'
+
   const blocks: string[] = []
   for (const { label, copies } of items) {
     const block = await labelBlock(label)
-    for (let i = 0; i < copies; i++) blocks.push(block)
+    for (let i = 0; i < copies; i++) blocks.push(`<div class="page">${block}</div>`)
   }
 
   const html = `<!DOCTYPE html><html><head>
@@ -72,32 +114,34 @@ export async function printBarcodeLabels(items: { label: BarcodeLabel; copies: n
   <title>ليبل</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    @page { size: 38mm 24.5mm; margin: 0; }
-    html, body { background:#fff; width:38mm; }
+    @page { size: ${pw}mm ${ph}mm; margin: 0; }
+    html, body { background:#fff; width:${pw}mm; }
+    .page { position: relative; width:${pw}mm; height:${ph}mm; overflow:hidden; break-inside:avoid; }
+    .page + .page { break-before: page; }
     .label {
-      width: 38mm;
-      height: 24mm;
+      contain: size;
+      position: absolute; top:0; left:0;
+      width: ${cw}mm;
+      height: ${ch}mm;
+      transform-origin: 0 0;
+      transform: ${transform};
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 0.4mm;
-      break-inside: avoid;
       overflow: hidden;
     }
-    .label + .label { break-before: page; }
-    .qr { width: 16mm; height: 16mm; display: block; }
+    .qr { width: ${qr}mm; height: ${qr}mm; display: block; }
     .bat { white-space: nowrap; }
     .bat-icon { width: 4.2mm; height: 2.1mm; vertical-align: -0.2mm; margin-inline-end: 0.6mm; }
     .name {
-      width: 36mm;
-      font: 700 7pt/1.1 Arial, Tahoma, sans-serif;
+      width: ${cw - 2}mm;
+      font: 700 ${font}pt/1.1 Arial, Tahoma, sans-serif;
       text-align: center;
       color: #000;
+      max-height: 2.4em;
       overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
     }
   </style>
   </head><body>

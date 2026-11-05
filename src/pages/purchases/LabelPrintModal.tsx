@@ -6,6 +6,7 @@ import { fmt } from '@/lib/fmt'
 import type { PurchaseInvoiceDetailDevice as InvoiceDetailDevice, PurchaseInvoiceDetailProduct as InvoiceDetailProduct } from '@/types/database'
 import { Sensitive } from '@/components/shared/Sensitive'
 import { printBarcodeLabels, type BarcodeLabel } from '@/lib/printBarcodeLabel'
+import { LabelSettingsPanel } from '@/components/shared/LabelSettingsPanel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -468,6 +469,11 @@ export function BulkLabelPrintModal({
               })}
             </div>
           )}
+        </div>
+
+        {/* Label size + rotation settings */}
+        <div className="flex-shrink-0 px-4 pb-3">
+          <LabelSettingsPanel />
         </div>
 
         {/* Footer */}

@@ -5,6 +5,7 @@ import React, { useRef, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { printBarcodeLabels, labelCaption, batteryHtml, type BarcodeLabel } from '@/lib/printBarcodeLabel'
 import { X, Printer, QrCode } from 'lucide-react'
+import { LabelSettingsPanel } from '@/components/shared/LabelSettingsPanel'
 
 // ── QR Canvas Preview ─────────────────────────────────────────────────────────
 
@@ -136,10 +137,8 @@ export function BarcodeLabelModal({ label, onClose }: Props) {
             )}
           </div>
 
-          {/* Label size note */}
-          <p className="text-xs text-gray-400 text-center">
-            مقاس الليبل: 1.50 × 0.98 in — Xprinter XP-233B
-          </p>
+          {/* Label size + rotation settings */}
+          <LabelSettingsPanel />
 
           {/* Copies */}
           <div className="flex items-center justify-between">
