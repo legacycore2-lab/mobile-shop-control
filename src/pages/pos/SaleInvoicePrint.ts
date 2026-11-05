@@ -270,9 +270,10 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 
 const RECEIPT_CSS = `
   @page { size: 80mm 200mm; margin: 0; }
+  html { direction: ltr; }
   html, body { width: 80mm; height: auto; }
   body { color: #000; font-size: 12px; }
-  .receipt { width: 80mm; padding: 4mm 4mm 6mm; }
+  .receipt { direction: rtl; width: 80mm; padding: 4mm 4mm 6mm; }
   .center { text-align: center; }
   .logo { width: 40mm; height: auto; display: inline-block; image-rendering: pixelated; }
   .solid { border: none; border-top: 2px solid #000; margin: 6px 0; }
