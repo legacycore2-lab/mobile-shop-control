@@ -113,7 +113,7 @@ function a4Body(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string,
   return `
 <div class="page">
   <div class="head">
-    <img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI Phones & Accessories">
+    <img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI">
     <div class="title">
       <h1>فاتورة بيع</h1>
       <div class="num">${escapeHtml(data.invoice_number)}</div>
@@ -235,7 +235,7 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 
   return `
 <div class="receipt">
-  <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI Phones & Accessories"></div>
+  <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI"></div>
   <hr class="solid">
   <div class="center">
     <div class="r-title">فاتورة بيع</div>
