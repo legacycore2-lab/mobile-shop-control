@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronRight, ChevronLeft, FileDown, Wallet, ShoppingCart, TrendingUp, Users, AlertCircle,
+  ChevronRight, ChevronLeft, FileDown, Printer, Wallet, ShoppingCart, TrendingUp, Users, AlertCircle,
 } from 'lucide-react'
 import { useDailyClose } from '@/hooks/useDailyClose'
 import { useNumberVisibility } from '@/hooks/usePermissions'
@@ -10,6 +10,7 @@ import { StatCard } from '@/components/shared/StatCard'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { exportDailyClosePdf } from '@/lib/pdfExport'
+import { printDailyClose } from './printDailyClose'
 import { formatDateKeyAr, shiftDateKey, todayKey } from '@/lib/dateKey'
 import { fmtCurrency } from '@/lib/fmt'
 import { CashFlowCard } from './components/CashFlowCard'
@@ -51,7 +52,11 @@ export function DailyClosePage() {
           {!isToday && (
             <Button size="sm" variant="ghost" onClick={() => setDate(todayKey())}>اليوم</Button>
           )}
-          <Button size="sm" variant="primary" icon={<FileDown size={14} />}
+          <Button size="sm" variant="primary" icon={<Printer size={14} />}
+            disabled={!data || !canPdf} onClick={() => data && void printDailyClose(data)}>
+            طباعة
+          </Button>
+          <Button size="sm" variant="secondary" icon={<FileDown size={14} />}
             disabled={!data || !canPdf} onClick={() => data && exportDailyClosePdf(data, 'preview')}>
             PDF
           </Button>
