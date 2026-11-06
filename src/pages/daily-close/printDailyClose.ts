@@ -68,6 +68,13 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
     ) +
     `<div class="note">أجهزة: ${fmt(d.sales.devices.quantity)} (${egp(d.sales.devices.amount)}) — إكسسوارات: ${fmt(d.sales.products.quantity)} (${egp(d.sales.products.amount)}) — قبل الخصم</div>`)
 
+  const soldItems = d.sales.items.length === 0 ? '' : section('ما تم بيعه (ملخص الأصناف)',
+    table(
+      ['الصنف', 'النوع', 'الكمية', 'الإجمالي'],
+      d.sales.items.map(i => [esc(i.name), i.kind === 'device' ? 'جهاز' : 'إكسسوار', fmt(i.quantity), egp(i.amount)]),
+      ['الإجمالي', '', fmt(d.sales.devices.quantity + d.sales.products.quantity), egp(d.sales.devices.amount + d.sales.products.amount)],
+    ))
+
   const purchases = section('المشتريات',
     `<div class="kvs">
       ${kv('عدد فواتير الشراء', String(d.purchases.invoiceCount))}
@@ -118,6 +125,7 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
   </div>
 
   ${sales}
+  ${soldItems}
   ${purchases}
   ${expenses}
   <div class="cols">

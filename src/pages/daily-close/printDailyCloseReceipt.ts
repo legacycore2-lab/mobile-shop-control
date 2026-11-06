@@ -38,10 +38,18 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
     kv('المصروفات', egp(d.expenses.total)) +
     kv('صافي الربح', egp(d.netProfit), 'grand'))
 
+  const soldItems = d.sales.items.length === 0 ? '' : sec('ما تم بيعه',
+    d.sales.items.map(i => `
+      <div class="inv">
+        <div class="kv"><span>${esc(i.name)}</span><span>${egp(i.amount)}</span></div>
+        <div class="kv small"><span>${i.kind === 'device' ? 'جهاز' : 'إكسسوار'} × ${fmt(i.quantity)}</span><span></span></div>
+      </div>`).join(''))
+
   const invoices = d.sales.invoices.length === 0 ? '' : sec('فواتير البيع',
     d.sales.invoices.map(i => `
       <div class="inv">
         <div class="kv"><span>${esc(i.number)} · ${esc(i.customerName ?? 'نقدي')}</span><span>${egp(i.total)}</span></div>
+        ${i.items.map(it => `<div class="kv small"><span>• ${esc(it)}</span><span></span></div>`).join('')}
         ${i.remaining > 0 ? `<div class="kv small"><span>المتبقي</span><span>${egp(i.remaining)}</span></div>` : ''}
       </div>`).join('') +
     `<hr class="dashed">` +
@@ -49,6 +57,13 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
     kv('إكسسوارات', `${fmt(d.sales.products.quantity)} (${egp(d.sales.products.amount)})`))
 
   const purchases = sec('المشتريات',
+    d.purchases.invoices.map(i => `
+      <div class="inv">
+        <div class="kv"><span>${esc(i.number)} · ${esc(i.supplierName)}</span><span>${egp(i.total)}</span></div>
+        ${i.items.map(it => `<div class="kv small"><span>• ${esc(it)}</span><span></span></div>`).join('')}
+        <div class="kv small"><span>المدفوع</span><span>${egp(i.paid)}</span></div>
+      </div>`).join('') +
+    (d.purchases.invoices.length > 0 ? '<hr class="dashed">' : '') +
     kv('عدد الفواتير', String(d.purchases.invoiceCount)) +
     kv('الإجمالي', egp(d.purchases.total)) +
     kv('المدفوع', egp(d.purchases.paid)))
@@ -82,6 +97,7 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
   ${kv('المتبقي عند العملاء', egp(d.receivables.totalOutstanding), 'big')}
   ${cash}
   ${profit}
+  ${soldItems}
   ${invoices}
   ${purchases}
   ${expenses}

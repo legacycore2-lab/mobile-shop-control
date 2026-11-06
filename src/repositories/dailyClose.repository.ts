@@ -4,6 +4,17 @@ import { invoiceItemNames } from '@/lib/db-helpers'
 
 const n = (v: unknown): number => Number(v ?? 0)
 
+const first = (v: unknown): Record<string, unknown> | null =>
+  (Array.isArray(v) ? v[0] : v) as Record<string, unknown> | null ?? null
+
+// اسم الجهاز بتفاصيله: الماركة + الموديل + السعة + اللون
+function deviceLabel(dev: Record<string, unknown> | null): string {
+  const model = first(dev?.['mobile_models'])
+  const brand = first(model?.['mobile_brands'])
+  return [brand?.['name'], model?.['name'], dev?.['storage'], dev?.['color']]
+    .filter(Boolean).map(String).join(' ').trim() || '—'
+}
+
 const ID_CHUNK = 100
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -92,7 +103,7 @@ export const dailyCloseRepository = {
         supabase
           .from('sale_invoice_devices')
           .select(`invoice_id, actual_selling_price,
-            mobile_devices!device_id ( cost_price, mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) )`)
+            mobile_devices!device_id ( cost_price, storage, color, mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) )`)
           .in('invoice_id', ids),
         supabase
           .from('sale_invoice_products')
@@ -104,13 +115,11 @@ export const dailyCloseRepository = {
 
       for (const row of (devices.data ?? []) as unknown[]) {
         const r     = row as Record<string, unknown>
-        const dev   = r['mobile_devices']    as Record<string, unknown> | null
-        const model = dev?.['mobile_models'] as Record<string, unknown> | null
-        const brand = model?.['mobile_brands'] as Record<string, unknown> | null
+        const dev   = first(r['mobile_devices'])
         lines.push({
           invoice_id: String(r['invoice_id']),
           kind:       'device',
-          name:       `${String(brand?.['name'] ?? '')} ${String(model?.['name'] ?? '—')}`.trim(),
+          name:       deviceLabel(dev),
           quantity:   1,
           unit_cost:  n(dev?.['cost_price']),
           unit_price: n(r['actual_selling_price']),
@@ -136,7 +145,7 @@ export const dailyCloseRepository = {
     const { data, error } = await supabase
       .from('purchase_invoices')
       .select(`id, invoice_number, total_amount, paid_amount, suppliers!supplier_id ( name ),
-        devices_agg:purchase_invoice_devices ( id, mobile_devices!device_id ( mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) ) ),
+        devices_agg:purchase_invoice_devices ( id, mobile_devices!device_id ( storage, color, mobile_models!model_id ( name, mobile_brands!brand_id ( name ) ) ) ),
         products_agg:purchase_invoice_products ( id, quantity, products!product_id ( name ) )`)
       .eq('invoice_date', date)
       .eq('status', 'confirmed')
@@ -151,7 +160,10 @@ export const dailyCloseRepository = {
         supplier_name:  String(sup?.['name'] ?? '—'),
         total_amount:   n(r['total_amount']),
         paid_amount:    n(r['paid_amount']),
-        item_names:     invoiceItemNames((r['devices_agg'] as unknown[] | null) ?? [], (r['products_agg'] as unknown[] | null) ?? []),
+        item_names:     [
+          ...((r['devices_agg'] as unknown[] | null) ?? []).map(d => deviceLabel(first((d as Record<string, unknown>)['mobile_devices']))),
+          ...invoiceItemNames([], (r['products_agg'] as unknown[] | null) ?? []),
+        ],
       }
     })
   },
