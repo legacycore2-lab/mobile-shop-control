@@ -89,17 +89,28 @@ function payStatusHtml(data: SaleInvoicePrintData): string {
   return `<div class="pay unpaid">غير مسدد — المطلوب ${fmt(data.total_amount)} ج</div>`
 }
 
-// ختم "تم البيع" — بيظهر بس على الفواتير المؤكدة
+// ختم "تم البيع" الدائري — بيظهر بس على الفواتير المؤكدة
 function stampHtml(data: SaleInvoicePrintData, invDate: string): string {
   if (data.status !== 'confirmed') return ''
-  return `<div class="stamp-wrap"><div class="stamp"><div class="stamp-t">تم البيع</div><div class="stamp-d">${invDate}</div></div></div>`
+  return `<div class="stamp-wrap"><svg class="stamp" viewBox="0 0 190 190" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <path id="st-top" d="M95,95 m-70,0 a70,70 0 1,1 140,0"/>
+      <path id="st-bot" d="M95,95 m-78,0 a78,78 0 0,0 156,0"/>
+    </defs>
+    <circle cx="95" cy="95" r="90" fill="none" stroke="#000" stroke-width="4"/>
+    <circle cx="95" cy="95" r="83" fill="none" stroke="#000" stroke-width="1.5"/>
+    <circle cx="95" cy="95" r="54" fill="none" stroke="#000" stroke-width="2"/>
+    <text font-size="12.5" font-family="Arial, sans-serif" letter-spacing="1.2" font-weight="700"><textPath href="#st-top" startOffset="50%" text-anchor="middle">ELSHAFEI MARKET APPLE</textPath></text>
+    <text font-size="12.5" font-family="Arial, sans-serif" letter-spacing="2" font-weight="700"><textPath href="#st-bot" startOffset="50%" text-anchor="middle">★ 01128816781 ★</textPath></text>
+    <text x="95" y="93" text-anchor="middle" font-size="26" font-weight="800">تم البيع</text>
+    <text x="95" y="120" text-anchor="middle" font-size="13" font-family="Arial, sans-serif" font-weight="700">${invDate}</text>
+  </svg></div>`
 }
 
 const STAMP_CSS = `
-  .stamp-wrap { display: flex; justify-content: center; padding: 8px 0 4px; }
-  .stamp { display: inline-block; transform: rotate(-7deg); text-align: center; padding: 3px 18px; border: 3px solid #000; border-radius: 8px; outline: 1px solid #000; outline-offset: 2px; letter-spacing: 1px; }
-  .stamp-t { font-size: 24px; font-weight: 800; line-height: 1.25; }
-  .stamp-d { font-size: 12px; font-weight: 700; border-top: 1.5px solid #000; margin-top: 1px; padding-top: 1px; direction: ltr; }
+  .stamp-wrap { display: flex; justify-content: center; padding: 4px 0 2px; }
+  .stamp { width: 36mm; height: 36mm; transform: rotate(-10deg); }
+  .stamp text { fill: #000; }
 `
 
 // ── A4 ────────────────────────────────────────────────────────────────────────
