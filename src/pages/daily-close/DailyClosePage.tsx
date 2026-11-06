@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { exportDailyClosePdf } from '@/lib/pdfExport'
 import { printDailyClose } from './printDailyClose'
+import { printDailyCloseReceipt } from './printDailyCloseReceipt'
 import { formatDateKeyAr, shiftDateKey, todayKey } from '@/lib/dateKey'
 import { fmtCurrency } from '@/lib/fmt'
 import { CashFlowCard } from './components/CashFlowCard'
@@ -53,8 +54,12 @@ export function DailyClosePage() {
             <Button size="sm" variant="ghost" onClick={() => setDate(todayKey())}>اليوم</Button>
           )}
           <Button size="sm" variant="primary" icon={<Printer size={14} />}
+            disabled={!data || !canPdf} onClick={() => data && void printDailyCloseReceipt(data)}>
+            طباعة 80mm
+          </Button>
+          <Button size="sm" variant="secondary" icon={<Printer size={14} />}
             disabled={!data || !canPdf} onClick={() => data && void printDailyClose(data)}>
-            طباعة
+            طباعة A4
           </Button>
           <Button size="sm" variant="secondary" icon={<FileDown size={14} />}
             disabled={!data || !canPdf} onClick={() => data && exportDailyClosePdf(data, 'preview')}>

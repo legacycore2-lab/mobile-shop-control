@@ -5,7 +5,7 @@ import { formatDateKeyAr } from '@/lib/dateKey'
 import { CASH_METHOD_LABELS } from '@/constants/paymentMethods'
 import type { DailyClose } from '@/types/dailyClose'
 
-function esc(text: string): string {
+export function esc(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
