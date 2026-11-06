@@ -274,10 +274,10 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
     <div class="kv sm"><span>الخصم</span><span>− ${fmt(data.discount)} ج</span></div>` : ''}
     <div class="kv sm"><span>المدفوع</span><span>${fmt(data.paid_amount)} ج</span></div>
     <div class="kv sm"><span>المتبقي</span><span>${fmt(data.remaining)} ج</span></div>
+    ${stampHtml(data, invDate)}
   </div>
   <div class="kv grand"><span>الإجمالي</span><span>${fmt(data.total_amount)} ج</span></div>
   ${data.remaining > 0 ? payStatusHtml(data) : ''}
-  ${stampHtml(data, invDate)}
   ${data.notes ? `<div class="small">ملاحظات: ${escapeHtml(data.notes)}</div>` : ''}
   <div class="warranty">
     <div class="w-box">ضمان استبدال<br><span>١٤ يوم</span></div>
@@ -314,7 +314,9 @@ const RECEIPT_CSS = `
   .c-num { width: 17mm; text-align: left; white-space: nowrap; font-size: 14px; }
   .line-name { font-size: 15px; font-weight: 800; }
   .line-code { font-size: 12px; direction: ltr; text-align: right; font-family: 'Courier New', monospace; }
-  .totals { padding: 5px 4px 0; }
+  .totals { padding: 5px 4px 0; position: relative; }
+  .totals .stamp-wrap { position: absolute; left: 82px; top: -6.5mm; padding: 0; }
+  .totals .stamp { width: 24mm; height: 24mm; }
   .grand { font-size: 20px; font-weight: 800; border: 2px solid #000; padding: 3px 4px; margin-top: 4px; }
   .pay { margin-top: 5px; text-align: center; font-size: 15px; font-weight: 800; padding: 2px; border: 2px solid #000; border-radius: 5px; }
   .small { font-size: 12px; line-height: 1.7; }
