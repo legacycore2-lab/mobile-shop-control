@@ -89,6 +89,19 @@ function payStatusHtml(data: SaleInvoicePrintData): string {
   return `<div class="pay unpaid">غير مسدد — المطلوب ${fmt(data.total_amount)} ج</div>`
 }
 
+// ختم "تم البيع" — بيظهر بس على الفواتير المؤكدة
+function stampHtml(data: SaleInvoicePrintData, invDate: string): string {
+  if (data.status !== 'confirmed') return ''
+  return `<div class="stamp-wrap"><div class="stamp"><div class="stamp-t">تم البيع</div><div class="stamp-d">${invDate}</div></div></div>`
+}
+
+const STAMP_CSS = `
+  .stamp-wrap { display: flex; justify-content: center; padding: 8px 0 4px; }
+  .stamp { display: inline-block; transform: rotate(-7deg); text-align: center; padding: 3px 18px; border: 3px solid #000; border-radius: 8px; outline: 1px solid #000; outline-offset: 2px; letter-spacing: 1px; }
+  .stamp-t { font-size: 24px; font-weight: 800; line-height: 1.25; }
+  .stamp-d { font-size: 12px; font-weight: 700; border-top: 1.5px solid #000; margin-top: 1px; padding-top: 1px; direction: ltr; }
+`
+
 // ── A4 ────────────────────────────────────────────────────────────────────────
 
 function a4Body(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string, invDate: string, now: string): string {
@@ -144,7 +157,8 @@ function a4Body(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string,
 
   <div class="summary">
     <div class="left">
-      ${payStatusHtml(data)}
+      ${data.remaining > 0 ? payStatusHtml(data) : ''}
+      ${stampHtml(data, invDate)}
       ${data.notes ? `<div class="notes">ملاحظات: ${escapeHtml(data.notes)}</div>` : ''}
     </div>
     <div class="totals">
@@ -173,6 +187,7 @@ function a4Body(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string,
 }
 
 const A4_CSS = `
+  ${STAMP_CSS}
   @page { size: A4; margin: 0; }
   body { color: #1a1a1a; font-size: 13px; }
   .page { width: 210mm; height: 296mm; padding: 12mm 14mm 10mm; display: flex; flex-direction: column; gap: 7mm; }
@@ -250,7 +265,8 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
     <div class="kv sm"><span>المتبقي</span><span>${fmt(data.remaining)} ج</span></div>
   </div>
   <div class="kv grand"><span>الإجمالي</span><span>${fmt(data.total_amount)} ج</span></div>
-  ${payStatusHtml(data)}
+  ${data.remaining > 0 ? payStatusHtml(data) : ''}
+  ${stampHtml(data, invDate)}
   ${data.notes ? `<div class="small">ملاحظات: ${escapeHtml(data.notes)}</div>` : ''}
   <div class="warranty">
     <div class="w-box">ضمان استبدال<br><span>١٤ يوم</span></div>
@@ -266,6 +282,7 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 }
 
 const RECEIPT_CSS = `
+  ${STAMP_CSS}
   @page { size: 80mm 200mm; margin: 0; }
   html { direction: ltr; }
   html, body { width: 100%; height: auto; overflow-x: hidden; }
