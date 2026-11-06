@@ -164,6 +164,7 @@ function a4Body(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string,
     <div><div class="sig-line"></div>توقيع الكاشير</div>
   </div>
 
+  <div class="warranty"><b>ضمان استبدال ١٤ يوم</b><b>ضمان على الجهاز ٩٠ يوم</b></div>
   <div class="foot">
     <div><b>شكراً لتعاملكم مع الشافعي ستور</b></div>
     <div>طُبعت: ${now}</div>
@@ -214,6 +215,7 @@ const A4_CSS = `
   .sig-line { border-bottom: 1px solid #1a1a1a; height: 14mm; margin-bottom: 4px; }
   .foot { border-top: 1px solid #dad6cc; padding-top: 8px; display: flex; justify-content: space-between; font-size: 11px; color: #5c5c5c; }
   .foot b { color: #1a1a1a; }
+  .warranty { display: flex; justify-content: center; gap: 28px; padding: 8px 0; font-size: 13px; color: #1a1a1a; }
 `
 
 // ── إيصال 80mm ───────────────────────────────────────────────────────────────
@@ -264,11 +266,14 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
     <div><div class="sig-line"></div>توقيع الكاشير</div>
   </div>
   <hr class="dashed">
+  <div class="center warranty"><b>ضمان استبدال ١٤ يوم</b><br><b>ضمان على الجهاز ٩٠ يوم</b></div>
+  <hr class="dashed">
   <div class="center small foot"><b>شكراً لتعاملكم مع الشافعي ستور</b><br>طُبعت: ${now}</div>
 </div>`
 }
 
 const RECEIPT_CSS = `
+  .warranty { padding: 2px 0; font-size: 14px; font-weight: 800; line-height: 1.5; }
   @page { size: 80mm 200mm; margin: 0; }
   html { direction: ltr; }
   html, body { width: 100%; height: auto; overflow-x: hidden; }
