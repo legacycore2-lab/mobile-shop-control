@@ -32,7 +32,14 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
     kv('صافي الربح', egp(d.netProfit), 'grand'))
 
   const soldItems = d.sales.items.length === 0 ? '' : sec('ما تم بيعه',
-    d.sales.items.map(i => kv(`${esc(i.name)} ×${fmt(i.quantity)}`, egp(i.amount))).join(''))
+    d.sales.items.map(i => `
+      <div class="inv">
+        ${kv(`${esc(i.name)} ×${fmt(i.quantity)}`, egp(i.amount))}
+        ${kv(`تكلفة ${fmt(i.cost)}`, `ربح ${fmt(i.amount - i.cost)}`, 'small')}
+      </div>`).join('') +
+    '<hr class="dashed">' +
+    kv('إجمالي التكلفة', egp(d.sales.costOfGoods)) +
+    kv('إجمالي الربح', egp(d.sales.grossProfit), 'grand'))
 
   const purchases = d.purchases.invoices.length === 0 ? '' : sec('ما تم شراؤه',
     d.purchases.invoices.map(i => `

@@ -70,9 +70,9 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
 
   const soldItems = d.sales.items.length === 0 ? '' : section('ما تم بيعه (ملخص الأصناف)',
     table(
-      ['الصنف', 'النوع', 'الكمية', 'الإجمالي'],
-      d.sales.items.map(i => [esc(i.name), i.kind === 'device' ? 'جهاز' : 'إكسسوار', fmt(i.quantity), egp(i.amount)]),
-      ['الإجمالي', '', fmt(d.sales.devices.quantity + d.sales.products.quantity), egp(d.sales.devices.amount + d.sales.products.amount)],
+      ['الصنف', 'النوع', 'الكمية', 'البيع', 'التكلفة', 'الربح'],
+      d.sales.items.map(i => [esc(i.name), i.kind === 'device' ? 'جهاز' : 'إكسسوار', fmt(i.quantity), egp(i.amount), egp(i.cost), egp(i.amount - i.cost)]),
+      ['الإجمالي', '', fmt(d.sales.devices.quantity + d.sales.products.quantity), egp(d.sales.devices.amount + d.sales.products.amount), egp(d.sales.costOfGoods), egp(d.sales.grossProfit)],
     ))
 
   const purchases = section('المشتريات',

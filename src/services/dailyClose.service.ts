@@ -45,9 +45,10 @@ export function buildDailyClose(input: DailyCloseInput): DailyClose {
   const itemMap = new Map<string, SoldItemRow>()
   for (const l of saleLines) {
     const key = `${l.kind}:${l.name}`
-    const cur = itemMap.get(key) ?? { kind: l.kind, name: l.name, quantity: 0, amount: 0 }
+    const cur = itemMap.get(key) ?? { kind: l.kind, name: l.name, quantity: 0, amount: 0, cost: 0 }
     cur.quantity += l.quantity
     cur.amount   += l.quantity * l.unit_price
+    cur.cost     += l.quantity * l.unit_cost
     itemMap.set(key, cur)
   }
   const items = [...itemMap.values()].sort((a, b) => b.amount - a.amount)

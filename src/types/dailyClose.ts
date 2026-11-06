@@ -36,6 +36,7 @@ export interface SoldItemRow {
   name:     string
   quantity: number
   amount:   number
+  cost:     number
 }
 
 export interface PurchaseInvoiceSummary {
