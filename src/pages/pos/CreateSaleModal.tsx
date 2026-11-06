@@ -151,8 +151,9 @@ function NotFoundCard({ code, onDismiss }: { code: string; onDismiss: () => void
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
-export function CreateSaleModal({ onClose, initialDeviceId, initialProductId }: {
+export function CreateSaleModal({ onClose, onSold, initialDeviceId, initialProductId }: {
   onClose: () => void
+  onSold?: (invoiceId: string) => void
   initialDeviceId?: string
   initialProductId?: string
 }) {
@@ -404,6 +405,7 @@ export function CreateSaleModal({ onClose, initialDeviceId, initialProductId }: 
         soldById: profile?.id ?? '',
       })
       onClose()
+      onSold?.(invoice.id)
     } catch (err) {
       const msg = err instanceof Error
         ? err.message

@@ -292,6 +292,7 @@ export function PosPage() {
           initialDeviceId={autoDeviceId ?? undefined}
           initialProductId={autoProductId ?? undefined}
           onClose={() => { setShowCreate(false); setAutoDeviceId(null); setAutoProductId(null) }}
+          onSold={setDetailId}
         />
       )}
       {detailId   && <SaleDrawer invoiceId={detailId} onClose={() => setDetailId(null)} />}
