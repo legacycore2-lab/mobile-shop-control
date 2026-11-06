@@ -223,61 +223,53 @@ const A4_CSS = `
 function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: string, invDate: string, now: string): string {
   const gross = data.total_amount + (data.discount ?? 0)
   const rows = lines.map(l => `
-    <div class="line">
-      <div class="line-main">
-        ${l.qr ? `<img class="qr" src="${l.qr}" alt="">` : ''}
-        <div>
-          <div class="line-name">${escapeHtml(l.title)}</div>
-          ${l.code ? `<div class="line-code">${escapeHtml(l.code)}</div>` : ''}
-          <div class="line-qty">${l.qty} × ${fmt(l.unit)}</div>
-        </div>
+    <div class="row">
+      <div class="c-name">
+        <div class="line-name">${escapeHtml(l.title)}${l.qty > 1 ? ` ×${l.qty}` : ''}</div>
+        ${l.code ? `<div class="line-code">${escapeHtml(l.code)}</div>` : ''}
       </div>
-      <div class="line-total">${fmt(l.total)}</div>
+      <span class="c-num">${fmt(l.unit)}</span>
+      <span class="c-num">${fmt(l.total)}</span>
     </div>`).join('')
 
   return `
 <div class="receipt">
   <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI"></div>
   <hr class="solid">
-  <div class="center">
-    <div class="r-title">فاتورة بيع</div>
-    <div class="r-num">${escapeHtml(data.invoice_number)}</div>
-  </div>
-  <div class="meta">
-    <div class="kv"><span>التاريخ</span><b>${invDate}</b></div>
-    <div class="kv"><span>الكاشير</span><b>${escapeHtml(data.created_by_name)}</b></div>
-    <div class="kv"><span>العميل</span><b>${escapeHtml(data.customer_name ?? 'نقدي')}</b></div>
-    ${data.customer_phone ? `<div class="kv"><span>الهاتف</span><b>${escapeHtml(data.customer_phone)}</b></div>` : ''}
-  </div>
-  <hr class="dashed">
-  <div class="kv head-row"><span>البيان</span><span>الإجمالي</span></div>
+  <div class="center r-title">فاتورة بيع</div>
+  <div class="kv sm"><span>رقم: ${escapeHtml(data.invoice_number)}</span><span>${invDate}</span></div>
+  <div class="kv sm"><span>العميل: ${escapeHtml(data.customer_name ?? 'نقدي')}</span><span>الكاشير: ${escapeHtml(data.created_by_name)}</span></div>
+  ${data.customer_phone ? `<div class="kv sm"><span>الهاتف: ${escapeHtml(data.customer_phone)}</span><span></span></div>` : ''}
+  <div class="thead"><span class="c-name">الصنف</span><span class="c-num">السعر</span><span class="c-num">الإجمالي</span></div>
   ${rows}
-  <hr class="dashed">
-  ${data.discount > 0 ? `
-  <div class="kv"><span>الإجمالي قبل الخصم</span><span>${fmt(gross)} ج</span></div>
-  <div class="kv"><span>الخصم</span><span>− ${fmt(data.discount)} ج</span></div>` : ''}
+  <div class="totals">
+    ${data.discount > 0 ? `
+    <div class="kv sm"><span>الإجمالي قبل الخصم</span><span>${fmt(gross)} ج</span></div>
+    <div class="kv sm"><span>الخصم</span><span>− ${fmt(data.discount)} ج</span></div>` : ''}
+    <div class="kv sm"><span>المدفوع</span><span>${fmt(data.paid_amount)} ج</span></div>
+    <div class="kv sm"><span>المتبقي</span><span>${fmt(data.remaining)} ج</span></div>
+  </div>
   <div class="kv grand"><span>الإجمالي</span><span>${fmt(data.total_amount)} ج</span></div>
-  <div class="kv"><span>المدفوع</span><b>${fmt(data.paid_amount)} ج</b></div>
-  <div class="kv"><span>المتبقي</span><b>${fmt(data.remaining)} ج</b></div>
   ${payStatusHtml(data)}
-  ${data.notes ? `<hr class="dashed"><div class="small">ملاحظات: ${escapeHtml(data.notes)}</div>` : ''}
+  ${data.notes ? `<div class="small">ملاحظات: ${escapeHtml(data.notes)}</div>` : ''}
+  <div class="warranty">
+    <div class="w-box">ضمان استبدال<br><span>١٤ يوم</span></div>
+    <div class="w-box">ضمان الجهاز<br><span>٩٠ يوم</span></div>
+  </div>
   <div class="sigs">
     <div><div class="sig-line"></div>توقيع العميل</div>
     <div><div class="sig-line"></div>توقيع الكاشير</div>
   </div>
-  <hr class="dashed">
-  <div class="center warranty"><b>ضمان استبدال ١٤ يوم</b><br><b>ضمان على الجهاز ٩٠ يوم</b></div>
   <hr class="dashed">
   <div class="center small foot"><b>شكراً لتعاملكم مع الشافعي ستور</b><br>طُبعت: ${now}</div>
 </div>`
 }
 
 const RECEIPT_CSS = `
-  .warranty { padding: 2px 0; font-size: 14px; font-weight: 800; line-height: 1.5; }
   @page { size: 80mm 200mm; margin: 0; }
   html { direction: ltr; }
   html, body { width: 100%; height: auto; overflow-x: hidden; }
-  body { color: #000; font-size: 15px; font-weight: 700; }
+  body { color: #000; font-size: 14px; font-weight: 700; }
   * { color: #000 !important; font-weight: 700; text-rendering: geometricPrecision; }
   .receipt { direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 2mm 2mm 3mm; }
   .center { text-align: center; }
@@ -285,20 +277,22 @@ const RECEIPT_CSS = `
   .solid { border: none; border-top: 2px solid #000; margin: 4px 0; }
   .dashed { border: none; border-top: 1px dashed #000; margin: 4px 0; }
   .r-title { font-size: 20px; font-weight: 800; }
-  .r-num { font-size: 17px; font-weight: 800; margin-top: 2px; }
-  .meta { margin-top: 6px; }
   .kv { display: flex; justify-content: space-between; gap: 6px; padding: 1px 0; font-size: 15px; }
-  .head-row { font-size: 14px; font-weight: 800; }
-  .line { display: flex; justify-content: space-between; gap: 6px; align-items: flex-start; padding: 3px 0; }
-  .line-main { display: flex; align-items: center; gap: 6px; }
-  .qr { width: 11mm; height: 11mm; flex: none; image-rendering: pixelated; }
-  .line-name { font-size: 16px; font-weight: 800; }
+  .kv.sm { font-size: 13px; }
+  .thead { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding: 2px 4px; background: #000; font-size: 13px; }
+  .thead span { color: #fff !important; }
+  .row { display: flex; align-items: flex-start; gap: 4px; padding: 4px; border-bottom: 1px solid #000; }
+  .c-name { flex: 1; min-width: 0; }
+  .c-num { width: 17mm; text-align: left; white-space: nowrap; font-size: 14px; }
+  .line-name { font-size: 15px; font-weight: 800; }
   .line-code { font-size: 12px; direction: ltr; text-align: right; font-family: 'Courier New', monospace; }
-  .line-qty { font-size: 14px; }
-  .line-total { font-size: 16px; font-weight: 800; white-space: nowrap; }
-  .grand { font-size: 19px; font-weight: 800; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 3px 0; margin: 3px 0; }
-  .pay { margin-top: 5px; text-align: center; font-size: 16px; font-weight: 800; padding: 3px; border: 2px solid #000; border-radius: 5px; }
-  .small { font-size: 13px; line-height: 1.8; }
+  .totals { padding: 5px 4px 0; }
+  .grand { font-size: 20px; font-weight: 800; border: 2px solid #000; padding: 3px 4px; margin-top: 4px; }
+  .pay { margin-top: 5px; text-align: center; font-size: 15px; font-weight: 800; padding: 2px; border: 2px solid #000; border-radius: 5px; }
+  .small { font-size: 12px; line-height: 1.7; }
+  .warranty { display: flex; gap: 6px; margin-top: 8px; }
+  .w-box { flex: 1; text-align: center; border: 1.5px solid #000; border-radius: 4px; padding: 3px; font-size: 12px; line-height: 1.4; }
+  .w-box span { font-size: 15px; font-weight: 800; }
   .sigs { margin-top: 3mm; display: flex; justify-content: space-between; gap: 6mm; text-align: center; font-size: 13px; }
   .sigs > div { flex: 1; }
   .sig-line { border-bottom: 1px solid #000; height: 7mm; margin-bottom: 3px; }
