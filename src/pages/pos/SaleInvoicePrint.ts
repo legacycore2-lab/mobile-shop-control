@@ -262,10 +262,17 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
 <div class="receipt">
   <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI"></div>
   <hr class="solid">
-  <div class="center r-title">فاتورة بيع</div>
-  <div class="kv sm"><span>رقم: ${escapeHtml(data.invoice_number)}</span><span>${invDate}</span></div>
-  <div class="kv sm"><span>العميل: ${escapeHtml(data.customer_name ?? 'نقدي')}</span><span>الكاشير: ${escapeHtml(data.created_by_name)}</span></div>
-  ${data.customer_phone ? `<div class="kv sm"><span>الهاتف: ${escapeHtml(data.customer_phone)}</span><span></span></div>` : ''}
+  <div class="hdr">
+    <div class="hdr-info">
+      <div class="r-title">فاتورة بيع</div>
+      <div class="kv sm"><span>رقم</span><span>${escapeHtml(data.invoice_number)}</span></div>
+      <div class="kv sm"><span>التاريخ</span><span>${invDate}</span></div>
+      <div class="kv sm"><span>العميل</span><span>${escapeHtml(data.customer_name ?? 'نقدي')}</span></div>
+      <div class="kv sm"><span>الكاشير</span><span>${escapeHtml(data.created_by_name)}</span></div>
+      ${data.customer_phone ? `<div class="kv sm"><span>الهاتف</span><span>${escapeHtml(data.customer_phone)}</span></div>` : ''}
+    </div>
+    ${stampHtml(data, invDate)}
+  </div>
   <div class="thead"><span class="c-name">الصنف</span><span class="c-num">السعر</span><span class="c-num">الإجمالي</span></div>
   ${rows}
   <div class="totals">
@@ -274,7 +281,6 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
     <div class="kv sm"><span>الخصم</span><span>− ${fmt(data.discount)} ج</span></div>` : ''}
     <div class="kv sm"><span>المدفوع</span><span>${fmt(data.paid_amount)} ج</span></div>
     <div class="kv sm"><span>المتبقي</span><span>${fmt(data.remaining)} ج</span></div>
-    ${stampHtml(data, invDate)}
   </div>
   <div class="kv grand"><span>الإجمالي</span><span>${fmt(data.total_amount)} ج</span></div>
   ${data.remaining > 0 ? payStatusHtml(data) : ''}
@@ -314,9 +320,12 @@ const RECEIPT_CSS = `
   .c-num { width: 17mm; text-align: left; white-space: nowrap; font-size: 14px; }
   .line-name { font-size: 15px; font-weight: 800; }
   .line-code { font-size: 12px; direction: ltr; text-align: right; font-family: 'Courier New', monospace; }
-  .totals { padding: 5px 4px 0; position: relative; }
-  .totals .stamp-wrap { position: absolute; left: 82px; top: -6.5mm; padding: 0; }
-  .totals .stamp { width: 24mm; height: 24mm; }
+  .totals { padding: 5px 4px 0; }
+  .hdr { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .hdr-info { flex: 1; min-width: 0; }
+  .hdr-info .r-title { text-align: center; }
+  .hdr .stamp-wrap { padding: 0; }
+  .hdr .stamp { width: 24mm; height: 24mm; }
   .grand { font-size: 20px; font-weight: 800; border: 2px solid #000; padding: 3px 4px; margin-top: 4px; }
   .pay { margin-top: 5px; text-align: center; font-size: 15px; font-weight: 800; padding: 2px; border: 2px solid #000; border-radius: 5px; }
   .small { font-size: 12px; line-height: 1.7; }
