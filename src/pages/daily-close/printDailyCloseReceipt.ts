@@ -5,6 +5,7 @@ import { formatDateKeyAr } from '@/lib/dateKey'
 import { CASH_METHOD_LABELS } from '@/constants/paymentMethods'
 import type { DailyClose } from '@/types/dailyClose'
 import { esc } from './printDailyClose'
+import { SHOP_PHONE } from '@/constants/shop'
 
 const egp = (v: number): string => `${fmt(v)} ج`
 
@@ -58,6 +59,7 @@ function build(d: DailyClose, logoUrl: string, now: string): string {
   return `
 <div class="receipt">
   <div class="center"><img class="logo" src="${esc(logoUrl)}" alt="ELSHAFEI"></div>
+  <div class="center phone">${SHOP_PHONE}</div>
   <hr class="solid">
   <div class="center">
     <div class="r-title">إقفال اليوم</div>
@@ -88,6 +90,7 @@ const CSS = `
   .receipt { direction: rtl; width: 100%; max-width: 72mm; margin: 0 auto; padding: 2mm 2mm 3mm; }
   .center { text-align: center; }
   .logo { width: 38mm; height: auto; display: inline-block; image-rendering: pixelated; }
+  .phone { font-size: 20px; font-weight: 800; letter-spacing: 1px; direction: ltr; margin-top: 1px; }
   .solid { border: none; border-top: 2px solid #000; margin: 3px 0; }
   .dashed { border: none; border-top: 1px dashed #000; margin: 2px 0; }
   .r-title { font-size: 20px; font-weight: 800; }
@@ -106,7 +109,7 @@ const CSS = `
 
 export async function printDailyCloseReceipt(d: DailyClose): Promise<void> {
   const now = new Date().toLocaleString('en-GB', { hour12: false })
-  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/elshafei-header-thermal.png?v=20261105`
+  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/elshafei-header-thermal.png?v=20261106`
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">

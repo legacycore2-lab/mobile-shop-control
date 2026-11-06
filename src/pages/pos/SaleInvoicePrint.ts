@@ -2,6 +2,7 @@
 // ── طباعة فاتورة البيع — A4 رسمية أو إيصال حراري 80mm (مع باركود كل صنف) ─────────
 import QRCode from 'qrcode'
 import { fmt } from '@/lib/fmt'
+import { SHOP_PHONE } from '@/constants/shop'
 
 interface DeviceLine {
   brand_name:           string
@@ -101,7 +102,7 @@ function stampHtml(data: SaleInvoicePrintData, invDate: string): string {
     <circle cx="95" cy="95" r="83" fill="none" stroke="#000" stroke-width="1.5"/>
     <circle cx="95" cy="95" r="54" fill="none" stroke="#000" stroke-width="2"/>
     <text font-size="12.5" font-family="Arial, sans-serif" letter-spacing="1.2" font-weight="700"><textPath href="#st-top" startOffset="50%" text-anchor="middle">ELSHAFEI MARKET APPLE</textPath></text>
-    <text font-size="12.5" font-family="Arial, sans-serif" letter-spacing="2" font-weight="700"><textPath href="#st-bot" startOffset="50%" text-anchor="middle">★ 01128816781 ★</textPath></text>
+    <text font-size="12.5" font-family="Arial, sans-serif" letter-spacing="2" font-weight="700"><textPath href="#st-bot" startOffset="50%" text-anchor="middle">★ ★ ★</textPath></text>
     <text x="95" y="93" text-anchor="middle" font-size="26" font-weight="800">تم البيع</text>
     <text x="95" y="120" text-anchor="middle" font-size="13" font-family="Arial, sans-serif" font-weight="700">${invDate}</text>
   </svg></div>`
@@ -261,6 +262,7 @@ function receiptBody(data: SaleInvoicePrintData, lines: PrintLine[], logoUrl: st
   return `
 <div class="receipt">
   <div class="center"><img class="logo" src="${escapeHtml(logoUrl)}" alt="ELSHAFEI"></div>
+  <div class="center phone">${SHOP_PHONE}</div>
   <hr class="solid">
   <div class="hdr">
     <div class="hdr-info">
@@ -321,6 +323,7 @@ const RECEIPT_CSS = `
   .line-name { font-size: 15px; font-weight: 800; }
   .line-code { font-size: 12px; direction: ltr; text-align: right; font-family: 'Courier New', monospace; }
   .totals { padding: 5px 4px 0; }
+  .phone { font-size: 20px; font-weight: 800; letter-spacing: 1px; direction: ltr; margin-top: 1px; }
   .hdr { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
   .hdr-info { flex: 1; min-width: 0; }
   .hdr-info .r-title { text-align: center; }
@@ -343,7 +346,7 @@ export async function printSaleInvoice(data: SaleInvoicePrintData, format: SaleI
   const invDate = new Date(data.invoice_date).toLocaleDateString('en-GB')
   const now     = new Date().toLocaleString('en-GB', { hour12: false })
   const logoFile = format === 'a4' ? 'elshafei-header.png' : 'elshafei-header-thermal.png'
-  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/${logoFile}?v=20261105`
+  const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}brand/${logoFile}?v=20261106`
   const lines   = await buildLines(data)
 
   const body = format === 'a4'
