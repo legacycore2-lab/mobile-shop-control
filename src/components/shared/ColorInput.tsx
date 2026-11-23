@@ -51,12 +51,12 @@ export function ColorInput({
     for (const opt of pools.flat()) {
       const key = norm(opt.value)
       if (seen.has(key)) continue
-      if (query && !key.includes(query) && !norm(opt.alias).includes(query)) continue
+      if (query && !key.includes(query) && !norm(opt.alias).includes(query) && !norm(opt.keywords ?? '').includes(query)) continue
       seen.add(key)
       out.push(opt)
     }
     // لو المكتوب هو نفس اللون بالظبط مفيش داعي نعرضه تاني
-    return out.filter(o => norm(o.value) !== query).slice(0, 12)
+    return out.filter(o => norm(o.value) !== query).slice(0, 15)
   }, [used, value, brandName, modelName, modelId])
 
   return (

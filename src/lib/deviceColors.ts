@@ -4,13 +4,29 @@
 export interface ColorOption {
   /** القيمة اللي بتتسجل في خانة اللون */
   value: string
-  /** الاسم التاني (عربي/إنجليزي) للبحث والعرض بس */
+  /** الاسم التاني (عربي/إنجليزي) للعرض والبحث */
   alias: string
+  /** كلمات بحث إضافية (نطق الاسم الإنجليزي بالعربي زي ما بيتقال في المحلات) */
+  keywords?: string
 }
 
-const c = (value: string, alias: string): ColorOption => ({ value, alias })
+const WORDS: Record<string, string> = {
+  black: 'بلاك', white: 'وايت', blue: 'بلو', green: 'جرين', red: 'ريد', yellow: 'يلو',
+  pink: 'بينك', purple: 'بيربل', silver: 'سيلفر', gold: 'جولد', gray: 'جراي', grey: 'جراي',
+  space: 'سبيس', graphite: 'جرافيت', midnight: 'ميدنايت', starlight: 'ستارلايت',
+  natural: 'ناتشورال', desert: 'ديزرت', titanium: 'تيتانيوم', rose: 'روز', pacific: 'باسيفيك',
+  sierra: 'سييرا', alpine: 'الباين', deep: 'ديب', jet: 'جيت', coral: 'كورال', teal: 'تيل',
+  ultramarine: 'الترامارين', mist: 'ميست', sage: 'ساج', lavender: 'لافندر', cosmic: 'كوزميك',
+  orange: 'اورانج', cloud: 'كلاود', light: 'لايت', sky: 'سكاي',
+}
+
+function transliterate(en: string): string {
+  return en.toLowerCase().split(' ').map(w => WORDS[w] ?? '').filter(Boolean).join(' ')
+}
+
+const c = (value: string, alias: string): ColorOption => ({ value, alias, keywords: transliterate(alias) })
 /** ألوان الأيفون: القيمة بالعربي والاسم الإنجليزي للبحث والعرض */
-const ip = (en: string, ar: string): ColorOption => ({ value: ar, alias: en })
+const ip = (en: string, ar: string): ColorOption => ({ value: ar, alias: en, keywords: transliterate(en) })
 
 // ── ألوان الأيفونات الرسمية (القيمة بالعربي، والاسم الإنجليزي للبحث) ──────────────
 
@@ -36,6 +52,11 @@ const DESERT_TI    = ip('Desert Titanium', 'تيتانيوم صحراوي')
 const SPACE_BLACK  = ip('Space Black', 'أسود فلكي')
 
 const IPHONE_COLORS: Record<string, ColorOption[]> = {
+  '5s':      [SPACE_GRAY, SILVER, GOLD],
+  '6':       [SPACE_GRAY, SILVER, GOLD],
+  '6plus':   [SPACE_GRAY, SILVER, GOLD],
+  '6s':      [SPACE_GRAY, SILVER, GOLD, ip('Rose Gold', 'روز جولد')],
+  '6splus':  [SPACE_GRAY, SILVER, GOLD, ip('Rose Gold', 'روز جولد')],
   x:         [SPACE_GRAY, SILVER],
   xs:        [SPACE_GRAY, SILVER, GOLD],
   xsmax:     [SPACE_GRAY, SILVER, GOLD],
@@ -85,6 +106,23 @@ export const GENERIC_COLORS: ColorOption[] = [
   c('تركواز', 'Turquoise'), c('لافندر', 'Lavender'), c('كريمي', 'Cream'),
   c('عنابي', 'Burgundy'), c('نعناعي', 'Mint'), c('جرافيت', 'Graphite'),
   c('تيتانيوم', 'Titanium'), c('روز جولد', 'Rose Gold'), c('متعدد الألوان', 'Multicolor'),
+  // درجات وتنويعات شائعة في السوق
+  c('أسود لامع', 'Jet Black'), c('أسود ميتاليك', 'Metallic Black'), c('أسود فانتوم', 'Phantom Black'),
+  c('أبيض فانتوم', 'Phantom White'), c('أبيض لؤلؤي', 'Pearl White'), c('أبيض ثلجي', 'Snow White'),
+  c('أزرق ملكي', 'Royal Blue'), c('أزرق سماوي', 'Sky Blue'), c('أزرق فاتح', 'Light Blue'),
+  c('أزرق غامق', 'Dark Blue'), c('أزرق ليلي', 'Midnight Blue'), c('أزرق جليدي', 'Ice Blue'),
+  c('أخضر زيتي', 'Olive Green'), c('أخضر غامق', 'Dark Green'), c('أخضر فاتح', 'Light Green'),
+  c('أخضر ميدنايت', 'Midnight Green'), c('أحمر غامق', 'Dark Red'), c('أحمر ناري', 'Product Red'),
+  c('رمادي غامق', 'Dark Gray'), c('رمادي فاتح', 'Light Gray'), c('رمادي فلكي', 'Space Gray'),
+  c('فضي ميتاليك', 'Metallic Silver'), c('ذهبي فاتح', 'Light Gold'), c('ذهبي وردي', 'Pink Gold'),
+  c('بنفسجي فاتح', 'Light Purple'), c('بنفسجي غامق', 'Deep Purple'), c('ليلكي', 'Lilac'),
+  c('وردي فاتح', 'Light Pink'), c('كاكي', 'Khaki'), c('فيروزي', 'Aqua'), c('مرجاني', 'Coral'),
+  c('ستارلايت', 'Starlight'), c('ميدنايت', 'Midnight'), c('تيتانيوم رمادي', 'Titanium Gray'),
+  c('تيتانيوم أسود', 'Titanium Black'), c('تيتانيوم بنفسجي', 'Titanium Violet'),
+  c('تيتانيوم أصفر', 'Titanium Yellow'), c('تيتانيوم أخضر', 'Titanium Green'),
+  c('تيتانيوم أزرق', 'Titanium Blue'), c('تيتانيوم طبيعي', 'Natural Titanium'),
+  c('تيتانيوم صحراوي', 'Desert Titanium'), c('برتقالي كوزميك', 'Cosmic Orange'),
+  c('متدرج', 'Gradient'),
 ]
 
 // ── التعرف على موديل الأيفون ──────────────────────────────────────────────────
