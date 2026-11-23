@@ -8,6 +8,7 @@ const KEYS = {
   one:    (id: string)  => ['devices', id]          as const,
   imei:   (imei: string) => ['devices', 'imei', imei] as const,
   brands: ['mobile_brands']      as const,
+  colors: ['devices', 'colors']  as const,
   models: (brandId: string) => ['mobile_models', brandId] as const,
 }
 
@@ -40,6 +41,14 @@ export function useDeviceByImei(imei: string) {
     queryKey: KEYS.imei(clean),
     queryFn:  () => devicesService.lookupByImei(clean),
     enabled:  /^\d{14,15}$/.test(clean),
+  })
+}
+
+export function useUsedColors() {
+  return useQuery({
+    queryKey: KEYS.colors,
+    queryFn:  devicesService.getUsedColors,
+    staleTime: 5 * 60_000,
   })
 }
 

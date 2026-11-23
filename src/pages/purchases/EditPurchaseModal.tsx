@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { InvoicePaymentsEditor } from './components/InvoicePaymentsEditor'
 import { cn } from '@/lib/cn'
 
+import { ColorInput } from '@/components/shared/ColorInput'
 import { fmt } from '@/lib/fmt'
 import { friendlyDbError } from '@/lib/errors'
 import type { InvoiceDeviceLine, InvoiceProductLine } from '@/repositories/purchases.repository'
@@ -237,7 +238,14 @@ function AddDeviceInlineForm({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">اللون</label>
-          <input value={form.color} onChange={e => set('color', e.target.value)} placeholder="أسود..." className={inp} />
+          <ColorInput
+            value={form.color}
+            onChange={v => set('color', v)}
+            brandName={brands.find(b => b.id === form.brand_id)?.name}
+            modelName={models.find(m => m.id === form.model_id)?.name}
+            modelId={form.model_id}
+            className={inp}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الحالة</label>

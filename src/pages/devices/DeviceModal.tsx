@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useDevices'
 import { useSuppliers } from '@/hooks/useSuppliers'
 import { useAuth } from '@/lib/auth'
+import { ColorInput } from '@/components/shared/ColorInput'
 import { cn } from '@/lib/cn'
 import type { MobileDeviceView } from '@/types/database'
 
@@ -349,8 +350,14 @@ export function DeviceModal({ device, onClose, initImei = '' }: {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>اللون</label>
-                  <input value={form.color} onChange={e => set('color', e.target.value)}
-                    placeholder="أسود" className={inputCls} />
+                  <ColorInput
+                    value={form.color}
+                    onChange={v => set('color', v)}
+                    placeholder="أسود"
+                    brandName={brands.find(b => b.id === form.brand_id)?.name}
+                    modelName={allModels.find(m => m.id === form.model_id)?.name}
+                    modelId={form.model_id}
+                    className={inputCls} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>الحالة</label>

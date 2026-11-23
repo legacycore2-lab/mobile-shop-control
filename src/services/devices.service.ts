@@ -84,6 +84,13 @@ export const devicesService = {
 
   getAllBrands: (): Promise<MobileBrand[]> => devicesRepository.getAllBrands(),
 
+  getUsedColors: async (): Promise<{ color: string; model_id: string | null }[]> => {
+    const rows = await devicesRepository.getUsedColors()
+    return rows
+      .map(r => ({ color: r.color.trim(), model_id: r.model_id }))
+      .filter(r => r.color !== '')
+  },
+
   getModelsByBrand: (brandId: string): Promise<MobileModel[]> =>
     devicesRepository.getModelsByBrand(brandId),
 

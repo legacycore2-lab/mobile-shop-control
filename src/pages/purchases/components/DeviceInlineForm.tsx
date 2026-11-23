@@ -7,6 +7,7 @@ import {
   Search, ScanLine, Zap, ChevronDown, ChevronUp, Camera, Info,
 } from 'lucide-react'
 import { BarcodeScanner, useUsbScanner } from '@/components/shared/BarcodeScanner'
+import { ColorInput } from '@/components/shared/ColorInput'
 import { LabelPrintModal, type LabelData } from '../LabelPrintModal'
 import { useCreatePurchase } from '@/hooks/usePurchases'
 import { useSuppliers } from '@/hooks/useSuppliers'
@@ -356,7 +357,14 @@ export function AddDeviceInlineForm({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">اللون</label>
-          <input value={form.color} onChange={e => set('color', e.target.value)} placeholder="أسود..." className={inp} />
+          <ColorInput
+            value={form.color}
+            onChange={v => set('color', v)}
+            brandName={brands.find(b => b.id === form.brand_id)?.name}
+            modelName={models.find(m => m.id === form.model_id)?.name}
+            modelId={form.model_id}
+            className={inp}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">الحالة</label>

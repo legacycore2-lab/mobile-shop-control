@@ -66,6 +66,17 @@ export const devicesRepository = {
     return (data ?? []) as MobileDeviceView[]
   },
 
+  /** كل الألوان اللي اتسجلت قبل كده مع الموديل بتاعها */
+  getUsedColors: async (): Promise<{ color: string; model_id: string | null }[]> => {
+    const { data, error } = await supabase
+      .from('mobile_devices')
+      .select('color, model_id')
+      .not('color', 'is', null)
+      .limit(5000)
+    if (error) throw error
+    return (data ?? []) as { color: string; model_id: string | null }[]
+  },
+
   create: async (payload: DeviceInsert): Promise<MobileDevice> => {
     const { data, error } = await supabase
       .from('mobile_devices')
